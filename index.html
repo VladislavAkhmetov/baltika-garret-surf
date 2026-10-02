@@ -5,8 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#3FA7D6">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Tony's Garret — Surf Rush (Papercraft Edition)</title>
+  
+  <script>
+    if (window.location.protocol.startsWith('http') && (window.location.pathname === '/' || window.location.pathname.endsWith('/index.html') || window.location.pathname === '')) {
+      const p = new URLSearchParams(window.location.search);
+      if (!p.has('legacy') && !p.has('debug')) {
+        window.location.replace('sandbox.html' + window.location.search);
+      }
+    }
+  </script>
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">

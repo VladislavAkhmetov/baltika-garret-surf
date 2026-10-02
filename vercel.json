@@ -1,6 +1,5 @@
 {
-  "cleanUrls": true,
-  "rewrites": [
-    { "source": "/", "destination": "/sandbox.html" }
+  "redirects": [
+    { "source": "/", "destination": "/sandbox.html", "permanent": false }
   ]
 }
