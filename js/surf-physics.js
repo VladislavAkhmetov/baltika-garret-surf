@@ -204,17 +204,20 @@ class SurfPhysics {
         let vy = jumpBase + jumpHold * holdFactor;
 
         let mult = 1.0;
+        let jumpType = 'flat';
+
         if (this.onRamp) {
           mult *= rampJumpMult;
+          jumpType = 'ramp';
           this.onRamp = false;
-        }
-        // Вылет с губы волны: x < 0 и движение вправо (heading > 10°)
-        if (this.state.x < 0 && this.state.heading > (10 * Math.PI / 180)) {
+        } else if ((surface.inPocket > 0.5 || this.state.x < 0) && this.state.heading > (10 * Math.PI / 180)) {
+          // Вылет с губы волны: только если в кармане (inPocket > 0.5) и движение вправо
           mult *= lipJumpMult;
+          jumpType = 'lip';
         }
 
         this.state.vy = vy * mult;
-        if (this.onJump) this.onJump(mult);
+        if (this.onJump) this.onJump(jumpType, mult);
       }
     }
 

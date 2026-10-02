@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#3FA7D6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Tony's Garret — Surf Rush (Вертикальный срез 45 с)</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Rubik+Mono+One&family=Rubik:wght@500;700;800&family=Caveat:wght@700&display=swap" rel="stylesheet">
+  
+  <!-- Base Styles -->
+  <link rel="stylesheet" href="css/style.css">
+  
+  <!-- Custom Sandbox UI Styles -->
+  <style>
+    /* TELEMETRY BAR TOP */
+    #sandbox-top-bar {
+      position: absolute;
+      top: calc(env(safe-area-inset-top, 0px) + 6px);
+      left: 10px;
+      right: 60px;
+      z-index: 50;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    #sandbox-telemetry {
+      font-family: monospace;
+      font-size: 11px;
+      color: #1C1A22;
+      background: rgba(244, 236, 220, 0.90);
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #1C1A22;
+      line-height: 1.3;
+      box-shadow: 1px 2px 4px rgba(0,0,0,0.25);
+    }
+
+    .sub-telemetry-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #pocket-bar-container {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(244, 236, 220, 0.90);
+      border: 1px solid #1C1A22;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 800;
+      font-size: 10px;
+    }
+
+    .pocket-bar-outer {
+      width: 60px;
+      height: 8px;
+      background: #D5C7B0;
+      border: 1px solid #1C1A22;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    #pocket-bar-inner {
+      width: 0%;
+      height: 100%;
+      background: #5CC8E8;
+      transition: width 0.05s linear;
+    }
+
+    #pump-indicator {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 900;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #1C1A22;
+      background: #F4ECDC;
+      color: #1C1A22;
+      transition: background 0.15s ease;
+    }
+    #pump-indicator.pump-good {
+      background: #4CAF50;
+      color: #FFFFFF;
+    }
+    #pump-indicator.pump-bad {
+      background: #D93829;
+      color: #FFFFFF;
+    }
+
+    /* GEAR TOGGLE BUTTON (TOP RIGHT) */
+    #btn-tuning-toggle {
+      position: absolute;
+      top: calc(env(safe-area-inset-top, 0px) + 6px);
+      right: 10px;
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: #F8C83A;
+      border: 2px solid #1C1A22;
+      color: #1C1A22;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 100;
+      box-shadow: 2px 3px 0 #1C1A22;
+      outline: none;
+      touch-action: manipulation;
+    }
+    #btn-tuning-toggle:active {
+      transform: translate(2px, 2px);
+      box-shadow: none;
+    }
+
+    /* GHOST HINTS */
+    .ghost-hint {
+      position: absolute;
+      bottom: 22%;
+      font-family: 'Caveat', cursive;
+      font-size: 26px;
+      color: #FFFFFF;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.6), 0 0 2px #1C1A22;
+      opacity: 0.75;
+      pointer-events: none;
+      z-index: 30;
+      text-align: center;
+      transition: opacity 0.5s ease;
+    }
+    .ghost-hint.fade-out {
+      opacity: 0;
+    }
+    #ghost-hint-left {
+      left: 6%;
+      width: 40%;
+    }
+    #ghost-hint-right {
+      right: 6%;
+      width: 45%;
+    }
+
+    /* FLOATING TOAST BANNER */
+    #sandbox-toast {
+      position: absolute;
+      top: 38%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.8);
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 900;
+      font-size: 22px;
+      color: #1C1A22;
+      background: #F8C83A;
+      border: 2px solid #1C1A22;
+      padding: 6px 16px;
+      border-radius: 8px;
+      box-shadow: 3px 4px 0 #1C1A22;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 60;
+      transition: transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.2s ease;
+    }
+    #sandbox-toast.show {
+      transform: translate(-50%, -50%) scale(1.0);
+      opacity: 1;
+    }
+
+    /* TUNING PANEL (BOTTOM SLIDING SHEET) */
+    #tuning-panel {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 48%;
+      background: rgba(244, 236, 220, 0.96);
+      border-top: 3px solid #1C1A22;
+      z-index: 90;
+      transform: translateY(105%);
+      transition: transform 0.3s cubic-bezier(0.1, 0.9, 0.2, 1.0);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+      padding: 10px 14px calc(env(safe-area-inset-bottom, 0px) + 10px) 14px;
+      user-select: none;
+    }
+    #tuning-panel.open {
+      transform: translateY(0);
+    }
+
+    .tuning-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #1C1A22;
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+    }
+    .tuning-title {
+      font-family: 'Rubik Mono One', sans-serif;
+      font-size: 13px;
+      color: #1C1A22;
+    }
+
+    .tuning-toolbar-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .tuning-btn {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 800;
+      font-size: 11px;
+      padding: 4px 8px;
+      background: #FFFFFF;
+      border: 1.5px solid #1C1A22;
+      border-radius: 5px;
+      color: #1C1A22;
+      cursor: pointer;
+      box-shadow: 1px 2px 0 #1C1A22;
+      touch-action: manipulation;
+    }
+    .tuning-btn:active {
+      transform: translate(1px, 1px);
+      box-shadow: none;
+    }
+    .tuning-btn-primary {
+      background: #F8C83A;
+    }
+    .tuning-btn-zone {
+      background: #5CC8E8;
+    }
+
+    #tuning-sliders-list {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-right: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .tuning-group-title {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 900;
+      font-size: 12px;
+      color: #D93829;
+      margin-top: 6px;
+      text-transform: uppercase;
+      border-bottom: 1px dashed rgba(28, 26, 34, 0.3);
+      padding-bottom: 2px;
+    }
+
+    .tuning-slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      background: rgba(255, 255, 255, 0.7);
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(28, 26, 34, 0.2);
+    }
+
+    .tuning-label-box {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11px;
+      color: #1C1A22;
+    }
+    .tuning-label-box b {
+      font-family: monospace;
+      font-size: 12px;
+      color: #0E3B6E;
+    }
+
+    .tuning-range-input {
+      width: 100%;
+      height: 24px;
+      cursor: pointer;
+      accent-color: #D93829;
+    }
+
+    /* START SCREEN */
+    #sandbox-start-screen {
+      position: absolute;
+      inset: 0;
+      background: rgba(28, 26, 34, 0.85);
+      z-index: 120;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    #sandbox-start-screen.hide {
+      display: none;
+    }
+    .sandbox-poster-card {
+      background: #F4ECDC;
+      border: 3px solid #1C1A22;
+      border-radius: 16px;
+      padding: 24px 20px;
+      text-align: center;
+      max-width: 340px;
+      width: 100%;
+      box-shadow: 6px 8px 0 #1C1A22;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .sandbox-poster-card h1 {
+      font-family: 'Rubik Mono One', sans-serif;
+      font-size: 17px;
+      color: #1C1A22;
+      margin: 0;
+      line-height: 1.3;
+    }
+    .sandbox-poster-card p {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 13px;
+      color: #4A4652;
+      margin: 0;
+      line-height: 1.4;
+    }
+    #btn-sandbox-start {
+      font-family: 'Rubik Mono One', sans-serif;
+      font-size: 15px;
+      padding: 12px 20px;
+      background: #F8C83A;
+      border: 2px solid #1C1A22;
+      border-radius: 8px;
+      color: #1C1A22;
+      cursor: pointer;
+      box-shadow: 3px 4px 0 #1C1A22;
+      touch-action: manipulation;
+    }
+    #btn-sandbox-start:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 2px 0 #1C1A22;
+    }
+  </style>
+
+  <!-- Three.js (Local with CDN fallback) -->
+  <script src="libs/three.min.js"></script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+    }
+  </script>
+</head>
+<body>
+  <!-- MOBILE SCREEN CONTAINER -->
+  <div id="app-container">
+    
+    <!-- 3D WebGL Canvas -->
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- Halftone Paper Overlay & Vignette -->
+    <div id="paper-grain-overlay"></div>
+    <div id="speed-lines"></div>
+
+    <!-- TOP TELEMETRY & STATUS BAR -->
+    <div id="sandbox-top-bar">
+      <div id="sandbox-telemetry">Загрузка среза...</div>
+      <div class="sub-telemetry-row">
+        <div id="pocket-bar-container">
+          <span>КАРМАН:</span>
+          <div class="pocket-bar-outer">
+            <div id="pocket-bar-inner"></div>
+          </div>
+        </div>
+        <div id="pump-indicator">НАКАЧКА</div>
+      </div>
+    </div>
+
+    <!-- GEAR TOGGLE BUTTON ⚙ -->
+    <button id="btn-tuning-toggle" aria-label="Тюнинг">⚙</button>
+
+    <!-- GHOST HINTS FOR FALLBACK DRAG MODE -->
+    <div id="ghost-hint-left" class="ghost-hint hide">◀ НАКЛОН ▶</div>
+    <div id="ghost-hint-right" class="ghost-hint hide">ДЕРЖИ — ПРИСЕД<br>ОТПУСТИ — ПРЫЖОК</div>
+
+    <!-- FLOATING TOAST -->
+    <div id="sandbox-toast" class="hide">ЧИСТО!</div>
+
+    <!-- HUD HERO MUG WIDGET (BOTTOM-LEFT, §5.2) -->
+    <div id="hud-mug-container">
+      <div class="mug-top-row">
+        <span id="mug-pct-label">100%</span>
+        <span id="mug-multiplier-badge" class="multiplier-badge mult-x3">×3</span>
+      </div>
+      <canvas id="mug-canvas"></canvas>
+      <div id="mug-telegraph-arrow" class="telegraph-arrow hide">◀</div>
+    </div>
+
+    <!-- GYRO CALIBRATION MODAL -->
+    <div id="calibration-screen" class="hide clickable">
+      <div class="calibration-card">
+        <div class="calibration-mug-icon">🍺</div>
+        <div class="calibration-title">КАЛИБРОВКА КРУЖКИ</div>
+        <div class="calibration-hint">Держи телефон как кружку. Ровно...</div>
+        <div class="calibration-countdown" id="calibration-count">3</div>
+      </div>
+    </div>
+
+    <!-- START MODAL SCREEN -->
+    <div id="sandbox-start-screen">
+      <div class="sandbox-poster-card">
+        <h1>GARRET: НИ КАПЛИ (СРЕЗ 45с)</h1>
+        <p>• Наклон телефона = карвинг влево/вправо<br>
+           • Удержание экрана = присед и накачка<br>
+           • Отпускание = прыжок и трюки<br>
+           • Держись в кармане у стены волны!</p>
+        <button id="btn-sandbox-start">НАЖМИ, ЧТОБЫ НАЧАТЬ</button>
+      </div>
+    </div>
+
+    <!-- TUNING SLIDING PANEL (BOTTOM SHEET) -->
+    <div id="tuning-panel">
+      <div class="tuning-header">
+        <div class="tuning-title">⚙ ТЮНИНГ ФИЗИКИ И ВОЛНЫ</div>
+      </div>
+
+      <div class="tuning-toolbar-row">
+        <button id="btn-zone-wave" class="tuning-btn tuning-btn-zone">🌊 Волна (0м)</button>
+        <button id="btn-zone-swell" class="tuning-btn tuning-btn-zone">〰 Зыбь (300м)</button>
+        <button id="btn-zone-ramps" class="tuning-btn tuning-btn-zone">🛹 Трамплины (550м)</button>
+        <button id="btn-zone-rival" class="tuning-btn tuning-btn-zone">🏄 Соперник (700м)</button>
+      </div>
+
+      <div class="tuning-toolbar-row">
+        <button id="btn-preset-reset" class="tuning-btn">Сброс</button>
+        <button id="btn-save-a" class="tuning-btn">Сохранить A</button>
+        <button id="btn-load-a" class="tuning-btn">Загрузить A</button>
+        <button id="btn-save-b" class="tuning-btn">Сохранить B</button>
+        <button id="btn-load-b" class="tuning-btn">Загрузить B</button>
+        <button id="btn-save-c" class="tuning-btn">Сохранить C</button>
+        <button id="btn-load-c" class="tuning-btn">Загрузить C</button>
+        <button id="btn-copy-json" class="tuning-btn tuning-btn-primary">📋 Копировать JSON</button>
+      </div>
+
+      <div id="tuning-sliders-list">
+        <!-- Генерируется динамически классом TuningPanel -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SCRIPT INCLUSIONS -->
+  <script src="js/sprites-data.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/ocean.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/models.js"></script>
+  <script src="js/mug.js"></script>
+  <script src="js/balance.js"></script>
+  <script src="js/control-input.js"></script>
+  <script src="js/peel-wave.js"></script>
+  <script src="js/surf-physics.js"></script>
+  <script src="js/tuning-panel.js"></script>
+  <script src="js/sandbox-game.js"></script>
+  <script src="js/slice-game.js"></script>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      window.game = new SliceGame();
+    });
+  </script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 {
   "redirects": [
-    { "source": "/", "destination": "/sandbox.html", "permanent": false }
+    { "source": "/", "destination": "/slice.html", "permanent": false }
   ]
 }

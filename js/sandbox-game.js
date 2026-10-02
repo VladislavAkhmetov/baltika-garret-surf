@@ -160,8 +160,14 @@ class SandboxGame {
   bindPhysicsCallbacks() {
     const p = this.physics;
 
-    p.onJump = (mult) => {
-      this.showToast(mult > 1.2 ? 'ВЫЛЕТ С ГРЕБНЯ! 🤙' : 'ПРЫЖОК!');
+    p.onJump = (jumpType, mult) => {
+      if (jumpType === 'ramp') {
+        this.showToast('ТРАМПЛИН! 🛹');
+      } else if (jumpType === 'lip') {
+        this.showToast('ВЫЛЕТ С ГРЕБНЯ! 🤙');
+      } else {
+        this.showToast('ПРЫЖОК!');
+      }
     };
 
     p.onLand = (clean, spinDeg) => {
@@ -196,12 +202,17 @@ class SandboxGame {
       this.showPumpingFeedback(false);
     };
 
-    // Проверка попадания падающей губы волны
+    // Проверка попадания падающей губы волны и накрытия пеной
     if (this.peelWave) {
       this.peelWave.onCheckLipStrike = (activeThrow) => {
         if (this.physics.state.x < 1.0) {
           this.physics.triggerStumble('Удар губы волны');
+          this.showToast('НАКРЫЛО! 💥');
         }
+      };
+      this.peelWave.onWipeCallback = (reason) => {
+        this.physics.triggerStumble(reason);
+        this.showToast('НАКРЫЛО ПЕНОЙ! 🌊');
       };
     }
   }
@@ -318,11 +329,11 @@ class SandboxGame {
 
   snapCamera() {
     const p = this.physics.state;
-    const camFollowX = p.worldX * 0.65 - 1.2;
-    this._camTargetPos.set(camFollowX, p.y + 3.2, p.z - 6.5);
+    const camX = p.worldX - 1.2;
+    this._camTargetPos.set(camX, p.y + 3.2, p.z - 6.5);
     this.camera.position.copy(this._camTargetPos);
     this._camLookPos.set(
-      camFollowX + 1.2 - Math.sin(p.heading) * 3.0,
+      p.worldX + 0.8 - Math.sin(p.heading) * 4.0,
       p.y + 0.6,
       p.z + 14.0
     );
@@ -449,16 +460,31 @@ class SandboxGame {
     const bot = this.rivalBot;
 
     if (cycleZ >= 680 && cycleZ <= 900) {
-      if (bot.mesh) bot.mesh.visible = true;
+      if (bot.mesh) {
+        bot.mesh.visible = true;
+        // Исправление бага 2: масштаб рига бота = масштаб игрока
+        if (this.surferRig) bot.mesh.scale.copy(this.surferRig.scale);
+      }
+
+      // Исправление бага 2: спавн не ближе 15 м по Z
+      if (!bot.spawned || bot.z < p.z + 15) {
+        bot.z = Math.max(p.z + 20, 720);
+        bot.spawned = true;
+      }
 
       bot.z += bot.speed * dt;
       // Если бот вышел за 900 м, возвращаем на старт зоны 720 м
-      if (bot.z > 900) bot.z = 720;
+      if (bot.z > 900) {
+        bot.z = 720;
+        bot.spawned = false;
+      }
 
       const botWorldX = SurfPhysics.toWorldX(bot.x);
-      const botSurface = this.peelWave.getSurface(bot.x, bot.z);
+      const botSurface = this.peelWave ? this.peelWave.getSurface(bot.x, bot.z) : { height: 0, slope: 0 };
       if (bot.mesh) {
+        // Исправление бага 2: бот стоит на поверхности и наклонен по склону
         bot.mesh.position.set(botWorldX, botSurface.height, bot.z);
+        bot.mesh.rotation.z = botSurface.slope;
       }
 
       // Кильватер: 10 м позади бота
@@ -477,12 +503,14 @@ class SandboxGame {
       }
     } else {
       if (bot.mesh) bot.mesh.visible = false;
+      bot.spawned = false;
       this.physics.wakeBonus = 0.0;
     }
   }
 
   updateVisuals(dt) {
     const p = this.physics.state;
+    const surface = this.peelWave ? this.peelWave.getSurface(p.x, p.z) : { height: 0, slope: 0 };
 
     // 1. Позиция и ориентация рига сёрфера
     if (this.surferRig) {
@@ -493,21 +521,26 @@ class SandboxGame {
       if (this.surferRig.userData && this.surferRig.userData.setPose) {
         this.surferRig.userData.setPose(p.pose, p.heading);
       }
+
+      // Исправление бага 4: тень на поверхности воды под сёрфером с наклоном по slope
+      const shadow = this.surferRig.getObjectByName('waterShadow');
+      if (shadow) {
+        shadow.position.y = -p.airY + 0.03;
+        shadow.rotation.z = surface.slope;
+      }
     }
 
-    // 2. Free-roam камера (§3 HANDOFF v3)
-    // Камера следует за сёрфером с мягким запаздыванием (коэффициент 0.65 и lerp),
-    // чтобы при наклоне сёрфер ВИЗУАЛЬНО перемещался по ширине экрана (от кармана к плечу).
-    const camFollowX = p.worldX * 0.65 - 1.2;
-    this._camTargetPos.set(camFollowX, p.y + 3.2, p.z - 6.5);
-    const lerpRate = 1.0 - Math.exp(-4.5 * dt);
-    this.camera.position.x += (this._camTargetPos.x - this.camera.position.x) * lerpRate;
-    this.camera.position.y += (this._camTargetPos.y - this.camera.position.y) * lerpRate;
-    this.camera.position.z = this._camTargetPos.z; // Z жёстко без отставания!
+    // 2. Free-roam камера (исправление бага 1 по §2 VERTICAL_SLICE_SPEC)
+    // camX = p.worldX − 1.2 (коэффициент 1.0, lerp 1 − exp(−8·dt))
+    const targetCamX = p.worldX - 1.2;
+    const lerpRate = 1.0 - Math.exp(-8.0 * dt);
+    this.camera.position.x += (targetCamX - this.camera.position.x) * lerpRate;
+    this.camera.position.y += ((p.y + 3.2) - this.camera.position.y) * lerpRate;
+    this.camera.position.z = p.z - 6.5; // Z жёстко без отставания!
 
-    // Взгляд с упреждением в сторону виража
+    // Взгляд по handoff: (p.worldX + 0.8 − sin(heading)·4, p.y + 0.6, p.z + 14)
     this._camLookPos.set(
-      camFollowX + 1.2 - Math.sin(p.heading) * 3.0,
+      p.worldX + 0.8 - Math.sin(p.heading) * 4.0,
       p.y + 0.6,
       p.z + 14.0
     );
@@ -517,6 +550,13 @@ class SandboxGame {
     const maxCamRoll = (5.0 * Math.PI) / 180;
     const camRoll = Math.max(-maxCamRoll, Math.min(maxCamRoll, p.roll * 0.15));
     this.camera.rotation.z += camRoll;
+
+    // Тряска камеры при приближении стены пены (< 10м, §4 ТЗ)
+    if (this.peelWave && this.peelWave.camShakeBonus > 0) {
+      const shake = this.peelWave.camShakeBonus;
+      this.camera.position.x += (Math.random() - 0.5) * shake;
+      this.camera.position.y += (Math.random() - 0.5) * shake;
+    }
 
     // FOV = 58 + (speed - 26) * 0.7
     const targetFov = 58.0 + (p.speed - 26.0) * 0.7;
