@@ -1096,3 +1096,404 @@ body::before {
   margin-right: 2px;
 }
 
+/* ==========================================================
+   FX DIRECTOR: FREEZE MOMENTS & PAPER PLATES (§6 LEVEL1_SPEC)
+   ========================================================== */
+#fx-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 150;
+  pointer-events: none;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 1. Canvas freeze filter (§6.3) */
+.fx-freeze #webgl-canvas {
+  filter: saturate(0.15) contrast(1.4) brightness(1.08);
+}
+
+/* 2. Fullscreen flash overlay */
+#fx-flash {
+  position: absolute;
+  inset: 0;
+  background: #FFFFFF;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.08s ease-out;
+}
+#fx-flash.active {
+  opacity: 0.35;
+}
+
+/* 3. Halftone dots overlay (6px) */
+#fx-halftone {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background-image: radial-gradient(#1C1A22 1.8px, transparent 1.8px);
+  background-size: 6px 6px;
+  mix-blend-mode: multiply;
+  transition: opacity 0.06s ease-out;
+}
+#fx-halftone.active {
+  opacity: 0.55;
+}
+
+/* 4. Moment Plates Container */
+#fx-moment-box {
+  position: absolute;
+  top: 36%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.fx-moment-in {
+  opacity: 1 !important;
+  animation: fxPlatePopIn 0.14s cubic-bezier(0.2, 1.6, 0.4, 1) forwards;
+}
+
+.fx-moment-out {
+  animation: fxPlatePopOut 0.26s ease-in forwards !important;
+}
+
+@keyframes fxPlatePopIn {
+  0% {
+    transform: translate(-50%, -50%) scale(2.6) rotate(-9deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.0) rotate(-4deg);
+    opacity: 1;
+  }
+}
+
+@keyframes fxPlatePopOut {
+  0% {
+    transform: translate(-50%, -50%) scale(1.0) rotate(-4deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-30%, -100%) scale(0.7) rotate(12deg);
+    opacity: 0;
+  }
+}
+
+/* Main tape plate */
+.fx-main-plate {
+  font-family: 'Rubik Mono One', 'Montserrat', Impact, sans-serif;
+  font-size: 28px;
+  padding: 8px 24px;
+  border-radius: 4px;
+  border: 3px solid #FFFFFF;
+  box-shadow: 4px 6px 0px rgba(28, 26, 34, 0.65), 0 8px 18px rgba(0,0,0,0.35);
+  letter-spacing: 0.05em;
+  text-align: center;
+  white-space: nowrap;
+  transform: rotate(-2deg);
+}
+
+/* Sub tape plate */
+.fx-sub-plate {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: 20px;
+  padding: 4px 18px;
+  border-radius: 3px;
+  border: 2px solid #FFFFFF;
+  background: #FFFFFF;
+  color: #D93829;
+  box-shadow: 3px 4px 0px rgba(28, 26, 34, 0.55);
+  letter-spacing: 0.06em;
+  text-align: center;
+  white-space: nowrap;
+  transform: rotate(3deg);
+  margin-top: -4px;
+}
+
+/* Color tones */
+.tone-yellow { background: #F8C83A; color: #1C1A22; }
+.tone-white  { background: #F4ECDC; color: #1C1A22; }
+.tone-red    { background: #D93829; color: #FFFFFF; }
+.tone-gold   { background: linear-gradient(135deg, #FFE07A 0%, #E0A21B 100%); color: #1C1A22; border-color: #FFF9E6; }
+.tone-ocean  { background: #5CC8E8; color: #1C1A22; }
+.tone-coral  { background: #FF6B4A; color: #FFFFFF; }
+
+/* Small toast stickers (Montserrat 900 22px) */
+.fx-toast-sticker {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.6) rotate(-3deg);
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: 22px;
+  background: #F8C83A;
+  color: #1C1A22;
+  border: 2px solid #FFFFFF;
+  padding: 6px 18px;
+  border-radius: 6px;
+  box-shadow: 3px 4px 0 rgba(28, 26, 34, 0.6);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 140;
+  transition: transform 0.15s cubic-bezier(0.2, 1.5, 0.4, 1), opacity 0.15s;
+}
+.fx-toast-sticker.show {
+  transform: translate(-50%, -50%) scale(1.0) rotate(-2deg);
+  opacity: 1;
+}
+
+/* ==========================================================
+   VERTICAL SLICE TOP HUD & PROGRESS BAR (§8)
+   ========================================================== */
+#slice-top-hud {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 6px);
+  left: 10px;
+  right: 10px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.slice-hud-left {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.slice-paper-badge {
+  background: var(--paper-cream, #F4ECDC);
+  border: 2px solid #1C1A22;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: 13px;
+  color: #1C1A22;
+  box-shadow: 2px 2px 0 #1C1A22;
+}
+
+#slice-rank-badge {
+  background: #F8C83A;
+  font-size: 15px;
+}
+
+.slice-hud-center {
+  flex: 1;
+  max-width: 140px;
+  display: flex;
+  align-items: center;
+}
+
+#slice-progress-track {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  background: rgba(244, 236, 220, 0.7);
+  border: 1.5px solid #1C1A22;
+  border-radius: 5px;
+  overflow: visible;
+}
+
+#slice-progress-bar {
+  width: 0%;
+  height: 100%;
+  background: #5CC8E8;
+  border-radius: 3px;
+}
+
+.slice-runner-icon {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.slice-hud-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+#slice-score-label {
+  font-family: 'Rubik Mono One', sans-serif;
+  font-size: 12px;
+  color: #1C1A22;
+  background: #F8C83A;
+  padding: 2px 6px;
+  border: 1.5px solid #1C1A22;
+  border-radius: 4px;
+  box-shadow: 1px 2px 0 #1C1A22;
+}
+
+#slice-combo-badge {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: 11px;
+  color: #FFFFFF;
+  background: #D93829;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid #1C1A22;
+}
+
+/* Tutorial Hint Caveat (§8) */
+.slice-tutorial-hint {
+  position: absolute;
+  top: 24%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-3deg);
+  font-family: 'Caveat', cursive;
+  font-weight: 700;
+  font-size: 26px;
+  color: #1C1A22;
+  background: #FFF9E6;
+  border: 2px dashed #D93829;
+  padding: 6px 18px;
+  border-radius: 8px;
+  box-shadow: 2px 4px 0 rgba(0,0,0,0.3);
+  z-index: 55;
+  pointer-events: none;
+  text-align: center;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Results Screen Card */
+#slice-results-screen {
+  z-index: 200 !important;
+}
+
+.slice-results-card {
+  width: 100%;
+  max-width: 360px;
+  background: #F4ECDC;
+  border: 3px solid #1C1A22;
+  border-radius: 14px;
+  padding: 22px 18px;
+  box-shadow: 5px 8px 0 rgba(28, 26, 34, 0.65), 0 16px 40px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+  transform: rotate(-1deg);
+}
+
+.results-header-stamp {
+  align-self: center;
+  background: #F8C83A;
+  color: #1C1A22;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  font-size: 12px;
+  padding: 3px 14px;
+  border-radius: 3px;
+  border: 1.5px solid #1C1A22;
+  box-shadow: 2px 2px 0 #1C1A22;
+}
+
+.slice-results-card h2 {
+  font-family: 'Rubik Mono One', sans-serif;
+  font-size: 24px;
+  color: #1C1A22;
+  margin: 0;
+}
+
+.results-stars {
+  font-size: 28px;
+  color: #F8C83A;
+  text-shadow: 1px 2px 0 #1C1A22;
+  letter-spacing: 4px;
+}
+
+.results-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  text-align: left;
+}
+
+.results-stats-grid .stat-item {
+  background: #FFFFFF;
+  border: 1.5px solid #1C1A22;
+  border-radius: 6px;
+  padding: 6px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 2px 2px 0 rgba(28, 26, 34, 0.2);
+}
+
+.results-stats-grid .stat-label {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 800;
+  font-size: 11px;
+  color: #777;
+}
+
+.results-stats-grid b {
+  font-family: 'Rubik Mono One', monospace;
+  font-size: 14px;
+  color: #1C1A22;
+}
+
+.results-btn-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.slice-btn-primary {
+  font-family: 'Rubik Mono One', sans-serif;
+  font-size: 14px;
+  padding: 12px;
+  background: #F8C83A;
+  border: 2px solid #1C1A22;
+  border-radius: 8px;
+  color: #1C1A22;
+  cursor: pointer;
+  box-shadow: 3px 4px 0 #1C1A22;
+}
+.slice-btn-primary:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 2px 0 #1C1A22;
+}
+
+.slice-btn-secondary {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 10px;
+  background: #F4ECDC;
+  border: 2px solid #1C1A22;
+  border-radius: 8px;
+  color: #1C1A22;
+  cursor: pointer;
+  box-shadow: 2px 3px 0 #1C1A22;
+}
+.slice-btn-secondary:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+
+

@@ -370,8 +370,65 @@
     <div id="paper-grain-overlay"></div>
     <div id="speed-lines"></div>
 
-    <!-- TOP TELEMETRY & STATUS BAR -->
-    <div id="sandbox-top-bar">
+    <!-- VERTICAL SLICE TOP HUD (§8) -->
+    <div id="slice-top-hud">
+      <div class="slice-hud-left">
+        <div id="slice-rank-badge" class="slice-paper-badge">1/3</div>
+        <div id="slice-caps-badge" class="slice-paper-badge">🪙 <span id="slice-caps-count">0</span>/28</div>
+      </div>
+      <div class="slice-hud-center">
+        <div id="slice-progress-track">
+          <div id="slice-progress-bar"></div>
+          <div id="slice-icon-tony" class="slice-runner-icon">🔴</div>
+          <div id="slice-icon-kiter" class="slice-runner-icon">🟢</div>
+          <div id="slice-icon-player" class="slice-runner-icon">🏄</div>
+        </div>
+      </div>
+      <div class="slice-hud-right">
+        <div id="slice-score-label">СЧЁТ 000000</div>
+        <div id="slice-combo-badge">×1</div>
+      </div>
+    </div>
+
+    <!-- TUTORIAL HINT (Caveat) -->
+    <div id="slice-tutorial-hint" class="slice-tutorial-hint hide">
+      <span id="slice-hint-text">НАКЛОНЯЙ — ПОВОРАЧИВАЙ ↘</span>
+    </div>
+
+    <!-- FX DIRECTOR OVERLAY CONTAINER -->
+    <div id="fx-overlay">
+      <div id="fx-flash"></div>
+      <div id="fx-halftone"></div>
+      <div id="fx-moment-box">
+        <div class="fx-main-plate tone-yellow">ЧИСТО!</div>
+        <div class="fx-sub-plate">+250</div>
+      </div>
+      <div id="fx-toast-sticker" class="fx-toast-sticker"></div>
+    </div>
+
+    <!-- RESULTS CARD MODAL (§8) -->
+    <div id="slice-results-screen" class="overlay-screen hide clickable">
+      <div class="slice-results-card">
+        <div class="results-header-stamp">ЗАЕЗД ЗАВЕРШЁН!</div>
+        <h2 id="results-title">ДОВЁЗ!</h2>
+        <div class="results-stars" id="results-stars">★★★</div>
+        <div class="results-stats-grid">
+          <div class="stat-item"><span class="stat-label">ВРЕМЯ:</span><b id="res-time">0:43.8</b></div>
+          <div class="stat-item"><span class="stat-label">МЕСТО:</span><b id="res-place">1/3</b></div>
+          <div class="stat-item"><span class="stat-label">ПИВО:</span><b id="res-beer">92%</b></div>
+          <div class="stat-item"><span class="stat-label">КРЫШКИ:</span><b id="res-caps">24 / 28</b></div>
+          <div class="stat-item"><span class="stat-label">ЗОЛОТО:</span><b id="res-gold">ДА ★</b></div>
+          <div class="stat-item"><span class="stat-label">СЧЁТ:</span><b id="res-score">14250</b></div>
+        </div>
+        <div class="results-btn-row">
+          <button id="btn-slice-replay" class="slice-btn-primary">ЕЩЁ ЗАЕЗД 🤙</button>
+          <button id="btn-slice-sandbox" class="slice-btn-secondary">⚙ ПЕСОЧНИЦА</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOP TELEMETRY & STATUS BAR (Only shown with ?debug=1) -->
+    <div id="sandbox-top-bar" class="hide">
       <div id="sandbox-telemetry">Загрузка среза...</div>
       <div class="sub-telemetry-row">
         <div id="pocket-bar-container">
@@ -384,8 +441,8 @@
       </div>
     </div>
 
-    <!-- GEAR TOGGLE BUTTON ⚙ -->
-    <button id="btn-tuning-toggle" aria-label="Тюнинг">⚙</button>
+    <!-- GEAR TOGGLE BUTTON ⚙ (Only shown with ?debug=1) -->
+    <button id="btn-tuning-toggle" class="hide" aria-label="Тюнинг">⚙</button>
 
     <!-- GHOST HINTS FOR FALLBACK DRAG MODE -->
     <div id="ghost-hint-left" class="ghost-hint hide">◀ НАКЛОН ▶</div>
@@ -461,6 +518,8 @@
   <script src="js/sprites-data.js"></script>
   <script src="js/config.js"></script>
   <script src="js/audio.js"></script>
+  <script src="js/fx.js"></script>
+  <script src="js/slice-script.js"></script>
   <script src="js/ocean.js"></script>
   <script src="js/entities.js"></script>
   <script src="js/models.js"></script>
@@ -469,6 +528,7 @@
   <script src="js/control-input.js"></script>
   <script src="js/peel-wave.js"></script>
   <script src="js/surf-physics.js"></script>
+  <script src="js/slice-rivals.js"></script>
   <script src="js/tuning-panel.js"></script>
   <script src="js/sandbox-game.js"></script>
   <script src="js/slice-game.js"></script>
