@@ -302,6 +302,25 @@ class SliceGame extends SandboxGame {
     }
   }
 
+  snapCamera() {
+    const p = this.physics.state;
+    const surface = this.peelWave ? this.peelWave.getSurface(p.x, p.z) : { height: 0, inPocket: 0, waveEnvelope: 0 };
+    const inPocket = (surface.inPocket > 0.05 || (surface.waveEnvelope > 0.2 && p.x < 3.8));
+    this.waveCamBlend = inPocket ? 1.0 : 0.0;
+    const camOffsetY = inPocket ? 1.9 : 3.2;
+    const shoulderShift = inPocket ? 2.2 : 1.2;
+    const camX = p.worldX - shoulderShift;
+    const camY = Math.max(surface.height + camOffsetY + p.airY, surface.height + 0.8);
+    this._camTargetPos.set(camX, camY, p.z - 6.5);
+    this.camera.position.copy(this._camTargetPos);
+    this._camLookPos.set(
+      p.worldX + (inPocket ? 1.6 : 0.8) - Math.sin(p.heading) * 3.0,
+      p.y + (inPocket ? 1.4 : 0.6),
+      p.z + 14.0
+    );
+    this.camera.lookAt(this._camLookPos);
+  }
+
   // =========================================================================
   // 4. Старт заезда и Интро-синематика
   // =========================================================================
@@ -772,12 +791,62 @@ class SliceGame extends SandboxGame {
         }
       }
 
-      // 2. Free-roam камера по handoff (коэф. 1.0, lerp 1 - exp(-8*dt))
-      const targetCamX = p.worldX - 1.2;
-      const lerpRate = 1.0 - Math.exp(-8.0 * dt);
-      this.camera.position.x += (targetCamX - this.camera.position.x) * lerpRate;
-      this.camera.position.y += ((p.y + 3.2) - this.camera.position.y) * lerpRate;
+      // 2. Динамическая камера по ТЗ ревью (п. 1 и п. 2)
+      const inPocket = surface.inPocket || 0;
+      const waveEnv = surface.waveEnvelope || 0;
+      // В зоне волны плавный бленд за ~1 с
+      const targetWaveBlend = (inPocket > 0.05 || (waveEnv > 0.2 && p.x < 3.8)) ? Math.max(inPocket, 0.7) : 0.0;
+      const blendRate = 1.0 - Math.exp(-2.2 * dt); // плавно за 1 с (~90% за 1с)
+      this.waveCamBlend = (this.waveCamBlend || 0) + (targetWaveBlend - (this.waveCamBlend || 0)) * blendRate;
+
+      // В зоне волны:
+      // offsetY: 3.2 → 1.9 над поверхностью под сёрфером
+      // сдвиг к плечу: worldX - 1.2 → worldX - 2.2
+      // взгляд y: p.y + 0.6 → p.y + 1.4
+      const camOffsetY = THREE.MathUtils.lerp(3.2, 1.9, this.waveCamBlend);
+      const shoulderShift = THREE.MathUtils.lerp(1.2, 2.2, this.waveCamBlend);
+      const targetCamX = p.worldX - shoulderShift;
+
+      // Высота цели: над поверхностью под сёрфером + airY в воздухе
+      const targetCamY = surface.height + camOffsetY + p.airY;
+
+      // В воздухе (launch / прыжок) камера следует за y сёрфера с lerp 1 - exp(-6*dt)
+      const vertLerpRate = p.airborne ? (1.0 - Math.exp(-6.0 * dt)) : (1.0 - Math.exp(-8.0 * dt));
+      const horizLerpRate = 1.0 - Math.exp(-8.0 * dt);
+
+      this.camera.position.x += (targetCamX - this.camera.position.x) * horizLerpRate;
+      this.camera.position.y += (targetCamY - this.camera.position.y) * vertLerpRate;
       this.camera.position.z = p.z - 6.5;
+
+      // П. 2: Каждый кадр высота камеры >= поверхность под камерой + 0.8 м
+      if (this.peelWave) {
+        const camSurface = this.peelWave.getSurface(-this.camera.position.x, this.camera.position.z);
+        const minCamY = (camSurface.height || 0) + 0.8;
+        if (this.camera.position.y < minCamY) {
+          this.camera.position.y = minCamY;
+        }
+
+        // П. 2: Если луч от камеры к сёрферу пересекает меш волны, камеру сдвигать к плечу (+X экрана / -worldX), пока сёрфер не станет виден
+        for (let iter = 0; iter < 6; iter++) {
+          let occluded = false;
+          for (let step = 1; step <= 4; step++) {
+            const t = step / 5.0;
+            const rx = this.camera.position.x + t * (p.worldX - this.camera.position.x);
+            const ry = this.camera.position.y + t * ((p.y + 0.7) - this.camera.position.y);
+            const rz = this.camera.position.z + t * (p.z - this.camera.position.z);
+            const sPt = this.peelWave.getSurface(-rx, rz);
+            if (ry < (sPt.height || 0) + 0.15) {
+              occluded = true;
+              break;
+            }
+          }
+          if (occluded) {
+            this.camera.position.x -= 0.35; // сдвиг к плечу
+          } else {
+            break;
+          }
+        }
+      }
 
       // Тряска камеры (пена + карман + FxDirector)
       const shakeAmt = (this.peelWave ? this.peelWave.camShakeBonus : 0) +
@@ -788,9 +857,12 @@ class SliceGame extends SandboxGame {
         this.camera.position.y += (Math.random() - 0.5) * shakeAmt;
       }
 
+      // Взгляд: y + 1.4 в зоне волны
+      const lookAtYOffset = THREE.MathUtils.lerp(0.6, 1.4, this.waveCamBlend);
+      const lookAtXOffset = THREE.MathUtils.lerp(0.8, 1.6, this.waveCamBlend);
       this._camLookPos.set(
-        p.worldX + 0.8 - Math.sin(p.heading) * 4.0,
-        p.y + 0.6,
+        p.worldX + lookAtXOffset - Math.sin(p.heading) * 3.0,
+        p.y + lookAtYOffset,
         p.z + 14.0
       );
       this.camera.lookAt(this._camLookPos);

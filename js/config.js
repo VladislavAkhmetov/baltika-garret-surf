@@ -257,7 +257,7 @@ const CFG = {
   },
 
   peel: {
-    H: 3.2,
+    H: 6.0,
     faceFromX: -6,
     faceToX: 4,
     lipX: -5,

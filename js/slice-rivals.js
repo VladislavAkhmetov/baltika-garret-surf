@@ -68,10 +68,9 @@ class SliceRivals {
         }
       }
 
-      // 2. Бумажная бирка с именем над головой (§7.1)
+      // 2. Бумажная бирка с именем над головой (§7.1, п. 4 ревью)
       const nameplate = this.createNameplate(r.name, r.id === 'tony' ? '#D93829' : '#1F78B4');
-      nameplate.position.set(0, 2.7, 0);
-      rig.add(nameplate);
+      this.scene.add(nameplate);
       r.nameplateMesh = nameplate;
 
       this.scene.add(rig);
@@ -120,6 +119,8 @@ class SliceRivals {
     tony.speed = 26.5;
     tony.targetX = 1.0;
     tony.overtaken = false;
+    tony.aheadDuration = 0.0;
+    tony.overtakeCooldown = 0.0;
     tony.airY = 0;
     tony.airborne = false;
 
@@ -129,6 +130,8 @@ class SliceRivals {
     kiter.speed = 25.5;
     kiter.targetX = 6.0;
     kiter.overtaken = true;
+    kiter.aheadDuration = 0.0;
+    kiter.overtakeCooldown = 0.0;
     kiter.airY = 0;
     kiter.airborne = false;
   }
@@ -198,17 +201,47 @@ class SliceRivals {
         }
       }
 
-      // 6. Позиционирование 3D меша
+      // 6. Позиционирование 3D меша и бирки с именем (п. 4 ревью)
+      const worldX = SurfPhysics.toWorldX(r.x);
+      const y = surface.height + r.airY;
+
       if (r.mesh) {
-        const worldX = SurfPhysics.toWorldX(r.x);
-        const y = surface.height + r.airY;
         r.mesh.position.set(worldX, y, r.z);
         r.mesh.rotation.set(0, 0, surface.slope);
       }
 
-      // 7. Проверка обгона игроком (§6, §7)
-      if (player.z > r.z && !r.overtaken) {
+      if (r.nameplateMesh && this.game && this.game.camera) {
+        r.nameplateMesh.position.set(worldX, y + 2.7, r.z);
+        // Billboard строго лицом к камере, без отрицательного scale.x
+        r.nameplateMesh.quaternion.copy(this.game.camera.quaternion);
+
+        const camDist = this.game.camera.position.distanceTo(r.nameplateMesh.position);
+        if (camDist < 6.0) {
+          // Скрывать ближе 6 м
+          r.nameplateMesh.visible = false;
+        } else {
+          r.nameplateMesh.visible = true;
+          // Фиксированный экранный размер ~14px по высоте текста
+          const s = camDist * 0.048 * (this.game.camera.fov / 58.0);
+          r.nameplateMesh.scale.set(s, s, s);
+        }
+      }
+
+      // 7. Обгон с гистерезисом (п. 3 ревью)
+      // Кулдаун между обгонами для одного соперника — не чаще раза в 8 с
+      r.overtakeCooldown = Math.max(0, (r.overtakeCooldown || 0) - dt);
+
+      // Засчитывать, только если игрок впереди соперника на >= 3 м и держится так 0.5 с
+      const distAhead = player.z - r.z;
+      if (distAhead >= 3.0) {
+        r.aheadDuration = (r.aheadDuration || 0) + dt;
+      } else {
+        r.aheadDuration = 0.0;
+      }
+
+      if (!r.overtaken && r.aheadDuration >= 0.5 && r.overtakeCooldown <= 0.0) {
         r.overtaken = true;
+        r.overtakeCooldown = 8.0;
         if (this.game.fx) {
           if (r.id === 'tony') {
             this.game.fx.moment({
@@ -216,6 +249,7 @@ class SliceRivals {
               sub: 'ТОНИ',
               tone: 'gold',
               freeze: 450,
+              zoom: 0.88,
               priority: 3,
               sound: 'crowd'
             });
@@ -226,15 +260,21 @@ class SliceRivals {
               sub: 'КАЙТЕР',
               tone: 'white',
               freeze: 320,
+              zoom: 0.88,
               priority: 2,
               sound: 'crowd'
             });
             this.game.addScore(250);
           }
         }
-      } else if (player.z < r.z - 2.0) {
-        // Если соперник снова вырвался вперед
+      } else if (r.overtaken && r.z > player.z) {
+        // Обратный обгон (соперник обошёл игрока) — toast «ТОНИ ОБОШЁЛ», без стоп-кадра
         r.overtaken = false;
+        r.aheadDuration = 0.0;
+        if (this.game.fx) {
+          const toastName = r.id === 'tony' ? 'ТОНИ ОБОШЁЛ' : 'КАЙТЕР ОБОШЁЛ';
+          this.game.fx.toast(toastName, 'red');
+        }
       }
 
       // 8. Взаимодействие с игроком

@@ -64,6 +64,15 @@ class FxDirector {
     }
     this.halftoneEl = halftone;
 
+    // 3.1 Тон стоп-кадра (п. 5 ревью)
+    let toneOverlay = document.getElementById('fx-tone-overlay');
+    if (!toneOverlay) {
+      toneOverlay = document.createElement('div');
+      toneOverlay.id = 'fx-tone-overlay';
+      overlay.appendChild(toneOverlay);
+    }
+    this.toneOverlayEl = toneOverlay;
+
     // 4. Блок бумажных плашек
     let box = document.getElementById('fx-moment-box');
     if (!box) {
@@ -118,7 +127,7 @@ class FxDirector {
       sub: '',
       tone: 'yellow',      // yellow | white | red | gold | ocean | coral
       freeze: 320,         // мс
-      zoom: 0.86,          // множитель FOV
+      zoom: 0.88,          // множитель FOV (п. 6 ревью: ×0.88, позицию не трогать)
       shake: 0.25,         // тряска 0..1
       haptic: [20, 30, 60],
       sound: 'slam',
@@ -160,9 +169,9 @@ class FxDirector {
     // Мгновенное замедление времени (§6.2)
     this.timeScale = 0.04;
 
-    // Тряска и зум
+    // Тряска и зум (п. 6 ревью: zoom меняет только FOV ×0.88)
     this.shake(opts.shake);
-    this.targetZoom = opts.zoom;
+    this.targetZoom = opts.zoom || 0.88;
 
     // Хаптика
     if (opts.haptic && typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -180,9 +189,9 @@ class FxDirector {
       }
     }
 
-    // Скрываем подсказки обучения во время эпичных стоп-кадров
-    const hint = document.getElementById('slice-tutorial-hint');
-    if (hint) hint.classList.add('hide');
+    // П. 5: Подсказки на время стоп-кадра скрывать
+    const hints = document.querySelectorAll('.slice-tutorial-hint, #slice-tutorial-hint');
+    hints.forEach(h => h.classList.add('hide'));
 
     // DOM-анимации
     if (this.appContainer) {
@@ -200,6 +209,20 @@ class FxDirector {
     // Полутоновый растр
     if (this.halftoneEl) {
       this.halftoneEl.classList.add('active');
+    }
+
+    // П. 5: Тон стоп-кадра — multiply, opacity 0.25
+    if (this.toneOverlayEl) {
+      const toneColors = {
+        yellow: '#F8C83A',
+        gold: '#E0A21B',
+        white: '#F4ECDC',
+        red: '#D93829',
+        ocean: '#5CC8E8',
+        coral: '#FF6B4A'
+      };
+      this.toneOverlayEl.style.backgroundColor = toneColors[opts.tone] || '#F8C83A';
+      this.toneOverlayEl.classList.add('active');
     }
 
     // Бумажные плашки
@@ -233,6 +256,16 @@ class FxDirector {
 
     if (this.halftoneEl) {
       this.halftoneEl.classList.remove('active');
+    }
+
+    if (this.toneOverlayEl) {
+      this.toneOverlayEl.classList.remove('active');
+    }
+
+    // Восстанавливаем подсказку обучения, если есть активная
+    if (this.game && this.game.currentBeat && this.game.currentBeat.hint && this.game.state === 'playing') {
+      const hint = document.getElementById('slice-tutorial-hint');
+      if (hint) hint.classList.remove('hide');
     }
 
     // Улёт плашек вверх-вправо

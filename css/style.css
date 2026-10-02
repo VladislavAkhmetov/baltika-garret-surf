@@ -1110,9 +1110,9 @@ body::before {
   justify-content: center;
 }
 
-/* 1. Canvas freeze filter (§6.3) */
+/* 1. Canvas freeze filter (п. 5 ревью) */
 .fx-freeze #webgl-canvas {
-  filter: saturate(0.15) contrast(1.4) brightness(1.08);
+  filter: saturate(0.55) contrast(1.25);
 }
 
 /* 2. Fullscreen flash overlay */
@@ -1128,19 +1128,32 @@ body::before {
   opacity: 0.35;
 }
 
-/* 3. Halftone dots overlay (6px) */
+/* 3. Halftone dots overlay (3px, opacity 0.35, п. 5 ревью) */
 #fx-halftone {
   position: absolute;
   inset: 0;
   opacity: 0;
   pointer-events: none;
-  background-image: radial-gradient(#1C1A22 1.8px, transparent 1.8px);
-  background-size: 6px 6px;
+  background-image: radial-gradient(#1C1A22 1.0px, transparent 1.0px);
+  background-size: 3px 3px;
   mix-blend-mode: multiply;
   transition: opacity 0.06s ease-out;
 }
 #fx-halftone.active {
-  opacity: 0.55;
+  opacity: 0.35;
+}
+
+/* 3.1 Тон стоп-кадра — multiply, opacity 0.25 (п. 5 ревью) */
+#fx-tone-overlay {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  transition: opacity 0.06s ease-out;
+}
+#fx-tone-overlay.active {
+  opacity: 0.25;
 }
 
 /* 4. Moment Plates Container */
