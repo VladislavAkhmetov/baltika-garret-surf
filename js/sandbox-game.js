@@ -38,11 +38,23 @@ class SandboxGame {
 
     this.entities = new EntityFactory(this.scene);
     this.mug = new MugLiquid();
-    this.mugRenderer = new MugRenderer();
+    const mugCanvas = document.getElementById('mug-canvas');
+    this.mugRenderer = new MugRenderer(mugCanvas);
+    this.mugRenderer.setColor('cherry');
     this.balance = new BalanceSystem(this);
     this.input = new ControlInput();
     this.physics = new SurfPhysics();
     this.panel = new TuningPanel(this);
+
+    // Подключение слушателя выплеска к партиклам MugRenderer
+    this.mug.addSpillListener((side, amount) => {
+      if (this.mugRenderer) {
+        this.mugRenderer.emitSpillParticles(side);
+      }
+      if (this.audio) {
+        this.audio.playCarve(0.4);
+      }
+    });
 
     // 3. Статические препятствия и бот для 900-метрового цикла
     this.initCycleObjects();
@@ -219,6 +231,7 @@ class SandboxGame {
         } else {
           console.warn('[ControlInput] Gyro permission not granted, switching to drag');
           this.input.state.mode = 'drag';
+          this.input.setupGhostHints();
         }
       } catch (err) {
         console.warn('[ControlInput] Gyro permission error:', err);
@@ -236,6 +249,37 @@ class SandboxGame {
       if (calScreen) calScreen.classList.remove('hide');
       this.state = 'calibrating';
 
+      // Начинаем сбор калибровки прямо во время обратного отсчета 3-2-1
+      const samples = [];
+      const sampleInterval = setInterval(() => {
+        if (this.input.rawGamma !== undefined) {
+          samples.push(this.input.rawGamma);
+        }
+      }, 50);
+
+      const finishCalibration = () => {
+        clearInterval(sampleInterval);
+        if (samples.length > 0) {
+          const sum = samples.reduce((a, b) => a + b, 0);
+          this.input.neutralGamma = sum / samples.length;
+        } else {
+          this.input.neutralGamma = this.input.rawGamma || 0;
+        }
+        this.input.gyroCalibrated = true;
+        this.input.hasGyro = true;
+        this.input.state.mode = 'gyro';
+        if (calScreen) calScreen.classList.add('hide');
+        this.state = 'playing';
+      };
+
+      // Тап по модалке калибровки позволяет мгновенно начать игру
+      const onSkipClick = () => {
+        calScreen.removeEventListener('click', onSkipClick);
+        clearInterval(countInterval);
+        finishCalibration();
+      };
+      if (calScreen) calScreen.addEventListener('click', onSkipClick, { once: true });
+
       let count = 3;
       if (calCount) calCount.textContent = count;
       const countInterval = setInterval(() => {
@@ -244,12 +288,10 @@ class SandboxGame {
           calCount.textContent = count;
         } else {
           clearInterval(countInterval);
-          if (calScreen) calScreen.classList.add('hide');
-          this.input.startCalibration((calibrated) => {
-            this.state = 'playing';
-          });
+          if (calScreen) calScreen.removeEventListener('click', onSkipClick);
+          finishCalibration();
         }
-      }, 600);
+      }, 450);
     } else {
       this.state = 'playing';
     }
@@ -531,6 +573,10 @@ class SandboxGame {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+    if (this.mugRenderer) {
+      this.mugRenderer.updateSize();
+    }
   }
 }
 

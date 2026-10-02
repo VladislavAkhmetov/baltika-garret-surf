@@ -195,6 +195,11 @@ class ControlInput {
     const w = window.innerWidth;
     const isLeftHalf = e.clientX < w * 0.5;
 
+    if (!this.hasGyro && this.state.mode !== 'keys' && this.forcedMode !== 'gyro') {
+      this.state.mode = 'drag';
+      this.setupGhostHints();
+    }
+
     if (this.state.mode === 'drag') {
       if (isLeftHalf) {
         // Левая половина: Drag = наклон

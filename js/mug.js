@@ -173,8 +173,8 @@ class MugLiquid {
 
 class MugRenderer {
   constructor(canvas) {
-    this.canvas = canvas;
-    this.ctx = canvas ? canvas.getContext('2d') : null;
+    this.canvas = canvas || (typeof document !== 'undefined' ? document.getElementById('mug-canvas') : null);
+    this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
 
     // Пузырьки в кружке (12 штук)
     this.bubbles = [];
