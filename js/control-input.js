@@ -140,8 +140,10 @@ class ControlInput {
     const startTime = performance.now();
 
     const sampler = () => {
-      samples.push({ gamma: this.rawGamma, beta: this.rawBeta });
-      if (performance.now() - startTime < 1000) {
+      if (this.rawGamma !== undefined) {
+        samples.push({ gamma: this.rawGamma, beta: this.rawBeta });
+      }
+      if (performance.now() - startTime < 800) {
         requestAnimationFrame(sampler);
       } else {
         let sumG = 0;
@@ -150,8 +152,9 @@ class ControlInput {
           sumG += s.gamma;
           sumB += s.beta;
         }
-        this.neutralGamma = sumG / Math.max(1, samples.length);
+        this.neutralGamma = samples.length > 0 ? (sumG / samples.length) : 0;
         this.gyroCalibrated = true;
+        this.hasGyro = true;
         this.state.mode = 'gyro';
         console.log(`[ControlInput] Gyro calibrated: neutralGamma=${this.neutralGamma.toFixed(1)}°`);
         if (onComplete) onComplete(true);
@@ -310,8 +313,8 @@ class ControlInput {
     }
 
     // 2. Вычисление lean по активному режиму
-    if (this.state.mode === 'gyro' && this.hasGyro && this.gyroCalibrated) {
-      let rel = this.rawGamma - this.neutralGamma;
+    if (this.state.mode === 'gyro') {
+      let rel = (this.rawGamma || 0) - (this.neutralGamma || 0);
 
       // Мёртвая зона (1.5°)
       if (Math.abs(rel) < leanDeadzone) {

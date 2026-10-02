@@ -209,6 +209,22 @@ class SandboxGame {
   }
 
   async onStart() {
+    // 1. Немедленный запрос разрешений iOS на доступ к гироскопу строго в контексте клика
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      try {
+        const resp = await DeviceOrientationEvent.requestPermission();
+        if (resp === 'granted') {
+          this.input.hasGyro = true;
+          this.input.state.mode = 'gyro';
+        } else {
+          console.warn('[ControlInput] Gyro permission not granted, switching to drag');
+          this.input.state.mode = 'drag';
+        }
+      } catch (err) {
+        console.warn('[ControlInput] Gyro permission error:', err);
+      }
+    }
+
     const startScreen = document.getElementById('sandbox-start-screen');
     if (startScreen) startScreen.classList.add('hide');
 
@@ -229,11 +245,11 @@ class SandboxGame {
         } else {
           clearInterval(countInterval);
           if (calScreen) calScreen.classList.add('hide');
-          this.input.requestPermissionsAndCalibrate((calibrated) => {
+          this.input.startCalibration((calibrated) => {
             this.state = 'playing';
           });
         }
-      }, 700);
+      }, 600);
     } else {
       this.state = 'playing';
     }
@@ -260,10 +276,11 @@ class SandboxGame {
 
   snapCamera() {
     const p = this.physics.state;
-    this._camTargetPos.set(p.worldX - 1.2, p.y + 3.2, p.z - 6.5);
+    const camFollowX = p.worldX * 0.65 - 1.2;
+    this._camTargetPos.set(camFollowX, p.y + 3.2, p.z - 6.5);
     this.camera.position.copy(this._camTargetPos);
     this._camLookPos.set(
-      p.worldX + 0.8 - Math.sin(p.heading) * 4.0,
+      camFollowX + 1.2 - Math.sin(p.heading) * 3.0,
       p.y + 0.6,
       p.z + 14.0
     );
@@ -437,16 +454,18 @@ class SandboxGame {
     }
 
     // 2. Free-roam камера (§3 HANDOFF v3)
-    // Позиция камеры = (worldX - 1.2, y + 3.2, z - 6.5)
-    this._camTargetPos.set(p.worldX - 1.2, p.y + 3.2, p.z - 6.5);
-    const lerpRate = 1.0 - Math.exp(-8.0 * dt);
+    // Камера следует за сёрфером с мягким запаздыванием (коэффициент 0.65 и lerp),
+    // чтобы при наклоне сёрфер ВИЗУАЛЬНО перемещался по ширине экрана (от кармана к плечу).
+    const camFollowX = p.worldX * 0.65 - 1.2;
+    this._camTargetPos.set(camFollowX, p.y + 3.2, p.z - 6.5);
+    const lerpRate = 1.0 - Math.exp(-4.5 * dt);
     this.camera.position.x += (this._camTargetPos.x - this.camera.position.x) * lerpRate;
     this.camera.position.y += (this._camTargetPos.y - this.camera.position.y) * lerpRate;
     this.camera.position.z = this._camTargetPos.z; // Z жёстко без отставания!
 
-    // Взгляд = (worldX + 0.8 - sin(heading) * 4, y + 0.6, z + 14)
+    // Взгляд с упреждением в сторону виража
     this._camLookPos.set(
-      p.worldX + 0.8 - Math.sin(p.heading) * 4.0,
+      camFollowX + 1.2 - Math.sin(p.heading) * 3.0,
       p.y + 0.6,
       p.z + 14.0
     );
