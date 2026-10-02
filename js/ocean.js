@@ -387,10 +387,12 @@ class OceanLanes {
 
   // 1. Основное полотно воды 14 × 220 м
   initWaterPlane() {
-    const W = CFG.ocean.width;   // 14 м
-    const L = CFG.ocean.length;  // 220 м
-    const segX = CFG.ocean.segX; // 28
-    const segZ = CFG.ocean.segZ; // 140
+    const W = CFG.ocean.width || 14;   // 14 м в игре, 30 м в песочнице
+    const L = CFG.ocean.length || 220; // 220 м
+    const centerX = CFG.ocean.waterCenterX || 0;
+    // Шаг сетки <= 0.6 м (HANDOFF v3 §5)
+    const segX = Math.max(28, Math.ceil(W / 0.5));
+    const segZ = CFG.ocean.segZ || 140;
 
     const geo = new THREE.PlaneGeometry(W, L, segX, segZ);
     geo.rotateX(-Math.PI * 0.5);
@@ -439,13 +441,14 @@ class OceanLanes {
     });
 
     this.waterMesh = new THREE.Mesh(geo, mat);
-    this.waterMesh.position.set(0, 0, CFG.ocean.offsetZ);
+    this.waterMesh.position.set(centerX, 0, CFG.ocean.offsetZ);
     this.scene.add(this.waterMesh);
   }
 
   // 2. Разделители полос на x = ±1.2 м (ширина 0.45 м)
   initLaneDividers() {
     this.dividers = [];
+    if (CFG.ocean.showLaneDividers === false) return;
     const divWidth = CFG.lanes.dividerWidth; // 0.45 м
     const divLength = CFG.ocean.length;      // 220 м
     const segZ = CFG.ocean.segZ;             // 140
@@ -490,35 +493,37 @@ class OceanLanes {
   // 3. Левая сторона экрана (+X): 3 сплошных слоя ступенчатых волн, уходящих под воду (y = -0.5)
   initLeftSideDecor() {
     this.leftSteps = [];
-    const stepXs = CFG.ocean.sideStepsX; // [7, 9, 12] — слева на экране (+X)
-    const stepHeights = [2.8, 4.2, 5.8]; // каждый следующий выше и дальше
+    if (CFG.ocean.showLeftSteps !== false) {
+      const stepXs = CFG.ocean.sideStepsX; // [7, 9, 12] — слева на экране (+X)
+      const stepHeights = [2.8, 4.2, 5.8]; // каждый следующий выше и дальше
 
-    stepXs.forEach((x, idx) => {
-      const H = stepHeights[idx];
-      const geo = new THREE.PlaneGeometry(CFG.ocean.length, H);
-      geo.rotateY(-Math.PI * 0.5); // развернуто лицом к дорожке (+X смотрит на дорожку)
+      stepXs.forEach((x, idx) => {
+        const H = stepHeights[idx];
+        const geo = new THREE.PlaneGeometry(CFG.ocean.length, H);
+        geo.rotateY(-Math.PI * 0.5); // развернуто лицом к дорожке (+X смотрит на дорожку)
 
-      const mat = new THREE.MeshBasicMaterial({
-        map: this.stepsTexture,
-        transparent: true,
-        alphaTest: 0.2,
-        fog: false, // fog: false по ТЗ!
-        side: THREE.DoubleSide
+        const mat = new THREE.MeshBasicMaterial({
+          map: this.stepsTexture,
+          transparent: true,
+          alphaTest: 0.2,
+          fog: false, // fog: false по ТЗ!
+          side: THREE.DoubleSide
+        });
+
+        const mesh = new THREE.Mesh(geo, mat);
+        // Низ слоя уходит под воду (y = -0.5): центр y = -0.5 + H * 0.5
+        const centerY = -0.5 + H * 0.5;
+        mesh.position.set(x, centerY, CFG.ocean.offsetZ);
+        this.scene.add(mesh);
+
+        this.leftSteps.push({
+          mesh: mesh,
+          baseX: x,
+          baseY: centerY,
+          parallax: CFG.ocean.sideStepsParallax[idx]
+        });
       });
-
-      const mesh = new THREE.Mesh(geo, mat);
-      // Низ слоя уходит под воду (y = -0.5): центр y = -0.5 + H * 0.5
-      const centerY = -0.5 + H * 0.5;
-      mesh.position.set(x, centerY, CFG.ocean.offsetZ);
-      this.scene.add(mesh);
-
-      this.leftSteps.push({
-        mesh: mesh,
-        baseX: x,
-        baseY: centerY,
-        parallax: CFG.ocean.sideStepsParallax[idx]
-      });
-    });
+    }
 
     // Городок на скале слева на экране (+X) на x = +15
     const townGeo = new THREE.PlaneGeometry(36, 14);
@@ -697,27 +702,31 @@ class OceanLanes {
     pos.needsUpdate = true;
 
     // 2. Разделители полос: сохраняют исходную ширину 0.45 м (d.origX) и динамически следуют за волной
-    this.dividers.forEach((d) => {
-      d.mesh.position.z = playerZ + CFG.ocean.offsetZ;
-      const dPos = d.geo.attributes.position;
-      const dCount = dPos.count;
-      for (let i = 0; i < dCount; i++) {
-        const vz = dPos.getZ(i);
-        const worldZ = vz + d.mesh.position.z;
-        const waveX = d.baseX + Math.sin(worldZ * 0.25 + this.time * 2.0) * CFG.ocean.dividerAmp;
-        const surfaceH = this.calcWaveH(waveX, worldZ, this.time);
+    if (this.dividers && this.dividers.length > 0) {
+      this.dividers.forEach((d) => {
+        d.mesh.position.z = playerZ + CFG.ocean.offsetZ;
+        const dPos = d.geo.attributes.position;
+        const dCount = dPos.count;
+        for (let i = 0; i < dCount; i++) {
+          const vz = dPos.getZ(i);
+          const worldZ = vz + d.mesh.position.z;
+          const waveX = d.baseX + Math.sin(worldZ * 0.25 + this.time * 2.0) * CFG.ocean.dividerAmp;
+          const surfaceH = this.calcWaveH(waveX, worldZ, this.time);
 
-        dPos.setX(i, d.origX[i] + (waveX - d.baseX));
-        dPos.setY(i, surfaceH + 0.05); // строго над поверхностью воды
-      }
-      dPos.needsUpdate = true;
+          dPos.setX(i, d.origX[i] + (waveX - d.baseX));
+          dPos.setY(i, surfaceH + 0.05); // строго над поверхностью воды
+        }
+        dPos.needsUpdate = true;
+      });
       this.laneFoamTexture.offset.y = -(playerZ / 30.0) % 1;
-    });
+    }
 
     // 3. Левая сторона экрана (+X): ступеньки и городок
-    this.leftSteps.forEach((s) => {
-      s.mesh.position.z = playerZ + CFG.ocean.offsetZ * s.parallax;
-    });
+    if (this.leftSteps && this.leftSteps.length > 0) {
+      this.leftSteps.forEach((s) => {
+        s.mesh.position.z = playerZ + CFG.ocean.offsetZ * s.parallax;
+      });
+    }
     if (this.townMesh) {
       this.townMesh.position.z = playerZ + 110;
     }

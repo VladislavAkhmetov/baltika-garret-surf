@@ -303,8 +303,15 @@ class BalanceSystem {
     this.worldRoll = totalRoll;
     this.axImpulse = totalAx;
 
-    // 3. Формула кружки: mugTilt = worldRoll * (1 - assist) + playerTilt
-    this.mugTilt = this.worldRoll * (1.0 - this.assist) + this.playerTilt;
+    // 3. Формула кружки: mugTilt = tiltInput (jerkTilt) + worldRoll * (1 - assist)
+    if (CFG.balance.model === 'jerk') {
+      if (CFG.surf && CFG.surf.assist !== undefined) {
+        this.assist = CFG.surf.assist;
+      }
+      this.mugTilt = this.playerTilt + this.worldRoll * (1.0 - this.assist);
+    } else {
+      this.mugTilt = this.worldRoll * (1.0 - this.assist) + this.playerTilt;
+    }
 
     // 4. Зона баланса: |mugTilt| < 4°
     const inZone = Math.abs(this.mugTilt) < this.balanceZoneRad;
@@ -320,11 +327,11 @@ class BalanceSystem {
       // 5 с подряд в балансе -> +1 комбо, toast «РОВНО ДЕРЖИШЬ»
       if (this.balanceContinuousTime >= CFG.balance.balanceHoldTime) {
         this.balanceContinuousTime = 0; // перезапуск счетчика
-        if (this.game) {
+        if (this.game && this.game.showTrickSticker) {
           this.game.stats.combo = (this.game.stats.combo || 0) + 1;
           this.game.stats.score += 150;
           this.game.showTrickSticker('РОВНО ДЕРЖИШЬ!', '+150 ★');
-          this.game.audio.playCarve(0.7);
+          if (this.game.audio) this.game.audio.playCarve(0.7);
         }
       }
     } else {
@@ -335,6 +342,42 @@ class BalanceSystem {
     this.updateHUDIndicators();
   }
 
+  // Обновление шума склона волны (активен пока inPocket > 0, HANDOFF v3 §4)
+  updateFaceChop(inPocket) {
+    if (!this.faceChopSource || !this.faceChopSource.active) {
+      if (inPocket > 0.01) {
+        this.faceChopSource = this.acquireSource();
+        if (this.faceChopSource) {
+          this.faceChopSource.type = 'faceChop';
+          this.faceChopSource.dur = 999999;
+          this.faceChopSource.telegraphLead = 0;
+        }
+      }
+    }
+    if (this.faceChopSource && this.faceChopSource.active) {
+      if (inPocket <= 0.01) {
+        this.faceChopSource.active = false;
+        this.faceChopSource = null;
+      } else {
+        const chopDeg = (CFG.surf && CFG.surf.chopPocket !== undefined) ? CFG.surf.chopPocket : 5;
+        this.faceChopSource.maxRollRad = (chopDeg * Math.PI / 180) * inPocket;
+      }
+    }
+  }
+
+  // Новый источник: swellBump ±2° на гребнях зыби (HANDOFF v3 §4)
+  triggerSwellBump(dir = 1, dur = 0.4) {
+    const s = this.acquireSource();
+    if (!s) return null;
+    s.type = 'swellBump';
+    s.dir = dir;
+    s.dur = dur;
+    s.maxRollRad = (2.0 * Math.PI) / 180;
+    s.ax = 0;
+    s.telegraphLead = 0;
+    return s;
+  }
+
   // Вычисление формы кривой возмущения по типу
   evaluateSource(s, t) {
     let roll = 0.0;
@@ -342,6 +385,20 @@ class BalanceSystem {
     const factor = s.damped ? (1.0 - CFG.balance.waiterDamp) : 1.0;
 
     switch (s.type) {
+      case 'faceChop': {
+        // Шум 4 Гц на склоне
+        const n1 = Math.sin(t * 4.0 * 2 * Math.PI);
+        const n2 = Math.sin(t * 7.3 * 2 * Math.PI + 1.2);
+        roll = (n1 * 0.6 + n2 * 0.4) * s.maxRollRad;
+        ax = 0;
+        break;
+      }
+      case 'swellBump': {
+        const p = Math.min(1, t / s.dur);
+        roll = Math.sin(p * Math.PI) * s.maxRollRad * s.dir;
+        ax = 0;
+        break;
+      }
       case 'swell': {
         // Синус 0.6 Гц
         const phase = 2 * Math.PI * CFG.balance.types.swell.freq * t;

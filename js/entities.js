@@ -493,12 +493,19 @@ class EntityFactory {
     return null;
   }
 
-  // Вернуть в пул
-  recycle(entity) {
-    if (!entity) return;
-    entity.active = false;
-    entity.collected = false;
-    entity.mesh.visible = false;
+  // Статичные объекты для свободного размещения (песочница)
+  createRamp(x, z, isMega = false) {
+    const item = this.buildRampMesh(isMega);
+    item.mesh.position.set(x, 0, z);
+    this.scene.add(item.mesh);
+    return item.mesh;
+  }
+
+  createBuoy(x, z) {
+    const item = this.buildBuoyMesh();
+    item.mesh.position.set(x, 0, z);
+    this.scene.add(item.mesh);
+    return item.mesh;
   }
 }
 

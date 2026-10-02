@@ -67,6 +67,9 @@ const CFG = {
   },
 
   ocean: {
+    showLaneDividers: true,
+    showLeftSteps: true,
+    waterCenterX: 0,
     width: 14,
     length: 220,
     segX: 28,
@@ -150,6 +153,7 @@ const CFG = {
   },
 
   balance: {
+    model: 'tilt', // 'jerk' (песочница) | 'tilt' (старое v2)
     poolSize: 16,
     defaultAssist: 0.4,
     cherryAssistPenalty: -0.1,
@@ -211,6 +215,56 @@ const CFG = {
       foamRegenMult: 1.0,
       foamMaxMult: 1.0
     }
+  },
+
+  surf: {
+    // Наклон
+    leanRange: 25,         // градусов (min 10, max 40)
+    leanCurve: 1.3,        // (min 1.0, max 2.0)
+    leanAlpha: 0.45,       // (min 0.15, max 0.9)
+    leanDeadzone: 1.5,     // градусов
+    maxHeading: 38,        // градусов (min 15, max 60)
+    turnRate: 6,           // (min 2, max 12)
+    lateralScale: 0.35,    // (min 0.15, max 0.6)
+    // Скорость
+    pocketBoost: 0.40,     // (min 0, max 0.8)
+    carveDrag: 0.12,       // (min 0, max 0.3)
+    pumpGain: 8,           // (min 0, max 20)
+    peelSpeed: 1.0,        // (min 0.8, max 1.2)
+    baseSpeedStart: 26,
+    baseSpeedMax: 34,
+    speedResponse: 1.5,
+    pumpDecay: 0.6,
+    pumpMax: 8,
+    headingAx: 0.15,
+    // Прыжок
+    jumpBase: 5,           // (min 2, max 9)
+    jumpHold: 8,           // (min 0, max 14)
+    gravity: 18,           // (min 10, max 30)
+    spinRate: 540,         // °/с (min 200, max 900)
+    minHoldForJump: 0.12,  // с
+    rampJumpMult: 1.6,
+    lipJumpMult: 1.4,
+    // Границы и карман
+    trackMinX: -5,
+    trackMaxX: 16,
+    pocketWidth: 4,
+    // Кружка
+    sloshTau: 0.35,        // с (min 0.1, max 0.8)
+    jerkGain: 1.0,         // (min 0.3, max 2.0)
+    chopPocket: 5,         // градусов (min 0, max 12)
+    assist: 0.3            // (min 0, max 0.6)
+  },
+
+  peel: {
+    H: 3.2,
+    faceFromX: -6,
+    faceToX: 4,
+    lipX: -5,
+    lipThrowEvery: [6, 10],
+    lipThrowLen: 12,
+    lipThrowWarn: 1.2,
+    lipThrowZoneX: 1
   },
 
   rivals: {
