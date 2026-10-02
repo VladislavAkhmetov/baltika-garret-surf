@@ -108,22 +108,30 @@ class SurfModels {
           group.userData.currentPose = poseName;
         }
 
-        if (poseName === 'turn') {
-          // steerStrength > 0 означает движение влево по экрану (+X)
-          const isLeft = steerStrength > 0;
-          cardMesh.scale.x = isLeft ? 1 : -1;
-          cupSprite.position.set(isLeft ? 0.75 : -0.75, 1.40, -0.04);
-          cupSprite.scale.x = isLeft ? 1 : -1;
-        } else if (poseName === 'jump') {
-          cardMesh.scale.x = 1;
-          cupSprite.scale.x = 1;
-          // В позе jump рука поднята вверх: x = +0.35, y = 1.90, z = -0.04
-          cupSprite.position.set(0.35, 1.90, -0.04);
+        if (poseName === 'duck') {
+          cardMesh.scale.set(1, 0.72, 1);
+          cardMesh.position.y = 1.22 * 0.72;
+          cupSprite.position.set(0.54, 1.02, -0.04);
+          cupSprite.scale.set(1, 1, 1);
         } else {
-          cardMesh.scale.x = 1;
-          cupSprite.scale.x = 1;
-          // В позе norma рука слева на экране (+X): x = +0.54, y = 1.38, z = -0.04
-          cupSprite.position.set(0.54, 1.38, -0.04);
+          cardMesh.position.y = 1.22;
+          if (poseName === 'turn') {
+            // steerStrength > 0 означает движение влево по экрану (+X)
+            const isLeft = steerStrength > 0;
+            cardMesh.scale.set(isLeft ? 1 : -1, 1, 1);
+            cupSprite.position.set(isLeft ? 0.75 : -0.75, 1.40, -0.04);
+            cupSprite.scale.set(isLeft ? 1 : -1, 1, 1);
+          } else if (poseName === 'jump') {
+            cardMesh.scale.set(1, 1, 1);
+            cupSprite.scale.set(1, 1, 1);
+            // В позе jump рука поднята вверх: x = +0.35, y = 1.90, z = -0.04
+            cupSprite.position.set(0.35, 1.90, -0.04);
+          } else {
+            cardMesh.scale.set(1, 1, 1);
+            cupSprite.scale.set(1, 1, 1);
+            // В позе norma рука слева на экране (+X): x = +0.54, y = 1.38, z = -0.04
+            cupSprite.position.set(0.54, 1.38, -0.04);
+          }
         }
       }
     };

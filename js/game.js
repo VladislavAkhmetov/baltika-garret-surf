@@ -286,12 +286,12 @@ class GarretSurfGame {
     const startScreen = document.getElementById('start-screen');
     if (startScreen) startScreen.classList.add('hide');
 
-    // Проверяем гироскоп и калибровку
+    // Проверяем гироскоп и калибровку (§3.4)
     const calScreen = document.getElementById('calibration-screen');
     const calCount = document.getElementById('calibration-count');
+    const isMobileWithTouch = typeof window !== 'undefined' && ('ontouchstart' in window || (navigator && navigator.maxTouchPoints > 0));
 
-    // Если гироскоп поддерживается и не принудительный свайп/кнопки
-    if (this.input.state.mode === 'gyro' || (!this.input.forcedMode && typeof DeviceOrientationEvent !== 'undefined')) {
+    if ((this.input.state.balanceMode === 'gyro' || (!this.input.forcedMode && isMobileWithTouch && typeof DeviceOrientationEvent !== 'undefined')) && !this.input.gyroCalibrated) {
       if (calScreen) calScreen.classList.remove('hide');
       this.state = 'calibrating';
 
@@ -412,12 +412,15 @@ class GarretSurfGame {
     const steerDiff = p.targetX - p.x;
 
     // Регистрация смены полосы для системы баланса (§5.3)
-    if (this._prevTargetX !== undefined && Math.abs(p.targetX - this._prevTargetX) > 0.5) {
-      const steerDir = Math.sign(p.targetX - this._prevTargetX);
+    if (this._prevTargetLane === undefined) {
+      this._prevTargetLane = inp.laneIndex;
+    }
+    if (inp.laneIndex !== this._prevTargetLane) {
+      const steerDir = Math.sign(CFG.lanes.x[inp.laneIndex] - CFG.lanes.x[this._prevTargetLane]);
       if (this.balance) {
-        this.balance.onLaneChange(steerDir);
+        this.balance.onLaneChange(steerDir, inp.playerTilt);
       }
-      this._prevTargetX = p.targetX;
+      this._prevTargetLane = inp.laneIndex;
     }
 
     // Высокая отзывчивость сглаживания
@@ -465,6 +468,8 @@ class GarretSurfGame {
       let targetPose = 'norma';
       if (p.isJumping) {
         targetPose = 'jump';
+      } else if (p.isDucking) {
+        targetPose = 'duck';
       } else if (Math.abs(steerDiff) > 0.08) {
         targetPose = 'turn';
       }
@@ -494,9 +499,9 @@ class GarretSurfGame {
       const worldRoll = this.balance ? this.balance.worldRoll : 0;
       this.surferRig.rotation.set(0, 0, worldRoll + p.roll * 0.4);
 
-      // Рука с кружкой: -playerTilt (видно, как сёрфер компенсирует)
+      // Рука с кружкой: -playerTilt (видно, как сёрфер компенсирует контр-наклоном)
+      const playerTilt = inp.playerTilt || 0;
       if (this.surferRig.userData && this.surferRig.userData.beerMug) {
-        const playerTilt = this.input.state.mode === 'gyro' ? this.input.state.tilt : p.roll;
         this.surferRig.userData.beerMug.rotation.z = -playerTilt;
       }
 
@@ -507,7 +512,7 @@ class GarretSurfGame {
     }
 
     // 8. Баланс и физика кружки с пивом (§5.1, §5.3 LEVEL1_SPEC)
-    const playerTilt = this.input.state.mode === 'gyro' ? this.input.state.tilt : p.roll;
+    const playerTilt = inp.playerTilt || 0;
     if (this.balance) {
       this.balance.update(dt, p.z, p.speed, playerTilt);
     }
@@ -571,18 +576,19 @@ class GarretSurfGame {
   }
 
   onPlayerLanding() {
-    // Чистая посадка:
-    // Гироскоп — |rel| < 6° в момент касания
-    // Свайпы — тап в окне ±150 мс
-    let isClean = false;
-    if (this.input.state.mode === 'gyro') {
-      const relDeg = Math.abs(this.input.rawGamma - this.input.neutralGamma);
-      isClean = relDeg < CFG.mug.cleanGyroThreshold;
+    // Чистая посадка (v2 §5.1): |mugTilt| < 6° в момент касания для всех режимов баланса
+    const mugTiltDeg = this.balance ? Math.abs(this.balance.mugTilt * (180 / Math.PI)) : 0;
+    const cleanThreshold = CFG.mug.cleanGyroThreshold || 6;
+    let cleanVal = 0;
+    if (mugTiltDeg <= cleanThreshold) {
+      cleanVal = 1.0;
+    } else if (mugTiltDeg >= 20) {
+      cleanVal = 0.0;
     } else {
-      isClean = this._landingTapRegistered;
+      cleanVal = 1.0 - (mugTiltDeg - cleanThreshold) / (20 - cleanThreshold);
     }
 
-    const cleanVal = isClean ? 1.0 : 0.0;
+    const isClean = cleanVal > 0.65;
     this.mug.applyLandingImpulse(cleanVal);
     this._landingTapRegistered = false;
 
@@ -704,8 +710,8 @@ class GarretSurfGame {
     const currentSection = LEVEL1.sections.find((s) => curZ >= s.fromM && curZ < s.toM) || LEVEL1.sections[0];
 
     const speedMs = this.player.speed.toFixed(1);
-    const mode = this.input.state.mode;
-    const tiltDeg = ((this.input.state.tilt * 180) / Math.PI).toFixed(1);
+    const routeMode = this.input.state.mode;
+    const balMode = this.input.state.balanceMode;
     const laneNames = ['0 [Левая +2.4]', '1 [Центр 0.0]', '2 [Правая -2.4]'];
     const laneStr = laneNames[this.input.state.laneIndex] || this.input.state.laneIndex;
     const activeCount = this.spawner ? this.spawner.activeEntities.length : 0;
@@ -718,15 +724,15 @@ class GarretSurfGame {
     const assistVal = this.balance ? this.balance.assist.toFixed(1) : '-';
 
     this.debugOverlay.innerHTML = `
-      <b>GARRET DEBUG [P3.5]</b><br>
+      <b>GARRET DEBUG [v2 Controls & P3.5]</b><br>
       FPS: ${this.fps}<br>
       Секция: ${currentSection.name} (${currentSection.id})<br>
       Дистанция: ${Math.floor(curZ)} / ${CFG.level.length} м<br>
       Скорость: ${speedMs} м/с | Статус: ${stumbleInfo}<br>
       Полоса: ${laneStr} (X: ${this.player.x.toFixed(2)})<br>
-      Ввод: ${mode} | Tilt: ${tiltDeg}°<br>
-      Баланс: мир ${wRoll}° | игрок ${pTilt}°<br>
-      Кружка: tilt ${mTilt}° | assist ${assistVal}<br>
+      Ввод: маршрут <b>${routeMode}</b> | баланс <b>${balMode}</b><br>
+      Крен: мир ${wRoll}° | игрок ${pTilt}°<br>
+      Кружка: mugTilt <b>${mTilt}°</b> | assist ${assistVal}<br>
       Волны: ${sourcesSummary}<br>
       Пиво: ${Math.round(this.stats.beer)}% | Очки: ${this.stats.score}
     `;

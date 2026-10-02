@@ -63,6 +63,8 @@ body::before {
   max-height: 940px;
   overflow: hidden;
   background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-low) 50%, #EAD9C2 78%, var(--ocean-mid) 100%);
+  touch-action: none;
+  user-select: none;
   z-index: 1;
 }
 

@@ -172,7 +172,10 @@ class BalanceSystem {
   }
 
   // Своя смена полосы: 7° против направления, 0.25 с импульс
-  onLaneChange(steerDir) {
+  onLaneChange(steerDir, playerTilt = null) {
+    if (playerTilt !== null) {
+      this.playerTilt = playerTilt;
+    }
     const s = this.acquireSource();
     if (!s) return null;
     s.type = 'laneChange';

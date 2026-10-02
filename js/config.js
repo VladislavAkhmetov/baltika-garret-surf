@@ -116,18 +116,17 @@ const CFG = {
   },
 
   input: {
-    gyroRange: 22,       // градусов (полный ход до ±2.4 м)
-    gyroDeadzone: 2,     // градусов
-    gyroAlpha: 0.25,     // low-pass коэффициент
-    magnetDist: 0.6,     // зона притяжения к полосе
-    magnetLerp: 0.45,
-    tiltFactor: 0.8,     // tilt = relRad * 0.8
-    flickThreshold: 6.0, // м/с²
-    flickWindow: 120,    // мс
-    flickCooldown: 400,  // мс
-    swipeThresholdPx: 28,
-    swipeSpeedThreshold: 0.35, // px/мс
-    swipeTransitionTime: 0.16  // 160 мс
+    gyroRange: 35,             // макс. диапазон наклона ±35° (v2 spec §3.4)
+    gyroDeadzone: 1.0,         // градусов мертвая зона (spec: 1°)
+    gyroAlpha: 0.5,            // low-pass α = 0.5 (spec: 0.5, задержка <= 50 мс)
+    tiltKeyRate: 120,          // град/с для Q/E на клавиатуре (spec: 120°/с)
+    tiltSpringTime: 0.25,      // возврат пружиной к 0 за 0.25 с (spec: 0.25 с)
+    dragZonePadding: 40,       // зона: кружка + 40px вокруг (spec: 40px)
+    dragSensitivityPx: 70,     // чувствительность: clamp(dx / 70px, -1, 1) * 30°
+    dragMaxTiltDeg: 30,        // 30° для drag-режима
+    swipeThresholdPx: 28,      // 28px порог свайпа (spec: 28px)
+    swipeSpeedThreshold: 0.35, // 0.35 px/мс (spec: > 0.35 px/мс)
+    swipeTransitionTime: 0.16  // 160 мс (spec: 160 мс, ease-out-cubic)
   },
 
   mug: {
