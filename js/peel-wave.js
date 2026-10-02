@@ -212,32 +212,53 @@ class PeelingWave {
 
     for (let iz = 0; iz <= segZ; iz++) {
       const z = -lengthZ * 0.5 + iz * dz;
-      const u = (iz / segZ) * 8.0; // UV u вдоль Z (8 широких живописных мазков на 280 м)
+      const u = (iz / segZ) * 4.0; // 4 повтора бесшовной текстуры на 280 м
+
+      // П. 5 ревью: Волна сужается вперёд (+60 м до +140 м)
+      // Высота плавно падает с 6.0 до 2.5 м, губа становится ниже и гладкой, без завитка
+      let hScale = 1.0;
+      let overhangScale = 1.0;
+      if (z > 60.0) {
+        const t = Math.min(1.0, (z - 60.0) / 80.0); // 0..1
+        const smoothT = t * t * (3.0 - 2.0 * t);
+        hScale = 1.0 - smoothT * (1.0 - 2.50 / 6.20); // 1.0 -> 0.4032 (6.2м -> 2.5м)
+        overhangScale = 1.0 - smoothT; // 1.0 -> 0.0 (завиток плавно разворачивается в гладкое плечо)
+      }
 
       for (let ix = 0; ix < numProfile; ix++) {
         const p = this.profilePoints[ix];
-        pos1.push(p.wx, p.y, z);
+        let wx = p.wx;
+        let y = p.y * hScale;
 
-        const v = ix / (numProfile - 1); // UV v вдоль склона (от подошвы 0 к гребню 1)
+        if (ix > 20) {
+          // Завиток губы: при overhangScale -> 0 плавно сворачивается в гребень wx = 4.2
+          wx = 4.20 - (4.20 - p.wx) * overhangScale;
+          y = (6.20 - (6.20 - p.y) * overhangScale) * hScale;
+        }
+
+        pos1.push(wx, y, z);
+
+        const v = ix / (numProfile - 1);
         uvs1.push(u, v);
 
-        // Цвета по высоте профиля (ТЗ ревью п. 1):
-        // подошва: --ocean-light #5CC8E8
-        // середина: --ocean-mid #1F78B4
-        // под губой: --ocean-deep #0E3B6E
-        // губа (верхние 0.6м): --foam #F6F1E4
+        // Цвета по высоте профиля (п. 2 и 3 ревью):
+        // Подошва и нижние 0.8 м: мягкий градиент через vertex colors
+        // Середина и склон: белый тинт (1, 1, 1) для сочных текстурных цветов
+        // Нижняя сторона губы и завиток (ix >= 21): --ocean-deep #0E3B6E с осветлением к краю
         let c = new THREE.Color();
-        if (p.y <= 2.2) {
+        if (p.y <= 0.01) {
           c.copy(colLight);
-        } else if (p.y <= 4.2) {
-          const t = (p.y - 2.2) / 2.0;
-          c.copy(colLight).lerp(colMid, t);
-        } else if (p.y <= 5.6) {
-          const t = (p.y - 4.2) / 1.4;
-          c.copy(colMid).lerp(colDeep, t);
+        } else if (p.y <= 0.80) {
+          // Мягкий градиент на нижних 0.8 м от --ocean-light к чистому отображению текстуры
+          const t = p.y / 0.80;
+          c.copy(colLight).lerp(new THREE.Color(1.0, 1.0, 1.0), t);
+        } else if (ix <= 20) {
+          // Склон волны: чистый белый множитель, текстура отображается своими цветами #1F78B4, #5CC8E8, #2E8FC9
+          c.setRGB(1.0, 1.0, 1.0);
         } else {
-          const t = Math.min(1.0, (p.y - 5.6) / 0.6);
-          c.copy(colDeep).lerp(colFoam, t);
+          // П. 3 ревью: Нижняя сторона нависающей губы и внутренность завитка — --ocean-deep #0E3B6E с небольшим осветлением к краю
+          const t = (ix - 21) / 5.0; // 0..1
+          c.copy(colDeep).lerp(colMid, t * 0.20);
         }
         colors1.push(c.r, c.g, c.b);
       }
@@ -262,17 +283,64 @@ class PeelingWave {
     geo1.setIndex(indices1);
     geo1.computeVertexNormals();
 
-    // Создаем процедурную бесшовную бумажную текстуру с диагональным растром
+    // Создаем процедурную бесшовную бумажную текстуру склона 1024×1024 (п. 1 ревью)
     this.waveTexture = this.createPaperWaveTexture();
     this.waveTexture.wrapS = THREE.RepeatWrapping;
     this.waveTexture.wrapT = THREE.RepeatWrapping;
-    this.waveTexture.repeat.set(1, 1);
+
+    // П. 2 ревью: плоская вода у подошвы — та же текстура, что у плоской воды справа
+    const flatTex = (this.ocean && this.ocean.waveTexture) ? this.ocean.waveTexture : this.createFlatWaterTexture();
 
     const mat1 = new THREE.MeshBasicMaterial({
       map: this.waveTexture,
       vertexColors: true,
       side: THREE.DoubleSide
     });
+
+    // Шейдерный бленд: плоская вода у основания -> склон волны (п. 2 ревью)
+    mat1.onBeforeCompile = (shader) => {
+      shader.uniforms.mapFlat = { value: flatTex };
+      shader.uniforms.slopeOffsetY = { value: 0.0 };
+      this.wallShaderUniforms = shader.uniforms;
+
+      shader.vertexShader = `
+        varying float vHeight;
+        varying vec2 vFlatUv;
+        varying vec2 vSlopeUv;
+        uniform float slopeOffsetY;
+      ` + shader.vertexShader;
+
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <uv_vertex>',
+        `
+        #include <uv_vertex>
+        vHeight = position.y;
+        vSlopeUv = vec2(uv.x, uv.y + slopeOffsetY);
+        vFlatUv = vec2((position.x + 7.0) / 14.0 * 2.0, (position.z / 220.0) * 24.0);
+        `
+      );
+
+      shader.fragmentShader = `
+        uniform sampler2D mapFlat;
+        varying float vHeight;
+        varying vec2 vFlatUv;
+        varying vec2 vSlopeUv;
+      ` + shader.fragmentShader;
+
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <map_fragment>',
+        `
+        #ifdef USE_MAP
+          vec4 colSlope = texture2D(map, vSlopeUv);
+          vec4 colFlat = texture2D(mapFlat, vFlatUv);
+          // Переход от плоской воды к склону на нижних 0.8 м профиля
+          float blend = smoothstep(0.0, 0.80, vHeight);
+          vec4 texColor = mix(colFlat, colSlope, blend);
+          diffuseColor *= texColor;
+        #endif
+        `
+      );
+    };
 
     this.mainWallMesh = new THREE.Mesh(geo1, mat1);
     this.waveGroup.add(this.mainWallMesh);
@@ -289,18 +357,38 @@ class PeelingWave {
     for (let iz = 0; iz <= segZ; iz++) {
       const z = -lengthZ * 0.5 + iz * dz;
 
+      let hScale = 1.0;
+      let overhangScale = 1.0;
+      if (z > 60.0) {
+        const t = Math.min(1.0, (z - 60.0) / 80.0);
+        const smoothT = t * t * (3.0 - 2.0 * t);
+        hScale = 1.0 - smoothT * (1.0 - 2.50 / 6.20);
+        overhangScale = 1.0 - smoothT;
+      }
+
       for (let ix = stepStartIx; ix < numProfile; ix++) {
         const p = this.profilePoints[ix];
-        // Сдвиг на 0.15м вперед по Z и чуть перпендикулярно для видимого бумажного выреза
-        pos2.push(p.wx + 0.05, p.y + 0.05, z + 0.15);
+        let wx = p.wx + 0.05;
+        let y = (p.y + 0.05) * hScale;
+
+        if (ix > 20) {
+          wx = 4.25 - (4.20 - p.wx) * overhangScale;
+          y = (6.25 - (6.20 - p.y) * overhangScale) * hScale;
+        }
+
+        pos2.push(wx, y, z + 0.15);
 
         let c = new THREE.Color();
         if (p.y <= 4.2) {
           c.copy(colLight).lerp(colMid, Math.max(0, (p.y - 2.2) / 2.0));
         } else if (p.y <= 5.6) {
           c.copy(colMid).lerp(colDeep, (p.y - 4.2) / 1.4);
+        } else if (ix <= 20) {
+          c.copy(colDeep).lerp(colFoam, 0.40);
         } else {
-          c.copy(colDeep).lerp(colFoam, Math.min(1.0, (p.y - 5.6) / 0.6));
+          // Завиток — --ocean-deep #0E3B6E с небольшим осветлением
+          const t = (ix - 21) / 5.0;
+          c.copy(colDeep).lerp(colMid, t * 0.20);
         }
         colors2.push(c.r, c.g, c.b);
       }
@@ -332,38 +420,92 @@ class PeelingWave {
     this.stepLayerMesh = new THREE.Mesh(geo2, mat2);
     this.waveGroup.add(this.stepLayerMesh);
 
-    // --- СЛОЙ 3: Рваная кромка белой пены по всей длине гребня (Lip Foam Strip) шириной 0.6 м ---
+    // --- СЛОЙ 3: Рваная кромка белой пены по всей длине гребня шириной 0.9 м (п. 3 ревью) ---
     this.initLipFoamStrip(lengthZ, segZ);
 
     this.scene.add(this.waveGroup);
   }
 
-  // Рваная белая бумажная кромка пены шириной 0.6 м по вершине губы (ТЗ ревью п. 1)
+  // Рваная белая бумажная кромка пены шириной 0.9 м по вершине губы (п. 3 ревью)
   initLipFoamStrip(lengthZ, segZ) {
-    const geo = new THREE.PlaneGeometry(0.6, lengthZ, 4, segZ);
-    geo.rotateX(-Math.PI * 0.5);
+    const geo = new THREE.BufferGeometry();
+    const pos = [];
+    const uvs = [];
+    const indices = [];
+    const width = 0.90; // ширина 0.9 м (п. 3 ревью)
+    const dz = lengthZ / segZ;
 
-    // Рисуем зубчатый бумажный контур кромки
+    for (let iz = 0; iz <= segZ; iz++) {
+      const z = -lengthZ * 0.5 + iz * dz;
+      let hScale = 1.0;
+      if (z > 60.0) {
+        const t = Math.min(1.0, (z - 60.0) / 80.0);
+        const smoothT = t * t * (3.0 - 2.0 * t);
+        hScale = 1.0 - smoothT * (1.0 - 2.50 / 6.20);
+      }
+      const crestY = 6.18 * hScale;
+      const crestX = 3.80;
+
+      // Две вершины по ширине кромки 0.9 м
+      pos.push(crestX - width * 0.45, crestY - 0.04, z);
+      uvs.push(0, (iz / segZ) * 16.0);
+
+      pos.push(crestX + width * 0.55, crestY + 0.04, z);
+      uvs.push(1, (iz / segZ) * 16.0);
+    }
+
+    for (let iz = 0; iz < segZ; iz++) {
+      const a = iz * 2;
+      const b = (iz + 1) * 2;
+      const c = (iz + 1) * 2 + 1;
+      const d = iz * 2 + 1;
+      indices.push(a, b, d);
+      indices.push(b, c, d);
+    }
+
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+
+    // Зубчатый бумажный контур кромки пены: неровный край, обводка --ink 1.5px с opacity 0.4
     const foamCanvas = document.createElement('canvas');
     foamCanvas.width = 128;
-    foamCanvas.height = 256;
+    foamCanvas.height = 512;
     const ctx = foamCanvas.getContext('2d');
+    ctx.clearRect(0, 0, 128, 512);
 
-    ctx.fillStyle = '#F6F1E4'; // --foam
-    ctx.fillRect(0, 0, 128, 256);
+    // Заливка --foam с рваным краем
+    ctx.fillStyle = '#F6F1E4';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, 512);
+    for (let y = 512; y >= 0; y -= 8) {
+      const edgeX = 100 + Math.sin(y * 0.08) * 12 + Math.cos(y * 0.22) * 8 + Math.sin(y * 0.7) * 4;
+      ctx.lineTo(edgeX, y);
+    }
+    ctx.closePath();
+    ctx.fill();
 
-    // Черный контур тушью по внешнему краю
-    ctx.fillStyle = '#1C1A22';
-    ctx.fillRect(0, 0, 8, 256);
-    ctx.fillRect(120, 0, 8, 256);
-
-    // Бумажные рваные зубчики
-    ctx.fillStyle = 'rgba(28, 26, 34, 0.20)';
-    for (let y = 0; y < 256; y += 16) {
+    // Неровные рваные зубчики
+    ctx.fillStyle = '#F6F1E4';
+    for (let y = 0; y < 512; y += 16) {
+      const edgeX = 100 + Math.sin(y * 0.08) * 12;
       ctx.beginPath();
-      ctx.arc(64, y + 8, 14, 0, Math.PI * 2);
+      ctx.arc(edgeX, y + 8, 12, 0, Math.PI * 2);
       ctx.fill();
     }
+
+    // Обводка --ink 1.5px с opacity 0.4 (п. 3 ревью)
+    ctx.strokeStyle = 'rgba(28, 26, 34, 0.40)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let y = 0; y <= 512; y += 8) {
+      const edgeX = 100 + Math.sin(y * 0.08) * 12 + Math.cos(y * 0.22) * 8 + Math.sin(y * 0.7) * 4;
+      if (y === 0) ctx.moveTo(edgeX, y);
+      else ctx.lineTo(edgeX, y);
+    }
+    ctx.stroke();
 
     const foamTex = new THREE.CanvasTexture(foamCanvas);
     foamTex.wrapS = THREE.RepeatWrapping;
@@ -374,88 +516,194 @@ class PeelingWave {
       map: foamTex,
       side: THREE.DoubleSide,
       transparent: true,
-      alphaTest: 0.2
+      alphaTest: 0.15
     });
 
     this.lipFoamMesh = new THREE.Mesh(geo, mat);
-    // Располагаем прямо на вершине губы на высоте 6.18м
-    this.lipFoamMesh.position.set(3.8, 6.18, 0);
-    this.lipFoamMesh.rotation.z = -0.15;
     this.waveGroup.add(this.lipFoamMesh);
   }
 
-  // Процедурная текстура бумаги с контрастными вертикальными мазками воды (ТЗ ревью п. 1)
+  // Процедурная бесшовная текстура 1024×1024 (п. 1 ревью):
+  // фон --ocean-mid #1F78B4, 40-60 мазков рваной бумаги вдоль потока,
+  // цвета --ocean-light #5CC8E8 (50%), #2E8FC9 (35%), --ocean-deep (15%),
+  // белого --foam <= 5% площади (редкие блики), растр 2px opacity 0.15.
   createPaperWaveTexture() {
     const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
+    canvas.width = 1024;
+    canvas.height = 1024;
     const ctx = canvas.getContext('2d');
 
-    // Базовый цвет светлой бумаги
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, 256, 256);
+    // 1. Фон --ocean-mid #1F78B4 (п. 1 ревью)
+    ctx.fillStyle = '#1F78B4';
+    ctx.fillRect(0, 0, 1024, 1024);
 
-    // Контрастные живописные полосы-мазки течения воды вверх по склону (§4 ТЗ, п. 1 ревью)
-    // Шаг 32px дает 8 выразительных широких полос на повтор
-    for (let x = 0; x < 256; x += 32) {
-      // Тёмный океанический мазок глубокой воды
-      ctx.fillStyle = 'rgba(14, 59, 110, 0.90)';
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x + 10, 0);
-      ctx.lineTo(x + 13, 256);
-      ctx.lineTo(x + 3, 256);
-      ctx.fill();
+    // Функция рисования бесшовного мазка рваной бумаги вдоль потока (Y)
+    const drawStroke = (cx, cy, len, width, color) => {
+      ctx.fillStyle = color;
+      // Чтобы текстура была строго бесшовной, рисуем мазок с обёртыванием по границам 1024
+      const offsetsX = [0];
+      if (cx - width < 0) offsetsX.push(1024);
+      if (cx + width > 1024) offsetsX.push(-1024);
 
-      // Яркий контрастный мазок белой пены
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-      ctx.beginPath();
-      ctx.moveTo(x + 12, 0);
-      ctx.lineTo(x + 22, 0);
-      ctx.lineTo(x + 25, 256);
-      ctx.lineTo(x + 15, 256);
-      ctx.fill();
+      const offsetsY = [0];
+      if (cy - len * 0.5 < 0) offsetsY.push(1024);
+      if (cy + len * 0.5 > 1024) offsetsY.push(-1024);
 
-      // Тонкий контур тушью с рваным бумажным краем
-      ctx.strokeStyle = 'rgba(28, 26, 34, 0.55)';
-      ctx.lineWidth = 2.0;
-      ctx.beginPath();
-      ctx.moveTo(x + 11, 0);
-      ctx.lineTo(x + 14, 256);
-      ctx.stroke();
+      offsetsX.forEach(ox => {
+        offsetsY.forEach(oy => {
+          const x0 = cx + ox;
+          const y0 = cy + oy;
+          const numSteps = 14;
 
-      // Мазок морской лазури
-      ctx.fillStyle = 'rgba(92, 200, 232, 0.75)';
-      ctx.beginPath();
-      ctx.moveTo(x + 23, 0);
-      ctx.lineTo(x + 29, 0);
-      ctx.lineTo(x + 31, 256);
-      ctx.lineTo(x + 25, 256);
-      ctx.fill();
+          ctx.beginPath();
+          // Правый контур сверху вниз
+          for (let i = 0; i <= numSteps; i++) {
+            const t = i / numSteps; // 0..1
+            const y = y0 - len * 0.5 + t * len;
+            // Сужение к обоим концам: sin(pi * t)
+            const taper = Math.sin(Math.PI * t);
+            // Неровный рваный край бумаги
+            const edgeNoise = 0.85 + Math.sin(t * 19.0 + cx) * 0.15 + Math.cos(t * 37.0) * 0.10;
+            const w = (width * 0.5) * taper * edgeNoise;
+            const wobbleX = Math.sin(t * Math.PI * 2.0) * (width * 0.15);
+            const x = x0 + wobbleX + w;
+            if (i === 0) ctx.moveTo(x0 + wobbleX, y);
+            else ctx.lineTo(x, y);
+          }
+          // Левый контур снизу вверх
+          for (let i = numSteps; i >= 0; i--) {
+            const t = i / numSteps;
+            const y = y0 - len * 0.5 + t * len;
+            const taper = Math.sin(Math.PI * t);
+            const edgeNoise = 0.85 + Math.cos(t * 23.0 + cy) * 0.15 + Math.sin(t * 41.0) * 0.10;
+            const w = (width * 0.5) * taper * edgeNoise;
+            const wobbleX = Math.sin(t * Math.PI * 2.0) * (width * 0.15);
+            const x = x0 + wobbleX - w;
+            ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          ctx.fill();
+        });
+      });
+    };
+
+    // 2. 52 мазка рваной бумаги, вытянутых вдоль потока Y (п. 1 ревью):
+    // длина 80–300px, ширина 6–30px, концы сужаются, края неровные.
+    // Цвета случайно: --ocean-light #5CC8E8 (50%), #2E8FC9 (35%), --ocean-deep (15%)
+    let seed = 42;
+    const rnd = () => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
+
+    const colors = [
+      '#5CC8E8', // 50%
+      '#2E8FC9', // 35%
+      '#0E3B6E'  // 15%
+    ];
+
+    for (let i = 0; i < 52; i++) {
+      const cx = rnd() * 1024;
+      const cy = rnd() * 1024;
+      const len = 80 + rnd() * 220;   // 80–300px
+      const width = 8 + rnd() * 22;   // 8–30px
+
+      const roll = rnd();
+      let col = colors[0];
+      if (roll < 0.50) col = colors[0];       // #5CC8E8 (50%)
+      else if (roll < 0.85) col = colors[1];  // #2E8FC9 (35%)
+      else col = colors[2];                   // #0E3B6E (15%)
+
+      drawStroke(cx, cy, len, width, col);
     }
 
-    // Бумажный полутоновый растр
+    // 3. Белого --foam на склоне не больше 5% площади — только редкие короткие блики (п. 1 ревью)
+    for (let i = 0; i < 12; i++) {
+      const cx = rnd() * 1024;
+      const cy = rnd() * 1024;
+      const len = 30 + rnd() * 35; // короткие 30–65px
+      const width = 3 + rnd() * 4; // тонкие 3–7px
+      drawStroke(cx, cy, len, width, 'rgba(246, 241, 228, 0.85)'); // --foam
+    }
+
+    // 4. Поверх мелкий растр 2px, opacity 0.15 (п. 1 ревью)
     ctx.fillStyle = 'rgba(28, 26, 34, 0.15)';
-    for (let x = 0; x < 256; x += 12) {
-      for (let y = 0; y < 256; y += 12) {
+    for (let y = 0; y < 1024; y += 8) {
+      const offsetX = (y % 16 === 0) ? 4 : 0;
+      for (let x = 0; x < 1024; x += 8) {
         ctx.beginPath();
-        ctx.arc(x + (y % 24 === 0 ? 6 : 0), y, 1.8, 0, Math.PI * 2);
+        ctx.arc(x + offsetX, y, 1.0, 0, Math.PI * 2); // 2px диаметр
         ctx.fill();
       }
     }
 
-    return new THREE.CanvasTexture(canvas);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(4, 1);
+    return tex;
+  }
+
+  // Запасная генерация текстуры плоской воды (если ocean.waveTexture недоступен)
+  createFlatWaterTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#5CC8E8';
+    ctx.fillRect(0, 0, 512, 512);
+
+    for (let i = 0; i < 16; i++) {
+      const baseY = i * 32;
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(65, 175, 215, 0.45)' : 'rgba(120, 215, 240, 0.45)';
+      ctx.beginPath();
+      ctx.moveTo(0, baseY);
+      for (let x = 0; x <= 512; x += 16) {
+        const wave = Math.sin((2 * Math.PI * x) / 512 * ((i % 3) + 1)) * 6 + Math.cos((4 * Math.PI * x) / 512) * 3;
+        ctx.lineTo(x, (baseY + wave) % 512);
+      }
+      ctx.lineTo(512, (baseY + 20) % 512);
+      ctx.lineTo(0, (baseY + 20) % 512);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.fillStyle = 'rgba(246, 241, 228, 0.65)';
+    for (let i = 0; i < 16; i += 2) {
+      const baseY = i * 32;
+      for (let x = 0; x <= 512; x += 20) {
+        const wave = Math.sin((2 * Math.PI * x) / 512 * ((i % 3) + 1)) * 6;
+        ctx.beginPath();
+        ctx.arc(x, (baseY + wave) % 512, 3.5 + (x % 3), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    ctx.fillStyle = 'rgba(28, 26, 34, 0.05)';
+    for (let py = 0; py < 512; py += 8) {
+      for (let px = 0; px < 512; px += 8) {
+        ctx.beginPath();
+        ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.MirroredRepeatWrapping;
+    tex.wrapT = THREE.MirroredRepeatWrapping;
+    tex.repeat.set(2, 24);
+    return tex;
   }
 
   // =========================================================================
-  // 3. Стена пены позади точки ломки (30 кипящих бумажных шаров, п. 1 и §4 ТЗ)
+  // 3. Стена пены позади точки ломки (п. 4 ревью)
   // =========================================================================
   initFoamWall() {
     this.foamBallGroup = new THREE.Group();
     this.foamBallGroup.name = 'foamWallBalls';
     this.foamBalls = [];
 
-    // Создаем процедурную текстуру бумажного шара пены с черной обводкой тушью
+    // П. 4 ревью: заливка --foam (#F6F1E4), обводка 1px #9FC3D6 вместо чёрной
     const ballCanvas = document.createElement('canvas');
     ballCanvas.width = 128;
     ballCanvas.height = 128;
@@ -463,75 +711,77 @@ class PeelingWave {
 
     bCtx.fillStyle = '#F6F1E4'; // --foam
     bCtx.beginPath();
-    bCtx.arc(64, 64, 56, 0, Math.PI * 2);
+    bCtx.arc(64, 64, 58, 0, Math.PI * 2);
     bCtx.fill();
 
-    bCtx.strokeStyle = '#1C1A22'; // --ink
-    bCtx.lineWidth = 6;
+    bCtx.strokeStyle = '#9FC3D6'; // обводка 1px #9FC3D6
+    bCtx.lineWidth = 2.5;
     bCtx.stroke();
 
-    // Внутренние пузырьковые детали
-    bCtx.strokeStyle = 'rgba(28, 26, 34, 0.25)';
-    bCtx.lineWidth = 3;
+    // Нежные пузырьковые детали
+    bCtx.strokeStyle = 'rgba(159, 195, 214, 0.45)';
+    bCtx.lineWidth = 1.5;
     bCtx.beginPath();
     bCtx.arc(52, 52, 22, 0, Math.PI * 2);
     bCtx.stroke();
 
     const ballTex = new THREE.CanvasTexture(ballCanvas);
-    const ballGeo = new THREE.PlaneGeometry(1.8, 1.8);
+    const ballGeo = new THREE.PlaneGeometry(1.0, 1.0);
     const ballMat = new THREE.MeshBasicMaterial({
       map: ballTex,
       transparent: true,
-      alphaTest: 0.3,
+      alphaTest: 0.2,
       side: THREE.DoubleSide
     });
 
-    // 30 бумажных шаров:
-    // 16 шаров в пенном гребне позади peelZ (H до 6.2м)
-    for (let i = 0; i < 16; i++) {
-      const mesh = new THREE.Mesh(ballGeo, ballMat);
-      const relX = 1.2 + Math.random() * 3.2;   // в зоне гребня губы
-      const relY = 1.5 + Math.random() * 4.5;   // на высоте от 1.5м до 6.0м
-      const relZ = -(Math.random() * 12.0);     // позади точки ломки
+    // П. 4 ревью: Размер 0.4–1.6 м с разбросом, кучками по 3–6 штук
+    const clusters = [
+      // 4 кучки позади точки ломки (вдоль гребня и склона)
+      { cx: 3.4, cy: 5.2, cz: -3.0, count: 5 },
+      { cx: 2.6, cy: 3.8, cz: -7.0, count: 4 },
+      { cx: 1.8, cy: 2.4, cz: -11.0, count: 5 },
+      { cx: 1.2, cy: 1.5, cz: -5.0, count: 4 },
+      // 3 кучки накатывают вперед (влетают в кадр снизу-слева при < 10м)
+      { cx: 0.8, cy: 1.1, cz: 2.2, count: 5 },
+      { cx: 1.5, cy: 1.8, cz: 4.5, count: 4 },
+      { cx: 0.2, cy: 0.7, cz: 6.2, count: 5 }
+    ];
 
-      mesh.position.set(relX, relY, relZ);
-      mesh.scale.setScalar(0.9 + Math.random() * 0.7);
+    let seed = 17;
+    const rnd = () => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
 
-      this.foamBalls.push({
-        mesh: mesh,
-        baseX: relX,
-        baseY: relY,
-        offsetZ: relZ,
-        phase: Math.random() * Math.PI * 2,
-        speed: 4.0 + Math.random() * 4.0,
-        baseScale: mesh.scale.x
-      });
+    clusters.forEach(cl => {
+      for (let k = 0; k < cl.count; k++) {
+        const mesh = new THREE.Mesh(ballGeo, ballMat);
+        const ox = (rnd() - 0.5) * 1.2;
+        const oy = (rnd() - 0.5) * 0.9;
+        const oz = (rnd() - 0.5) * 1.5;
+        // Размер 0.4–1.6 м с разбросом
+        const diameter = 0.40 + rnd() * 1.20;
 
-      this.foamBallGroup.add(mesh);
-    }
+        const posX = cl.cx + ox;
+        const posY = Math.max(0.3, cl.cy + oy);
+        const posZ = cl.cz + oz;
 
-    // 14 шаров, накатывающих вперед перед точкой ломки (влетают в кадр снизу-слева при < 10м)
-    for (let i = 0; i < 14; i++) {
-      const mesh = new THREE.Mesh(ballGeo, ballMat);
-      const relX = -0.2 + Math.random() * 2.8;  // карман и переход к плечу
-      const relY = 0.4 + Math.random() * 2.8;   // нижняя и средняя часть волны
-      const relZ = 1.0 + Math.random() * 6.5;   // выкатываются вперед на 1..7.5м перед peelZ!
+        mesh.position.set(posX, posY, posZ);
+        mesh.scale.setScalar(diameter);
 
-      mesh.position.set(relX, relY, relZ);
-      mesh.scale.setScalar(1.0 + Math.random() * 0.8);
+        this.foamBalls.push({
+          mesh: mesh,
+          baseX: posX,
+          baseY: posY,
+          offsetZ: posZ,
+          phase: rnd() * Math.PI * 2,
+          speed: 4.0 + rnd() * 4.0,
+          baseScale: diameter
+        });
 
-      this.foamBalls.push({
-        mesh: mesh,
-        baseX: relX,
-        baseY: relY,
-        offsetZ: relZ,
-        phase: Math.random() * Math.PI * 2,
-        speed: 4.0 + Math.random() * 4.0,
-        baseScale: mesh.scale.x
-      });
-
-      this.foamBallGroup.add(mesh);
-    }
+        this.foamBallGroup.add(mesh);
+      }
+    });
 
     this.scene.add(this.foamBallGroup);
   }
@@ -625,8 +875,9 @@ class PeelingWave {
     spCtx.beginPath();
     spCtx.ellipse(128, 128, 124, 108, 0, 0, Math.PI * 2);
     spCtx.fill();
-    spCtx.strokeStyle = '#1C1A22';
-    spCtx.lineWidth = 10;
+    // Мягкий контур #9FC3D6 вместо жирной туши (п. 4 ревью)
+    spCtx.strokeStyle = '#9FC3D6';
+    spCtx.lineWidth = 3.0;
     spCtx.stroke();
     // Бумажные пенные кружки в месте удара
     spCtx.fillStyle = '#F6F1E4';
@@ -634,8 +885,8 @@ class PeelingWave {
       spCtx.beginPath();
       spCtx.arc(32 + (i * 29) % 192, 32 + (i * 37) % 192, 18 + (i % 6) * 4, 0, Math.PI * 2);
       spCtx.fill();
-      spCtx.strokeStyle = '#1C1A22';
-      spCtx.lineWidth = 4;
+      spCtx.strokeStyle = '#9FC3D6';
+      spCtx.lineWidth = 1.5;
       spCtx.stroke();
     }
     const splashTex = new THREE.CanvasTexture(splashCanvas);
@@ -664,7 +915,6 @@ class PeelingWave {
 
     const colDeep = new THREE.Color(0x0E3B6E);
     const colMid = new THREE.Color(0x1F78B4);
-    const colLight = new THREE.Color(0x5CC8E8);
     const colFoam = new THREE.Color(0xF6F1E4);
 
     for (let iz = 0; iz < numZ; iz++) {
@@ -676,21 +926,18 @@ class PeelingWave {
         pos[idx + 1] = 6.2 - t * 0.6;
         pos[idx + 2] = z;
 
+        // П. 3 ревью: Нижняя сторона нависающей губы и внутренность завитка — --ocean-deep #0E3B6E с осветлением к краю.
+        // Чёрные линии-каракули с завитка убрать.
         let c = new THREE.Color();
-        if (it === numT - 1) {
-          // Чёрный контур тушью по кромке
-          c.setHex(0x1C1A22);
-        } else if (t >= 0.70) {
-          // Белая бумажная пена губы
-          c.copy(colFoam);
-        } else if (t >= 0.40) {
-          // Океаническая лазурь
-          const k = (t - 0.40) / 0.30;
-          c.copy(colMid).lerp(colLight, k);
+        if (t >= 0.90) {
+          c.copy(colFoam); // пена только на самом гребне
+        } else if (t >= 0.50) {
+          const k = (t - 0.50) / 0.40;
+          c.copy(colMid).lerp(colFoam, k * 0.30);
         } else {
-          // Глубокий океан
-          const k = t / 0.40;
-          c.copy(colDeep).lerp(colMid, k);
+          // Внутренность завитка и нижняя сторона — чистый --ocean-deep #0E3B6E
+          const k = t / 0.50;
+          c.copy(colDeep).lerp(colMid, k * 0.25);
         }
         colors[idx] = c.r;
         colors[idx + 1] = c.g;
@@ -754,8 +1001,9 @@ class PeelingWave {
   // =========================================================================
   // 6. Главный покадровый цикл обновления (§4 ТЗ)
   // =========================================================================
-  update(dt, playerZ, playerSpeed) {
+  update(dt, playerZ, playerSpeed, camera = null) {
     this.time += dt;
+    if (camera) this.camera = camera;
 
     // 1. Позиционирование меша стены волны вдоль хода игрока
     if (this.waveGroup) {
@@ -763,8 +1011,12 @@ class PeelingWave {
     }
 
     // 2. Вода тянется вверх: скролл текстуры по V вверх со скоростью 0.6 * speed (§4 ТЗ, п. 1 ревью)
+    const scrollDelta = 0.6 * playerSpeed * dt * 0.035;
+    if (this.wallShaderUniforms) {
+      this.wallShaderUniforms.slopeOffsetY.value -= scrollDelta;
+    }
     if (this.waveTexture) {
-      this.waveTexture.offset.y -= 0.6 * playerSpeed * dt * 0.035;
+      this.waveTexture.offset.y -= scrollDelta;
       this.waveTexture.needsUpdate = true;
     }
 
@@ -788,10 +1040,26 @@ class PeelingWave {
       this.foamBallGroup.position.z = this.peelZ;
 
       const boilScale = 1.0 + Math.sin(this.time * 6.0 * Math.PI * 2) * 0.10; // кипение ±10% на 6 Гц
+      const cam = this.camera;
+      const wWidth = typeof window !== 'undefined' ? window.innerWidth : 393;
+      const wHeight = typeof window !== 'undefined' ? window.innerHeight : 852;
+
       this.foamBalls.forEach((b) => {
-        const wobble = Math.sin(this.time * b.speed + b.phase) * 0.25;
+        const wobble = Math.sin(this.time * b.speed + b.phase) * 0.20;
         b.mesh.position.set(b.baseX + wobble, b.baseY + wobble * 0.5, b.offsetZ);
         b.mesh.scale.setScalar(b.baseScale * boilScale);
+
+        // П. 4 ревью: не появляются в прямоугольнике HUD-кружки плюс 30px (screenX < 145, screenY > wHeight - 165)
+        if (cam) {
+          if (!this._tempVec) this._tempVec = new THREE.Vector3();
+          b.mesh.updateWorldMatrix(true, false);
+          b.mesh.getWorldPosition(this._tempVec);
+          this._tempVec.project(cam);
+          const sx = (this._tempVec.x * 0.5 + 0.5) * wWidth;
+          const sy = (1.0 - (this._tempVec.y * 0.5 + 0.5)) * wHeight;
+          const inMugRect = (sx < 145 && sy > (wHeight - 165) && this._tempVec.z > 0 && this._tempVec.z < 1);
+          b.mesh.visible = !inMugRect;
+        }
       });
     }
 
@@ -811,8 +1079,11 @@ class PeelingWave {
       this.camShakeBonus = 0.0;
     }
 
-    // 6. Брызги, срывающиеся с губы назад
-    if (Math.random() < 0.45) {
+    // 6. Брызги, срывающиеся с губы назад: строго 6–10 в секунду (п. 3 ревью)
+    this.lipSprayTimer = (this.lipSprayTimer || 0) + dt;
+    const sprayInterval = 1.0 / (7.0 + Math.sin(this.time * 4.0) * 2.5); // 5 to 9.5 Hz (6–10 / сек)
+    if (this.lipSprayTimer >= sprayInterval) {
+      this.lipSprayTimer = 0;
       this.emitLipSpray(playerZ);
     }
     this.updateSprayParticles(dt);

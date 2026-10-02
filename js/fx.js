@@ -292,6 +292,25 @@ class FxDirector {
     }
   }
 
+  reset() {
+    this.isFrozen = false;
+    this.activeMoment = null;
+    this.queue = [];
+    this.freezeTimer = 0;
+    this.easingTimer = 0;
+    this.cooldownTimer = 0;
+    this.targetZoom = 1.0;
+    this.currentZoom = 1.0;
+    this.timeScale = 1.0;
+    if (this.appContainer) this.appContainer.classList.remove('fx-freeze');
+    if (this.halftoneEl) this.halftoneEl.classList.remove('active');
+    if (this.toneOverlayEl) this.toneOverlayEl.classList.remove('active');
+    if (this.momentBox) {
+      this.momentBox.classList.remove('fx-moment-in', 'fx-moment-out');
+      this.momentBox.style.display = 'none';
+    }
+  }
+
   /**
    * Всплывающее текстовое сообщение без стоп-кадра (§6.4)
    */

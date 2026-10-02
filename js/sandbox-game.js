@@ -428,7 +428,7 @@ class SandboxGame {
 
     // 8. Обновление объектов окружения и океана
     this.ocean.update(dt, pState.z);
-    this.peelWave.update(dt, pState.z, pState.speed);
+    this.peelWave.update(dt, pState.z, pState.speed, this.camera);
 
     // 9. Визуал и камера
     this.updateVisuals(dt);

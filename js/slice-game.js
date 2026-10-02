@@ -285,6 +285,7 @@ class SliceGame extends SandboxGame {
     console.log(`[SliceGame] Jumping to beat: ${beat.id} (${beat.fromM}m)`);
     this.currentBeat = beat;
     this.currentBeatIndex = this.script.beats.indexOf(beat);
+    if (this.fx) this.fx.reset();
 
     const startZ = Math.max(0, beat.fromM);
     const startX = beat.id === 'pocket' ? 1.0 : (beat.id === 'shoulder' ? 6.0 : 2.0);
@@ -483,7 +484,7 @@ class SliceGame extends SandboxGame {
 
     // 8. Обновление волны и океана
     this.ocean.update(dt, p.z);
-    this.peelWave.update(dt, p.z, p.speed);
+    this.peelWave.update(dt, p.z, p.speed, this.camera);
 
     // 9. Эффекты скорости (§5)
     this.emitBoardSpray(dt, p.speed, p.heading, surface.inPocket);
@@ -532,8 +533,8 @@ class SliceGame extends SandboxGame {
       }
     }
 
-    // 13. Проверка финиша на 1275 м
-    if (p.z >= 1275.0 && !this.isRaceFinished) {
+    // 13. Проверка финиша на 1320 м (линия финишных буйков с флагами)
+    if (p.z >= 1320.0 && !this.isRaceFinished) {
       this.onRaceFinish();
     }
   }

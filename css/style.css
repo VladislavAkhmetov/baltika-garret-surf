@@ -1390,6 +1390,18 @@ body::before {
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
+/* П. 5 ревью: Подсказки и старые тосты на время стоп-кадра скрывать */
+.fx-freeze .slice-tutorial-hint,
+#ui-root.fx-freeze .slice-tutorial-hint,
+body.fx-freeze .slice-tutorial-hint,
+.slice-tutorial-hint.hide,
+.fx-freeze #toast,
+#ui-root.fx-freeze #toast {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
 /* Results Screen Card */
 #slice-results-screen {
   z-index: 200 !important;

@@ -85,43 +85,61 @@ async function testSlice() {
 
   // --- 4. ТЕСТ POCKET & RIVALS (330–900м) ---
   console.log('[STEP 4] Testing Beat 4: pocket (330–900m, rivals, golden cap)...');
+  // --- 4. ТЕСТ POCKET & RIVALS (330–900м) ---
+  console.log('[STEP 4] Testing Beat 4: pocket (330–900m, rivals, golden cap)...');
   await page.evaluate(() => {
     window.game.jumpToBeat('pocket');
-    // Позиционируем перед золотой крышкой на 638м
-    window.game.physics.reset(-3.5, 638.0);
+    // Позиционируем в кармане
+    window.game.physics.reset(0.5, 450.0);
     window.game.snapCamera();
-    for (let i = 0; i < 15; i++) window.game.updateGame(0.02);
+    for (let i = 0; i < 20; i++) window.game.updateGame(0.02);
   });
   await new Promise(r => setTimeout(r, 200));
   await page.screenshot({ path: path.join(reviewDir, 'beat-4-pocket.png') });
   console.log('✓ Captured beat-4-pocket.png');
 
-  // Проверяем захват золотой крышки
+  // Захват золотой крышки на 665м
+  await page.evaluate(() => {
+    const g = window.game;
+    g.physics.reset(-3.5, 663.0);
+    g.snapCamera();
+    // Собираем золотую крышку на 665м
+    for (let i = 0; i < 15; i++) g.updateGame(0.02);
+  });
+  await new Promise(r => setTimeout(r, 200));
   const goldCollected = await page.evaluate(() => window.game.hasGoldCap);
   console.log('Gold cap collected in pocket:', goldCollected);
   await page.screenshot({ path: path.join(reviewDir, 'moment-zoloto.png') });
   console.log('✓ Captured moment-zoloto.png');
 
-  // Проверяем обгон Тони
+  // Проверяем обгон Тони с гистерезисом (>= 3м held for >= 0.5s, без коллизии)
   await page.evaluate(() => {
     const g = window.game;
-    // Ставим Тони на 700м, а игрока на 702м
+    if (g.fx) g.fx.reset();
+    // Тони на 700м x=3.0, игрок на 704м x=0.5 (в кармане, 4м впереди >= 3м)
+    g.rivalsManager.rivals[0].x = 3.0;
+    g.rivalsManager.rivals[0].targetX = 3.0;
     g.rivalsManager.rivals[0].z = 700.0;
     g.rivalsManager.rivals[0].overtaken = false;
-    g.physics.reset(1.0, 702.0);
+    g.rivalsManager.rivals[0].aheadDuration = 0.0;
+    g.rivalsManager.rivals[0].overtakeCooldown = 0.0;
+    g.physics.reset(0.5, 704.0);
     g.snapCamera();
-    g.updateGame(0.016);
+    // Держим 0.56с (35 кадров по 0.016с) для срабатывания гистерезиса
+    for (let i = 0; i < 35; i++) {
+      g.updateGame(0.016);
+    }
   });
-  await new Promise(r => setTimeout(r, 150));
+  await new Promise(r => setTimeout(r, 250));
   await page.screenshot({ path: path.join(reviewDir, 'moment-obgon.png') });
   console.log('✓ Captured moment-obgon.png');
 
-  // --- 5. ТЕСТ LAUNCH & MEGA RAMP (900–1000м) ---
-  console.log('[STEP 5] Testing Beat 5: launch (900–1000m, ramp flight & apex)...');
+  // --- 5. ТЕСТ LAUNCH & MEGA RAMP (940–1040м) ---
+  console.log('[STEP 5] Testing Beat 5: launch (940–1040m, ramp flight & apex)...');
   await page.evaluate(() => {
     window.game.jumpToBeat('launch');
-    // Наезжаем на рампу на 920м
-    window.game.physics.reset(1.2, 918.0);
+    // Наезжаем на рампу на 960м
+    window.game.physics.reset(1.2, 960.0);
     window.game.snapCamera();
     for (let i = 0; i < 12; i++) window.game.updateGame(0.02);
     // Взлёт на апекс
@@ -132,6 +150,7 @@ async function testSlice() {
       sub: 'ВЫЛЕТ ×1.8',
       tone: 'yellow',
       freeze: 500,
+      zoom: 0.88,
       priority: 3
     });
   });
@@ -139,11 +158,11 @@ async function testSlice() {
   await page.screenshot({ path: path.join(reviewDir, 'beat-5-launch.png') });
   console.log('✓ Captured beat-5-launch.png');
 
-  // --- 6. ТЕСТ SHOULDER (1000–1250м) ---
-  console.log('[STEP 6] Testing Beat 6: shoulder (1000–1250m, buoy slalom)...');
+  // --- 6. ТЕСТ SHOULDER (1040–1290м) ---
+  console.log('[STEP 6] Testing Beat 6: shoulder (1040–1290m, buoy slalom)...');
   await page.evaluate(() => {
     window.game.jumpToBeat('shoulder');
-    window.game.physics.reset(6.0, 1080.0);
+    window.game.physics.reset(6.0, 1100.0);
     window.game.snapCamera();
     for (let i = 0; i < 20; i++) window.game.updateGame(0.025);
   });
@@ -151,14 +170,14 @@ async function testSlice() {
   await page.screenshot({ path: path.join(reviewDir, 'beat-6-shoulder.png') });
   console.log('✓ Captured beat-6-shoulder.png');
 
-  // --- 7. ТЕСТ FINISH & RESULTS CARD (1250–1300м) ---
-  console.log('[STEP 7] Testing Beat 7: finish (1250–1300m, finish line & results card)...');
+  // --- 7. ТЕСТ FINISH & RESULTS CARD (1290–1350м) ---
+  console.log('[STEP 7] Testing Beat 7: finish (1290–1350m, finish line at 1320m & results card)...');
   await page.evaluate(() => {
     window.game.jumpToBeat('finish');
-    window.game.physics.reset(2.0, 1272.0);
+    window.game.physics.reset(2.0, 1315.0);
     window.game.snapCamera();
-    // Пересекаем линию финиша на 1275м
-    for (let i = 0; i < 20; i++) window.game.updateGame(0.02);
+    // Пересекаем линию финиша на 1320м
+    for (let i = 0; i < 25; i++) window.game.updateGame(0.02);
   });
   await new Promise(r => setTimeout(r, 400));
   await page.screenshot({ path: path.join(reviewDir, 'beat-7-finish.png') });
@@ -173,8 +192,29 @@ async function testSlice() {
   await page.screenshot({ path: path.join(reviewDir, 'results-card.png') });
   console.log('✓ Captured results-card.png');
 
-  // --- 8. ЗАПИСЬ 10-СЕКУНДНОГО GIF ФИНАЛЬНОГО ЗАЕЗДА ---
-  console.log('[STEP 8] Recording 10s video/GIF of full slice action...');
+  // --- 8. ЗАМЕР МОБИЛЬНОГО FPS ---
+  console.log('[STEP 8] Measuring mobile rendering FPS...');
+  const fpsStats = await page.evaluate(async () => {
+    return new Promise(resolve => {
+      let frameCount = 0;
+      const start = performance.now();
+      function count() {
+        frameCount++;
+        if (frameCount >= 60) {
+          const duration = performance.now() - start;
+          const fps = Math.round((frameCount / duration) * 1000);
+          resolve({ fps, duration });
+        } else {
+          requestAnimationFrame(count);
+        }
+      }
+      requestAnimationFrame(count);
+    });
+  });
+  console.log(`[MOBILE FPS RESULT]: ${fpsStats.fps} FPS (measured over 60 frames in ${Math.round(fpsStats.duration)}ms)`);
+
+  // --- 9. ЗАПИСЬ 10-СЕКУНДНОГО GIF ФИНАЛЬНОГО ЗАЕЗДА ---
+  console.log('[STEP 9] Recording 10s video/GIF of full slice action...');
   const gifWidth = 200;
   const gifHeight = 434;
   const encoder = new GifEncoder(gifWidth, gifHeight);
@@ -240,6 +280,31 @@ async function testSlice() {
   const gifBuffer = encoder.encode();
   fs.writeFileSync(gifPath, gifBuffer);
   console.log(`✓ Saved 10s video/GIF: ${gifPath} (${Math.round(gifBuffer.length / 1024)} KB)`);
+
+  // Копирование артефактов в brain директорию
+  const brainDir = path.resolve('C:/Users/amazi/.gemini/antigravity/brain/d1f205d3-882e-4d65-8030-81fa9ac72ecd');
+  const artifactsToCopy = [
+    'beat-1-intro.png',
+    'beat-2-pump.png',
+    'beat-3-rise.png',
+    'beat-4-pocket.png',
+    'moment-zoloto.png',
+    'moment-obgon.png',
+    'beat-5-launch.png',
+    'beat-6-shoulder.png',
+    'beat-7-finish.png',
+    'results-card.png',
+    'checkpoint_s2_full_run.gif'
+  ];
+
+  artifactsToCopy.forEach(file => {
+    const src = path.join(reviewDir, file);
+    const dest = path.join(brainDir, file);
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, dest);
+      console.log(`✓ Copied ${file} to artifact directory`);
+    }
+  });
 
   await browser.close();
 
