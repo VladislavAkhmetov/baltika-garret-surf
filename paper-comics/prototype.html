@@ -16,7 +16,7 @@
       <span class="scribble">Две руки — одно приключение</span>
       <p><kbd>←</kbd> <kbd>→</kbd> &nbsp; карвинг</p>
       <p><kbd>ПРОБЕЛ</kbd> &nbsp; держи — присед</p>
-      <p>Отпусти у гребня — вылет!</p>
+      <p>Сжался → разогнулся — разгон.<br>Отпусти у гребня — вылет!</p>
       <p>В воздухе: наклон — разворот.<br>Перед касанием — зажми пробел.</p>
       <small>Мышью: тяни по волне и отпускай.<br>На телефоне: наклон + касание.</small>
     </div>
@@ -36,10 +36,13 @@
       <span id="input-label" class="input-label paper">НАКЛОН ТЕЛЕФОНА</span>
       <span id="combo-value" class="combo-value">×1</span>
     </header>
+    <div class="wave-ticket paper"><span id="wave-label">НАЙДИ ПЕННУЮ ЛИНИЮ</span><div><i id="wave-fill"></i></div></div>
 
     <div id="moment" class="moment" aria-live="polite"><strong></strong><span></span></div>
     <div id="comic-frame" class="comic-frame" aria-hidden="true">
       <div class="comic-scene"><canvas id="comic-snapshot"></canvas></div>
+      <div class="comic-face-panel"><img id="comic-face-cutout" alt=""><i></i></div>
+      <div class="comic-eye-panel"><canvas id="comic-detail"></canvas><span>НИ КАПЛИ.</span></div>
       <div class="comic-burst"><img id="comic-cutout" alt=""><strong id="comic-word">УАУ!</strong><span id="comic-caption"></span><i class="comic-lines"></i></div>
     </div>
     <div id="hint" class="hint paper">НАКЛОНЯЙ — РЕЖЬ ВОЛНУ ↔</div>
@@ -47,9 +50,12 @@
     <div id="bottom-hud" class="bottom-hud">
       <div class="speed-ticket"><strong id="speed-value">26</strong><span>М/С</span><div id="speed-meter"></div></div>
       <div class="route-ticket paper"><span id="section-value">ПОЙМАЙ РИТМ</span><div class="route-track"><i id="route-fill"></i></div></div>
-      <div id="charge-ticket" class="charge-ticket paper"><span id="charge-label">ДЕРЖИ ↓</span><div><i id="charge-fill"></i></div></div>
     </div>
-    <div class="touch-guide" id="touch-guide"><span>↔ ТЯНИ — ПОВОРОТ</span><span>ДЕРЖИ ↓<br>ОТПУСТИ ↑</span></div>
+    <div class="action-controls">
+      <div class="surf-rhythm paper"><span>РИТМ ВОЛНЫ</span><strong>↓ СЖАЛСЯ<br>↑ РАЗОГНУЛСЯ</strong><small>На склоне — разгон<br>У гребня — вылет</small></div>
+      <button id="crouch-button" class="action-button crouch-button paper" aria-label="Удерживать сжатие, отпустить для разгона или вылета с гребня" aria-pressed="false"><span class="action-icon">↓</span><strong id="charge-label">ПРИСЕД</strong><small id="crouch-help">держи · отпусти ↑</small><i class="button-charge"><i id="charge-fill"></i></i></button>
+    </div>
+    <div class="touch-guide" id="touch-guide"><span>↔ ТЯНИ — ПОВОРОТ</span></div>
 
     <section id="start-screen" class="screen">
       <div class="start-stamp">GARRET SURF CLUB</div>
@@ -58,7 +64,7 @@
         <h2>НИ<br><em>КАПЛИ!</em></h2>
         <p>Волны большие.<br>Компания странная.<br>Пиво — твоё.</p>
         <button id="start-button" class="yellow-button">ЛОВИ ВОЛНУ <span>↗</span></button>
-        <p id="start-help" class="start-help">Держи телефон удобно — запомним нейтраль.<br>Наклон — курс · касание — присед<br>В воздухе наклон — трюк · присед — посадка</p>
+        <p id="start-help" class="start-help">Держи телефон удобно — запомним нейтраль.<br>Наклон — курс · ПРИСЕД — работа ногами<br>Отпусти на склоне — разгон · у гребня — вылет</p>
       </div>
       <span class="start-footnote">Сначала едешь. Потом рассказываешь.</span>
     </section>
@@ -77,6 +83,8 @@
   <script src="js/audio.js"></script>
   <script src="js/comics-course.js"></script>
   <script src="js/paper-wave.js"></script>
+  <script src="js/wave-ride.js"></script>
+  <script src="js/hand-beer.js"></script>
   <script src="js/comics-world.js"></script>
   <script src="js/paper-prototype.js"></script>
 </body>

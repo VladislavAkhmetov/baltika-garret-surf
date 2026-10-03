@@ -12,6 +12,7 @@ async function test(){
     browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
     const page=await browser.newPage(),errors=[];
     page.on('pageerror',error=>errors.push(error.message));page.setDefaultTimeout(20000);
+    page.on('console',message=>{if(message.type()==='error'&&/WebGL|Shader|THREE/.test(message.text()))errors.push(message.text());});
     await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true,deviceScaleFactor:1});
     await page.evaluateOnNewDocument(()=>{
       window.permissionCalls=0;
@@ -20,6 +21,7 @@ async function test(){
     });
     await page.goto(base,{waitUntil:'domcontentloaded'});
     await page.waitForFunction(()=>window.game&&window.game.textures.surfer_norma.image?.complete);
+    await page.waitForFunction(()=>window.game.handBeer.frame.complete&&window.game.handBeer.frame.naturalWidth>0);
     const review=path.resolve(__dirname,'../review/comics');fs.mkdirSync(review,{recursive:true});
     await page.screenshot({path:path.join(review,'01-mobile-start.png')});
     await page.click('#start-button');await page.waitForFunction(()=>window.game.state==='playing');
@@ -69,6 +71,35 @@ async function test(){
     assert.ok(mechanics.hardLanding.beer<mechanics.landing.beer&&mechanics.hardLanding.clean===0,'landing without compression should spill more beer');
     assert.ok(mechanics.hit.beer<.95&&mechanics.hit.protected&&mechanics.hit.sharkHit,'shark collision should cost beer and grant recovery time');
     assert.equal(mechanics.finish.state,'finished');assert.equal(mechanics.finish.visible,true);
+    const surf=await page.evaluate(()=>{
+      const g=window.game;
+      function setup(){g.reset();g.state='playing';g.input.mode='gyro';g.input.gamma=g.input.neutral;g.rivals.forEach(r=>{r.z=900;r.x=7;});}
+      function ride(track){
+        setup();g.p.z=60;g.p.x=track?g.waveRide.line(60):-6;g.p.y=g.wave.height(g.p.x,60);let peak=0,speed=0,maxError=0;
+        for(let i=0;i<300;i++){
+          let lean=0;
+          if(track){const ahead=g.waveRide.line(g.p.z+6),desired=Math.atan((ahead-g.p.x)/6/.52);lean=THREE.MathUtils.clamp(desired/.62,-1,1);}
+          g.input.gamma=g.input.neutral+(Math.abs(lean)>.001?Math.sign(lean)*1.5+lean*23:0);g.step(1/120);peak=Math.max(peak,g.waveRide.boost);speed+=g.p.speed;maxError=Math.max(maxError,Math.abs(g.p.x-g.waveRide.line(g.p.z)));
+        }
+        return{boost:peak,speed:speed/300,charge:g.waveRide.charge,caught:g.waveRide.totalCaught,maxError};
+      }
+      const onLine=ride(true),offLine=ride(false);
+      setup();g.p.z=37;g.p.y=g.wave.height(0,37);g.input.gamma=g.input.neutral+14;g.input.startHold();for(let i=0;i<45;i++)g.step(1/120);g.input.endHold();g.step(1/120);const pump={airborne:g.p.airborne,cycles:g.p.pumpCycles,energy:g.p.pump};
+      function beer(crouch){setup();g.mug.foam=0;g.p.lean=.65;g.p.smoothLean=.43;g.p.crouch=crouch;for(let i=0;i<720;i++)g.handBeer.step(1/120,1,0,.22);return{level:g.mug.level,spill:g.mug.totalSpilled,peak:g.handBeer.peakSlosh};}
+      const upright=beer(0),compressed=beer(1);
+      const liquid=new ComicBeerLiquid();liquid.foam=0;for(let i=0;i<120;i++)liquid.update(1/120,.1,0,.08);const initial=Math.max(...liquid.h.map(Math.abs));for(let i=0;i<1000;i++)liquid.update(1/120,0,0,0);const settled=Math.max(...liquid.h.map(Math.abs));
+      setup();g.state='paused';g.wave.update(0,0,true);g.updateVisuals(1/60);g.updateHUD();g.renderer.render(g.scene,g.camera);
+      const cup=g.handBeer.mesh,hand=g.handBeer.pivot;
+      return{onLine,offLine,pump,upright,compressed,initial,settled,handProp:cup.parent===hand&&hand.parent===g.player.card,cupHeight:cup.geometry.parameters.height,labels:g.rivals.some(r=>r.label!==undefined),beerButton:!!document.getElementById('steady-button')};
+    });
+    assert.ok(surf.onLine.boost>5&&surf.onLine.caught>0,'holding the foam line should catch a wave');
+    assert.ok(surf.onLine.speed>surf.offLine.speed+2,'caught wave should accelerate more than riding away from the pocket');
+    assert.ok(!surf.pump.airborne&&surf.pump.cycles>0&&surf.pump.energy>2,'releasing compression below the lip should pump rather than jump');
+    assert.ok(surf.upright.spill>0&&surf.upright.level<1,'sustained strong turning should spill liquid over the rim');
+    assert.ok(surf.compressed.level>surf.upright.level&&surf.compressed.peak<surf.upright.peak,'bent knees should damp the same turning forces');
+    assert.ok(surf.initial>.01&&surf.settled<.005,'liquid should react and then settle');
+    assert.ok(surf.handProp&&surf.cupHeight>1.5&&!surf.labels&&!surf.beerButton,'oversized mug should follow the hand without names or a beer button');
+    console.log(JSON.stringify({surf}));
     await page.screenshot({path:path.join(review,'02-mobile-finish.png')});
     await page.click('#replay-button');await page.waitForFunction(()=>window.game.state==='playing');
     const restart=await page.evaluate(()=>{const g=window.game;g.state='paused';return{z:g.p.z,beer:g.mug.level,hazards:g.world.hazards.every(h=>!h.hit&&!h.warned),tricks:g.tricksSeen.size,fx:g.comics.active};});
@@ -82,8 +113,9 @@ async function test(){
     await page.click('#resume-button');await page.evaluate(()=>{window.game.state='paused';document.getElementById('pause-screen').classList.add('hidden');});
     await page.screenshot({path:path.join(review,'04-mobile-comic.png')});
     const alpha=await page.evaluate(async()=>{
-      const result={};for(const name of ['hero-air-low','hero-grab']){const im=new Image();im.src='assets/comics/'+name+'.png';await im.decode();const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const ctx=c.getContext('2d');ctx.drawImage(im,0,0);const data=ctx.getImageData(0,0,im.width,im.height).data;let transparent=0;for(let i=3;i<data.length;i+=4)if(data[i]===0)transparent++;result[name]={width:im.width,height:im.height,transparent:transparent/(im.width*im.height)};}return result;
+      const result={};for(const name of ['hero-air-low','hero-grab','shark-fin','mug-paper-frame']){const im=new Image();im.src='assets/comics/'+name+'.png';await im.decode();const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const ctx=c.getContext('2d');ctx.drawImage(im,0,0);const data=ctx.getImageData(0,0,im.width,im.height).data;let transparent=0;for(let i=3;i<data.length;i+=4)if(data[i]===0)transparent++;result[name]={width:im.width,height:im.height,transparent:transparent/(im.width*im.height),centreAlpha:ctx.getImageData(Math.floor(im.width*.62),Math.floor(im.height*.5),1,1).data[3]};}return result;
     });
+    assert.ok(alpha['shark-fin'].transparent>.2&&alpha['mug-paper-frame'].transparent>.2&&alpha['mug-paper-frame'].centreAlpha<20,'paper assets need transparent silhouettes and an open glass interior');
     await page.setViewport({width:1250,height:900,isMobile:false,hasTouch:false,deviceScaleFactor:1});
     await page.waitForFunction(()=>window.game);
     if(await page.evaluate(()=>window.game.state==='start')){await page.click('#start-button');await page.waitForFunction(()=>window.game.state==='playing');}
@@ -99,8 +131,13 @@ async function test(){
     await fallback.evaluate(()=>{window.game.state='paused';});
     const finger=await fallback.touchscreen.touchStart(70,450);await finger.move(140,450);
     assert.ok(await fallback.evaluate(()=>window.game.input.target>.5),'touch drag should steer right');await finger.end();
+    await fallback.evaluate(()=>{window.game.reset();window.game.state='paused';});
+    const crouch=await fallback.$('#crouch-button'),buttonRect=await crouch.boundingBox();
+    const thumb=await fallback.touchscreen.touchStart(buttonRect.x+buttonRect.width/2,buttonRect.y+buttonRect.height/2);
+    const held=await fallback.evaluate(()=>{const g=window.game;for(let i=0;i<55;i++)g.step(1/120);return{hold:g.input.hold,crouch:g.p.crouch};});assert.ok(held.hold&&held.crouch>.8,'thumb button should physically compress the rider');
+    await thumb.end();const released=await fallback.evaluate(()=>{const g=window.game;g.step(1/120);return{hold:g.input.hold,jump:g.p.airborne};});assert.ok(!released.hold&&released.jump,'releasing the thumb button at a crest should launch');
     assert.deepEqual(errors,[]);
-    console.log(JSON.stringify({gyro,mechanics,restart,square,alpha,pageErrors:errors,screenshots:review},null,2));
+    console.log(JSON.stringify({gyro,mechanics,surf,restart,square,alpha,pageErrors:errors,screenshots:review},null,2));
   }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
 test().catch(error=>{console.error(error);process.exitCode=1;});

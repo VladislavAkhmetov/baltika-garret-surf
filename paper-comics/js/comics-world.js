@@ -36,7 +36,7 @@ class ComicsWorld {
     }
   }
   makeHazard(config,index) {
-    const group=new THREE.Group();let labelText='',color='#ae533b';
+    const group=new THREE.Group();let labelText='',color='#ae533b',fin=null;
     const cream=this.material(0xf3e8cc),red=this.material(0xe66540),dark=this.material(0x153d4d);
     if(config.type==='buoy'){
       const base=new THREE.Mesh(new THREE.CylinderGeometry(.7,.95,.3,8),cream);group.add(base);
@@ -44,11 +44,7 @@ class ComicsWorld {
       const pole=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,1.8,4),dark);pole.position.y=.9;group.add(pole);
       const flag=new THREE.Mesh(new THREE.PlaneGeometry(.75,.5),cream);flag.position.set(.35,1.7,0);group.add(flag);
     }else if(config.type==='shark'){
-      const body=new THREE.Mesh(new THREE.SphereGeometry(1,6,4),this.material(0x567d89));body.scale.set(.58,.3,1.7);body.position.y=-.11;group.add(body);
-      const shape=new THREE.Shape();shape.moveTo(-.55,0);shape.lineTo(.1,1.3);shape.lineTo(.52,0);shape.closePath();
-      const edge=new THREE.Mesh(new THREE.ShapeGeometry(shape),cream);edge.position.y=.08;edge.scale.setScalar(1.15);group.add(edge);
-      const fin=new THREE.Mesh(new THREE.ShapeGeometry(shape),dark);fin.position.set(0,.12,-.02);group.add(fin);
-      labelText='АКУЛА';color='#24526b';
+      fin=new THREE.Mesh(new THREE.PlaneGeometry(2.4,2.4),new THREE.MeshBasicMaterial({map:this.game.textures.shark_fin,transparent:true,alphaTest:.12,side:THREE.DoubleSide}));fin.position.y=1.02;group.add(fin);
     }else{
       const hull=new THREE.Mesh(new THREE.ConeGeometry(.8,3.1,5),cream);hull.rotation.x=Math.PI/2;hull.scale.y=1;group.add(hull);
       const hood=new THREE.Mesh(new THREE.BoxGeometry(1.05,.58,1.35),red);hood.position.set(0,.35,.3);group.add(hood);
@@ -60,7 +56,7 @@ class ComicsWorld {
     this.scene.add(group);
     const label=labelText?this.game.sprite(this.game.label(labelText,color),config.type==='jetski'?3.7:2.5,.7):null;
     const wake=[];if(config.type==='jetski')for(let j=0;j<16;j++)wake.push(this.game.sprite(this.game.dropTexture,.4,.25));
-    return {...config,initialX:config.x,group,label,wake,index};
+    return {...config,initialX:config.x,group,label,wake,index,fin};
   }
   reset(){this.hazards.forEach(h=>{h.x=h.initialX;h.activeAt=null;h.hit=false;h.warned=false;h.passed=false;h.group.visible=true;});}
   step(dt){
@@ -105,6 +101,7 @@ class ComicsWorld {
     this.hazards.forEach(h=>{
       const y=g.wave.height(h.x,h.z);h.group.position.set(-h.x,y+.18,h.z);h.group.visible=Math.abs(h.z-p.z)<160;
       h.group.rotation.z=h.type==='shark'?Math.sin(g.time*2+h.index)*.05:0;
+      if(h.fin)h.fin.quaternion.copy(g.camera.quaternion);
       if(h.type==='jetski')h.group.rotation.y=h.direction*Math.PI/2;
       if(h.label){h.label.position.set(-h.x,y+2.6,h.z);h.label.visible=h.group.visible;}
       h.wake.forEach((s,i)=>{const x=h.x-i*.43*h.direction,z=h.z-1-i*.22;s.position.set(-x,g.wave.height(x,z)+.07,z);s.scale.set(.75+i*.08,.2,1);s.visible=h.group.visible&&h.activeAt!==null;});
@@ -114,7 +111,7 @@ class ComicsWorld {
 
 class ComicDirector {
   constructor(game){
-    this.game=game;this.el=document.getElementById('comic-frame');this.art=document.getElementById('comic-cutout');this.snapshot=document.getElementById('comic-snapshot');this.ctx=this.snapshot.getContext('2d');
+    this.game=game;this.el=document.getElementById('comic-frame');this.art=document.getElementById('comic-cutout');this.snapshot=document.getElementById('comic-snapshot');this.ctx=this.snapshot.getContext('2d');this.detail=document.getElementById('comic-detail');this.detailCtx=this.detail.getContext('2d');this.face=document.getElementById('comic-face-cutout');this.sequence=0;
     this.active=false;this.elapsed=0;this.cooldown=0;this.pending=false;this.timeScale=1;
   }
   reset(){this.active=false;this.pending=false;this.elapsed=0;this.cooldown=0;this.timeScale=1;this.el.classList.remove('visible');}
@@ -124,6 +121,7 @@ class ComicDirector {
     this.active=true;this.pending=true;this.elapsed=0;this.timeScale=0;this.cooldown=3.5;
     document.getElementById('comic-word').textContent=word;document.getElementById('comic-caption').textContent=sub;
     this.art.src=variant==='grab'?'assets/comics/hero-grab.png':'assets/comics/hero-air-low.png';
+    this.face.src=this.art.src;this.el.classList.toggle('reverse',this.sequence++%2===1);
     this.art.onerror=()=>{this.art.onerror=null;this.art.src=SPRITE_ASSETS.surfer_jump;};
     this.el.classList.toggle('grab',variant==='grab');this.el.classList.add('visible');
     if(navigator.vibrate)navigator.vibrate([20,30,35]);this.game.audio.playSlam();
@@ -139,6 +137,7 @@ class ComicDirector {
     const canvas=this.game.renderer.domElement;
     this.snapshot.width=canvas.width;this.snapshot.height=canvas.height;
     this.ctx.drawImage(canvas,0,0);
+    this.detail.width=384;this.detail.height=480;this.detailCtx.clearRect(0,0,384,480);this.detailCtx.drawImage(this.game.handBeer.canvas,0,0);
   }
 }
 window.ComicsWorld=ComicsWorld;window.ComicDirector=ComicDirector;

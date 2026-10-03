@@ -9,7 +9,7 @@ class PaperWave {
     this.colors = [new THREE.Color('#063957'), new THREE.Color('#207ca3'), new THREE.Color('#65aeb4')];
     const texture = new THREE.TextureLoader().load(SPRITE_ASSETS.wave_paper_texture);
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(7, 15);
+    texture.repeat.set(1, 1);
     texture.anisotropy = 4;
     const geometry = new THREE.PlaneGeometry(84, 232, 64, 144);
     geometry.rotateX(-Math.PI / 2);
@@ -17,6 +17,30 @@ class PaperWave {
     geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.count * 3), 3));
     this.originalZ = Float32Array.from(geometry.attributes.position.array.filter((_, i) => i % 3 === 2));
     this.sea = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({map:texture, vertexColors:true, side:THREE.DoubleSide}));
+    // Three differently rotated photograph samples blend in world space. Smooth
+    // noise hides tile boundaries while preserving the original printed water.
+    this.sea.material.onBeforeCompile=shader=>{
+      shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vPaperWorld;').replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nvPaperWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
+      shader.fragmentShader=shader.fragmentShader.replace('#include <common>',`#include <common>
+        varying vec3 vPaperWorld;
+        float paperHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+        float paperNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(paperHash(i),paperHash(i+vec2(1,0)),f.x),mix(paperHash(i+vec2(0,1)),paperHash(i+vec2(1,1)),f.x),f.y);}
+      `).replace('#include <map_fragment>',`
+        #ifdef USE_MAP
+          vec2 world=vPaperWorld.xz;
+          vec2 warp=vec2(paperNoise(world*.043),paperNoise(world*.036+17.0))*.9;
+          vec2 uv=world*vec2(.041,.054)+warp;
+          vec4 a=texture2D(map,uv);
+          vec4 b=texture2D(map,mat2(.8,-.6,.6,.8)*uv*.73+vec2(8.2,3.7));
+          vec4 d=texture2D(map,mat2(-.36,.93,.93,.36)*uv*1.23+vec2(1.7,12.8));
+          float blend=paperNoise(world*.066+7.0);
+          vec4 texelColor=mix(mix(a,b,.22+blend*.5),d,.17+paperNoise(world*.031)*.18);
+          texelColor=mapTexelToLinear(texelColor);
+          diffuseColor*=texelColor;
+        #endif
+      `);
+    };
+    this.sea.material.customProgramCacheKey=()=> 'paper-water-aperiodic-v2';
     this.sea.frustumCulled = false;
     scene.add(this.sea);
     this.crests = [];
@@ -40,20 +64,24 @@ class PaperWave {
 
   hash(n) { const a = Math.sin(n * 127.1 + 311.7) * 43758.5453; return a - Math.floor(a); }
 
+  phase(x,z,time=this.time){return (z-time*this.drift+x*.82)/this.period*Math.PI*2+.4*Math.sin(z*.017)+.19*Math.sin(x*.18+z*.009);}
+  crestZ(n,x,time){let z=n*this.period+this.period/4+time*this.drift-x*.82;for(let i=0;i<4;i++){const error=this.phase(x,z,time)-(n*Math.PI*2+Math.PI/2);z-=error/(Math.PI*2/this.period+.0068*Math.cos(z*.017)+.00171*Math.cos(x*.18+z*.009));}return z;}
+
   height(x, z, time = this.time) {
-    const phase = (z - time * this.drift + x * .82) / this.period * Math.PI * 2;
+    const phase = this.phase(x,z,time);
     const ridge = Math.pow((Math.sin(phase) + 1) * .5, 3);
     const leftBank = Math.max(0, Math.min(1, (-x + 1) / 10));
     const rightBank = Math.max(0, Math.min(1, (x - 3) / 12));
     const wall = 1.6 * leftBank * leftBank * (.6 + .4 * Math.sin(z * .035));
-    return -.5 + 3.8 * ridge + wall + .7 * rightBank * rightBank + .12 * Math.sin(z * .23 + x * .41 - time * 1.4);
+    const amplitude=3.8*(1+.13*Math.sin(z*.026)+.08*Math.sin(x*.08+z*.013));
+    return -.5 + amplitude * ridge + wall + .7 * rightBank * rightBank + .12 * Math.sin(z * .23 + x * .41 - time * 1.4);
   }
 
   sample(x, z) {
     const h = this.height(x, z);
     const dx = (this.height(x + .12, z) - this.height(x - .12, z)) / .24;
     const dz = (this.height(x, z + .15) - this.height(x, z - .15)) / .3;
-    const phase = (z - this.time * this.drift + x * .82) / this.period * Math.PI * 2;
+    const phase = this.phase(x,z);
     return {height:h, dx, dz, crest:Math.pow((Math.sin(phase) + 1) * .5, 3)};
   }
 
@@ -78,7 +106,6 @@ class PaperWave {
     const pos = this.sea.geometry.attributes.position;
     const col = this.sea.geometry.attributes.color;
     const centerZ = playerZ + 91;
-    this.sea.material.map.offset.y = -centerZ / 232 * 15;
     const c = new THREE.Color();
     for (let i = 0; i < pos.count; i++) {
       const wx = pos.getX(i), z = this.originalZ[i] + centerZ;
@@ -100,7 +127,7 @@ class PaperWave {
         const p = mesh.geometry.attributes.position;
         for (let j = 0; j <= 80; j++) {
           const x = -64 + j / 80 * 76;
-          const center = n * this.period + this.period / 4 + time * this.drift - x * .82;
+          const center = this.crestZ(n,x,time);
           const rag = (this.hash(j + n * 89) - .5) * .55;
           for (let side = 0; side < 2; side++) {
             const z = center + (side - .5) * mesh.userData.width + rag + (layer === 1 ? -.38 : 0);
