@@ -1,0 +1,9 @@
+{
+  "scripts": {
+    "dev": "node scripts/serve.js",
+    "test:prototype": "node scripts/test_prototype.js"
+  },
+  "dependencies": {
+    "puppeteer-core": "^24.43.1"
+  }
+}

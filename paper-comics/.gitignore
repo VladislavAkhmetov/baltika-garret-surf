@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Test artifacts & reviews
+.frames/
+review/
+*.gif
+*.log
+playtest-*.png
+scratch_test_*.png
+
+# Vercel
+.vercel/
+
+# OS files
+.DS_Store
+Thumbs.db

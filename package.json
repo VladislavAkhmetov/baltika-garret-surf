@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "dev": "node scripts/serve.js",
+    "test:prototype": "node paper-comics/scripts/test_prototype.js"
+  },
   "dependencies": {
     "puppeteer-core": "^24.43.1"
   }

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#3FA7D6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Tony's Garret — Surf Rush (Papercraft Edition)</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Rubik+Mono+One&family=Rubik:wght@500;700;800&family=Caveat:wght@700&display=swap" rel="stylesheet">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/style.css">
+  
+  <!-- Three.js (Local with CDN fallback) -->
+  <script src="libs/three.min.js"></script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+    }
+  </script>
+</head>
+<body>
+  <!-- MOBILE SCREEN CONTAINER -->
+  <div id="app-container">
+    
+    <!-- 3D WebGL Canvas -->
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- Halftone Paper Overlay & Vignette -->
+    <div id="paper-grain-overlay"></div>
+    <div id="speed-lines"></div>
+
+    <!-- Central Paper Trick Sticker Popup -->
+    <div id="trick-sticker" class="hide">
+      <div class="trick-badge-inner">
+        <div class="trick-yellow-tape" id="trick-tag">ТРЮК</div>
+        <div class="trick-white-tape" id="trick-val">+250</div>
+      </div>
+    </div>
+
+    <!-- Dynamic In-Game Banner -->
+    <div id="banner-popup"></div>
+
+    <!-- UI Root Layer -->
+    <div id="ui-root">
+      
+      <!-- AUTHENTIC CONCEPT TORN-PAPER HUD -->
+      <header id="hud">
+        
+        <!-- 1. LEFT: BEER CUP GAUGE -->
+        <div id="hud-beer-widget" class="paper-hud-card">
+          <div class="beer-cup-col">
+            <img src="assets/sprites/cherry_beer_cup.png" alt="Cherry Garret Beer" class="hud-beer-icon">
+          </div>
+          <div class="beer-meter-col">
+            <div class="beer-pct-line">
+              <span id="beer-level-val">100</span><span class="pct-sign">%</span>
+            </div>
+            <div class="beer-bar-outer">
+              <div id="beer-bar-inner" style="width: 100%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. CENTER: КОЛЛЕКЦИЯ ВОЛН (3 BOTTLE CAPS) -->
+        <div id="hud-collection-badge" class="paper-hud-card">
+          <div class="collection-title">КОЛЛЕКЦИЯ ВОЛН</div>
+          <div class="collection-slots">
+            <div class="cap-slot" id="slot-1">
+              <img src="assets/sprites/cap_empty.png" class="slot-cap-img empty" id="cap-icon-1" alt="Slot 1">
+            </div>
+            <div class="cap-slot" id="slot-2">
+              <img src="assets/sprites/cap_empty.png" class="slot-cap-img empty" id="cap-icon-2" alt="Slot 2">
+            </div>
+            <div class="cap-slot" id="slot-3">
+              <img src="assets/sprites/cap_empty.png" class="slot-cap-img empty" id="cap-icon-3" alt="Slot 3">
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. RIGHT: СЧЕТ ODOMETER & SOUND TOGGLE -->
+        <div id="hud-score-widget" class="paper-hud-card">
+          <div class="score-tape-label">СЧЕТ</div>
+          <div class="score-odometer-box">
+            <span id="score-odometer-text">000000</span>
+          </div>
+          <button id="btn-sound-toggle" class="btn-sound-paper clickable" aria-label="Звук">🔊</button>
+        </div>
+
+      </header>
+
+      <!-- DEBUG STATS OVERLAY (?debug=1) -->
+      <div id="debug-overlay" class="hide"></div>
+
+      <!-- GYRO CALIBRATION MODAL -->
+      <div id="calibration-screen" class="hide clickable">
+        <div class="calibration-card">
+          <div class="calibration-mug-icon">🍺</div>
+          <div class="calibration-title">КАЛИБРОВКА КРУЖКИ</div>
+          <div class="calibration-hint">Держи телефон как кружку. Ровно...</div>
+          <div class="calibration-countdown" id="calibration-count">3</div>
+        </div>
+      </div>
+
+      <!-- FALLBACK TOUCH ON-SCREEN CONTROLS (TORN KRAFT PAPERCRAFT BUTTONS) -->
+      <div id="touch-controls-layer">
+        <div class="touch-steer-container">
+          <button id="btn-touch-left" class="paper-touch-btn btn-carve" aria-label="Влево">
+            <span class="btn-touch-icon">◀</span>
+            <span class="btn-touch-text">ВЛЕВО</span>
+          </button>
+          <button id="btn-touch-right" class="paper-touch-btn btn-carve" aria-label="Вправо">
+            <span class="btn-touch-text">ВПРАВО</span>
+            <span class="btn-touch-icon">▶</span>
+          </button>
+        </div>
+        <div class="touch-jump-container">
+          <button id="btn-touch-jump" class="paper-touch-btn btn-jump" aria-label="Прыжок">
+            <span class="btn-touch-icon">🤙</span>
+            <span class="btn-touch-text">ПРЫЖОК</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- START / ONBOARDING SCREEN (VINTAGE PAPERCRAFT POSTER) -->
+      <div id="start-screen" class="overlay-screen clickable">
+        <div class="paper-poster-card">
+          
+          <div class="poster-stamp-top">TONY'S GARRET SPECIAL</div>
+          
+          <div class="logo-hero">
+            <div class="logo-badge">
+              <div class="logo-sub">Tony's</div>
+              <h1 class="logo-title">GARRET</h1>
+              <div class="logo-tag">CHERRY SURF RUSH 2.5D</div>
+            </div>
+          </div>
+
+          <!-- FLAVOR SELECTOR -->
+          <div class="flavor-selector-box">
+            <div class="flavor-selector-title">ВЫБЕРИ СВОЙ ВАЙБ</div>
+            <div class="flavor-grid">
+              <div class="flavor-card active" data-flavor="cherry">
+                <div class="flavor-icon">🍒</div>
+                <div class="flavor-name">Craft Cherry</div>
+                <div class="flavor-stat">Физика жидкости</div>
+              </div>
+              <div class="flavor-card" data-flavor="peach">
+                <div class="flavor-icon">🍑</div>
+                <div class="flavor-name">Hard Peach</div>
+                <div class="flavor-stat">Баланс</div>
+              </div>
+              <div class="flavor-card" data-flavor="lemon">
+                <div class="flavor-icon">🍋</div>
+                <div class="flavor-name">Hard Lemon</div>
+                <div class="flavor-stat">Скорость</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CONTROLS & BEER MECHANIC GUIDE -->
+          <div class="control-guide-box">
+            <div class="control-icon">🍺</div>
+            <div class="control-text">
+              <b id="gyro-status-label">Держи кружку вишневого Garret в руке!</b><br>
+              Управляй гироскопом или кнопками <b>◀</b> / <b>▶</b> и <b>🤙 ПРЫЖОК</b> (или стрелками на клаве). Не расплескай пиво — в кружке реальная физика жидкости!<br>
+              <small style="opacity:0.85; color:#fce38a;">Наезжай на трамплины <b>>></b>, собирай жестяные крышки и заезжай в баррель за супер-глотком x3!</small>
+            </div>
+          </div>
+
+          <!-- ACTION BUTTON -->
+          <button id="btn-start" class="btn-paper-primary">ПОКОРИТЬ ВОЛНУ 🏄‍♂️</button>
+        </div>
+      </div>
+
+      <!-- GAME OVER / RESULT SCREEN (GARRET SURF PASS) -->
+      <div id="result-screen" class="overlay-screen clickable hide">
+        <div class="surf-pass-card">
+          
+          <div class="pass-header">
+            <span class="pass-title">GARRET SURF PASS</span>
+            <span class="pass-date">SUMMER 2026</span>
+          </div>
+
+          <div class="pass-rank-title" id="pass-rank">Король Барреля</div>
+          <div class="pass-badge-pill">OFFICIAL RIDER 🏄‍♂️</div>
+
+          <!-- COLLECTED CAPS ROW IN PASS -->
+          <div class="pass-caps-row">
+            <span class="pass-caps-title">Твоя Коллекция:</span>
+            <div class="pass-caps-icons" id="pass-caps-container">
+              <img src="assets/sprites/cap_fish.png" class="pass-cap" id="pass-cap-1" alt="Fish Cap">
+              <img src="assets/sprites/cap_palm.png" class="pass-cap" id="pass-cap-2" alt="Palm Cap">
+              <img src="assets/sprites/cap_empty.png" class="pass-cap" id="pass-cap-3" alt="Cap 3">
+            </div>
+          </div>
+
+          <div class="pass-stats-grid">
+            <div class="stat-item">
+              <span class="stat-val" id="pass-beer">100%</span>
+              <span class="stat-lbl">Garret цел</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-val" id="pass-score">004200</span>
+              <span class="stat-lbl">Очки</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-val" id="pass-distance">0м</span>
+              <span class="stat-lbl">Дистанция</span>
+            </div>
+          </div>
+
+          <p class="pass-quote" id="pass-quote">«Освежающий заезд на закатной волне Garret. Ни капли не пролито!»</p>
+
+          <div class="result-buttons">
+            <button id="btn-replay" class="btn-paper-primary">ЕЩЁ ЗАЕЗД 🤙</button>
+            <button id="btn-share" class="btn-paper-secondary">ПОДЕЛИТЬСЯ РЕЗУЛЬТАТОМ</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Scripts (Strict order per LEVEL1_SPEC) -->
+  <script src="js/sprites-data.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/ocean.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/models.js"></script>
+  <script src="js/mug.js"></script>
+  <script src="js/fx.js"></script>
+  <script src="js/rivals.js"></script>
+  <script src="js/events.js"></script>
+  <script src="js/level1.js"></script>
+  <script src="js/spawner.js"></script>
+  <script src="js/meta.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

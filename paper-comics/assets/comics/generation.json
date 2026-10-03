@@ -1,0 +1,14 @@
+{
+  "mode": "built-in image_gen",
+  "reference": "Paper Collage Surfing Sticker Run (2).png",
+  "assets": [
+    {
+      "file": "hero-air-low.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent game character cutout for a dramatic comic freeze frame. Reference image role: character identity, clothes, collage material and board design from the supplied surfing concept; do not reproduce the whole poster. Generate ONE isolated full-body surfer with surfboard seen from the FRONT at a dramatic LOW angle from underneath the board, mid aerial at its apex. Same adult male: curly dark brown hair, white sleeveless tank top, green tropical patterned shorts, barefoot, blue short surfboard. Knees tucked, joyful concentrated expression, right hand holding an upright clear glass of golden beer with white foam, left arm spread for balance. Board foreshortened in foreground, entire board and glass in frame. Photographic cut-paper collage, rough cream paper sticker border, tactile torn edges, subtle halftone printing and slight imperfect registration, warm sunlight, playful energy matching the reference. No lettering, no background scenery, no logo, no watermark, no other people. Actual transparent alpha background. Centered subject with room around edges."
+    },
+    {
+      "file": "hero-grab.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent game character cutout for a second comic freeze-frame camera angle. Reference image role: same character, clothes and photomontage paper style from the supplied surfing concept, not a reproduction of the poster. Generate ONE isolated full-body adult male surfer doing a sideways aerial GRAB, seen from a dramatic FRONT THREE-QUARTER angle close to board level. Curly dark brown hair, white sleeveless tank top, green tropical patterned shorts, barefoot, blue short surfboard. Deeply bent knees, LEFT hand gripping the near rail of the blue surfboard, RIGHT hand raised holding an upright clear glass of golden foamy beer. Proud slightly startled grin. Whole body, board and glass fully inside frame. Photographic cut-paper collage with tactile rough cream sticker border, torn edges, small printed halftone accents, warm sunlight. Dynamic readable silhouette. No words, no scenery, no logos, no watermark, no other people. Actual transparent alpha background."
+    }
+  ]
+}

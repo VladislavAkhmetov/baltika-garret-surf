@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#103f58">
+  <title>GARRET — Ни капли! / Бумажные комиксы</title>
+  <link rel="stylesheet" href="css/prototype.css">
+</head>
+<body>
+  <aside class="desktop-note">
+    <span class="edition">GARRET · SURF CLUB</span>
+    <h1>ВОЛНА.<br>ВЕТЕР.<br><em>НИ КАПЛИ!</em></h1>
+    <p>Поймай ритм волны.<br>Подружись с местными.<br>Довези своё пиво.</p>
+    <div class="note-controls paper">
+      <span class="scribble">Две руки — одно приключение</span>
+      <p><kbd>←</kbd> <kbd>→</kbd> &nbsp; карвинг</p>
+      <p><kbd>ПРОБЕЛ</kbd> &nbsp; держи — присед</p>
+      <p>Отпусти у гребня — вылет!</p>
+      <p>В воздухе: наклон — разворот.<br>Перед касанием — зажми пробел.</p>
+      <small>Мышью: тяни по волне и отпускай.<br>На телефоне: наклон + касание.</small>
+    </div>
+    <span class="desktop-footer">Бумага. Соль. Хорошая компания.</span>
+  </aside>
+
+  <main id="app-container" aria-label="Игра Ни капли">
+    <div class="sky" aria-hidden="true"><div class="sun-halo"></div><div class="sun"></div><div class="cloud cloud-one"></div><div class="cloud cloud-two"></div></div>
+    <canvas id="surf-canvas" aria-label="Бумажная волна и сёрферы"></canvas>
+    <div class="print-grain" aria-hidden="true"></div>
+    <header class="hud" id="hud">
+      <div class="beer-ticket paper"><canvas id="beer-canvas" width="104" height="144"></canvas><div><span class="ticket-label">ДОВЕЗИ</span><strong id="beer-value">100<span>%</span></strong><div class="beer-track"><i id="beer-fill"></i></div></div></div>
+      <div class="score-ticket"><span>СЧЁТ</span><strong id="score-value">000000</strong></div>
+      <div class="caps-ticket paper"><img id="cap-icon" alt="Крышка"><span id="caps-value">0</span><span class="ticket-label">КРЫШЕК</span></div>
+      <button id="pause-button" class="small-button paper" aria-label="Пауза">Ⅱ</button>
+      <button id="center-button" class="center-button paper" aria-label="Сделать текущее положение телефона нейтральным" title="Новая нейтраль">◎</button>
+      <span id="input-label" class="input-label paper">НАКЛОН ТЕЛЕФОНА</span>
+      <span id="combo-value" class="combo-value">×1</span>
+    </header>
+
+    <div id="moment" class="moment" aria-live="polite"><strong></strong><span></span></div>
+    <div id="comic-frame" class="comic-frame" aria-hidden="true">
+      <div class="comic-scene"><canvas id="comic-snapshot"></canvas></div>
+      <div class="comic-burst"><img id="comic-cutout" alt=""><strong id="comic-word">УАУ!</strong><span id="comic-caption"></span><i class="comic-lines"></i></div>
+    </div>
+    <div id="hint" class="hint paper">НАКЛОНЯЙ — РЕЖЬ ВОЛНУ ↔</div>
+    <div id="spill-flash" aria-hidden="true"></div>
+    <div id="bottom-hud" class="bottom-hud">
+      <div class="speed-ticket"><strong id="speed-value">26</strong><span>М/С</span><div id="speed-meter"></div></div>
+      <div class="route-ticket paper"><span id="section-value">ПОЙМАЙ РИТМ</span><div class="route-track"><i id="route-fill"></i></div></div>
+      <div id="charge-ticket" class="charge-ticket paper"><span id="charge-label">ДЕРЖИ ↓</span><div><i id="charge-fill"></i></div></div>
+    </div>
+    <div class="touch-guide" id="touch-guide"><span>↔ ТЯНИ — ПОВОРОТ</span><span>ДЕРЖИ ↓<br>ОТПУСТИ ↑</span></div>
+
+    <section id="start-screen" class="screen">
+      <div class="start-stamp">GARRET SURF CLUB</div>
+      <div class="start-card paper">
+        <span class="eyebrow">БУМАЖНОЕ ПРИКЛЮЧЕНИЕ</span>
+        <h2>НИ<br><em>КАПЛИ!</em></h2>
+        <p>Волны большие.<br>Компания странная.<br>Пиво — твоё.</p>
+        <button id="start-button" class="yellow-button">ЛОВИ ВОЛНУ <span>↗</span></button>
+        <p id="start-help" class="start-help">Держи телефон удобно — запомним нейтраль.<br>Наклон — курс · касание — присед<br>В воздухе наклон — трюк · присед — посадка</p>
+      </div>
+      <span class="start-footnote">Сначала едешь. Потом рассказываешь.</span>
+    </section>
+    <section id="pause-screen" class="screen hidden">
+      <div class="pause-card paper"><span class="eyebrow">МИНУТКА НА БЕРЕГУ</span><h2>ВЫДОХНИ.</h2><button id="resume-button" class="yellow-button">ОБРАТНО НА ВОЛНУ ↗</button><button id="reset-button" class="text-button">Начать заново</button></div>
+    </section>
+    <section id="result-screen" class="screen hidden">
+      <div class="result-card paper"><span class="eyebrow">ПЛЯЖНЫЙ БАР GARRET</span><h2 id="result-title">ДОВЁЗ!</h2><strong class="result-beer" id="result-beer">100%</strong><p id="result-comment">Бармен одобряет.</p><div class="result-stats"><div><span>СЧЁТ</span><strong id="result-score">0</strong></div><div><span>КРЫШКИ</span><strong id="result-caps">0</strong></div><div><span>ЧИСТЫЕ ПОСАДКИ</span><strong id="result-landings">0</strong></div></div><p id="result-tricks" class="result-tricks"></p><button id="replay-button" class="yellow-button">ЕЩЁ ОДНУ ВОЛНУ ↗</button></div>
+    </section>
+    <div id="error-screen" class="error-screen hidden" role="alert">Для игры нужен браузер с WebGL. Попробуй открыть её в Chrome, Edge или Safari.</div>
+  </main>
+  <script src="libs/three.min.js"></script>
+  <script src="js/sprites-data.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/mug.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/comics-course.js"></script>
+  <script src="js/paper-wave.js"></script>
+  <script src="js/comics-world.js"></script>
+  <script src="js/paper-prototype.js"></script>
+</body>
+</html>
