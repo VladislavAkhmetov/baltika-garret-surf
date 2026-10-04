@@ -17,7 +17,7 @@ async function test(){
   await page.evaluate(async()=>{await Promise.all([game.heroAnimator.ready,game.comics.ready,game.world.ready]);});
   const review=path.resolve(__dirname,'../review/comics');fs.mkdirSync(review,{recursive:true});
   await page.screenshot({path:path.join(review,'01-mobile-start.png')});
-  await page.click('#start-button');await page.click('#character-next');await page.click('#location-next');await page.click('#story-skip');await page.click('#ride-button');await page.waitForFunction(()=>game.state==='playing');
+  await page.click('#start-button');await page.click('#setup-next');await page.click('#story-skip');await page.waitForFunction(()=>game.state==='playing');
   const gyro=await page.evaluate(()=>{
     clearInterval(sensorTimer);const g=game;g.state='paused';g.reset();g.state='playing';
     const before=g.p.x;g.input.gamma=g.input.neutral+18;g.input.beta=g.input.neutralBeta-8;
@@ -58,7 +58,7 @@ async function test(){
   const mechanics=await page.evaluate(()=>{
     const g=game,dt=1/120;
     function setup(z=0,face=.42){
-      g.reset();g.state='playing';g.input.mode='touch';g.input.target=g.input.pitchTarget=0;g.rivals.forEach(r=>{r.z=2000;r.x=8;});
+      g.assist=false;g.reset();g.state='playing';g.input.mode='touch';g.input.target=g.input.pitchTarget=0;g.rivals.forEach(r=>{r.z=2000;r.x=8;});
       if(z){const w=g.wave.waves.find(w=>z>w.from&&z<w.to);g.p.z=z;g.p.x=w?g.wave.crestX(w,z)+w.width*face:1;g.p.y=g.wave.height(g.p.x,z);}
     }
     function control(face=.42,pitch=0){
@@ -119,7 +119,7 @@ async function test(){
     setup(950,.38);const stas=g.rivals[2];stas.x=g.p.x;stas.z=g.p.z+.5;
     const spillMethod=g.spill;let rivalContacts=0;
     g.spill=function(amount,reason){if(reason.startsWith(stas.name))rivalContacts++;return spillMethod.call(this,amount,reason);};
-    for(let i=0;i<1200&&g.state==='playing';i++){control(.38,.1);g.step(dt);g.comics.update(dt);}
+    for(let i=0;i<2400&&g.state==='playing';i++){control(.38,.1);g.step(dt);g.comics.update(dt);}
     g.spill=spillMethod;const company={contacts:rivalContacts,beer:g.mug.level,z:g.p.z};
     setup();g.input.target=.8;for(let i=0;i<240;i++)g.step(dt);const slosh=g.handBeer.peakSlosh;
     g.input.target=g.input.pitchTarget=0;for(let i=0;i<360;i++)g.step(dt);const settled=Math.max(...g.mug.h.map(Math.abs));
@@ -148,7 +148,7 @@ async function test(){
   assert.equal(mechanics.reset.level,1);assert.equal(mechanics.reset.spilled,0);assert.equal(mechanics.reset.caught,0);assert.equal(mechanics.reset.jets,true);
   const jumpsAndChase=await page.evaluate(()=>{
     const g=game,dt=1/120;
-    const setup=(z=20)=>{g.reset();g.state='playing';g.input.mode='touch';g.rivals.forEach(r=>{r.z=2000;r.x=8;});g.p.z=z;g.p.x=1;g.p.y=g.wave.height(1,z);};
+    const setup=(z=20)=>{g.assist=false;g.reset();g.state='playing';g.input.mode='touch';g.rivals.forEach(r=>{r.z=2000;r.x=8;});g.p.z=z;g.p.x=1;g.p.y=g.wave.height(1,z);};
     const key=(type)=>dispatchEvent(new KeyboardEvent(type,{code:'Space',bubbles:true}));
     setup();key('keydown');for(let i=0;i<60;i++)g.step(dt);const charged=g.jump.charge;key('keyup');g.step(dt);
     const launched=g.p.airborne;g.heroAnimator.update(dt);const pose={state:g.heroAnimator.state,frame:g.heroAnimator.frame};
@@ -249,17 +249,17 @@ async function test(){
   const fallback=await browser.newPage();fallback.on('pageerror',e=>errors.push(e.message));
   await fallback.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
   await fallback.evaluateOnNewDocument(()=>{Object.defineProperty(DeviceOrientationEvent,'requestPermission',{value:async()=>'denied'});});
-  await fallback.goto(base,{waitUntil:'domcontentloaded'});await fallback.click('#start-button');await fallback.click('#character-next');await fallback.click('#location-next');await fallback.click('#story-skip');await fallback.click('#ride-button');await fallback.waitForFunction(()=>game.state==='playing');
+  await fallback.goto(base,{waitUntil:'domcontentloaded'});await fallback.click('#start-button');await fallback.click('#setup-next');await fallback.click('#story-skip');await fallback.waitForFunction(()=>game.state==='playing');
   const touch=await fallback.evaluate(()=>{const g=game;g.state='paused';const el=g.container;const event=(name,x,y)=>el.dispatchEvent(new PointerEvent(name,{pointerId:11,pointerType:'touch',clientX:x,clientY:y,bubbles:true}));event('pointerdown',90,490);event('pointermove',140,435);g.input.update(.2);const result={mode:g.input.mode,lean:g.input.lean,pitch:g.input.pitch};event('pointercancel',140,435);g.input.update(1);result.cancelled=Math.abs(g.input.pitch)+Math.abs(g.input.lean);return result;});
   assert.equal(touch.mode,'touch');assert.ok(touch.lean>.3&&touch.pitch>.3);assert.ok(touch.cancelled<.002);
   await fallback.close();
   await page.setViewport({width:1240,height:900,isMobile:false,hasTouch:false});
   await page.evaluate(async()=>{await game.start(false);game.state='paused';game.comics.reset();game.reducedMotion=false;game.p.z=480;game.p.x=game.wave.crestX(game.wave.waves[2],480)+4.2;game.p.y=game.wave.height(game.p.x,480);game.resize();game.updateCamera(1,true);game.updateVisuals(0);game.wave.update(game.p.z,game.time,true);});
   await page.screenshot({path:path.join(review,'04-desktop-square.png')});
-  const square=await page.$eval('#app-container',el=>{const r=el.getBoundingClientRect();return Math.abs(r.width-r.height);});assert.ok(square<2);
+  const stage=await page.$eval('#app-container',el=>{const r=el.getBoundingClientRect();return {width:r.width,height:r.height};});assert.deepEqual(stage,{width:1240,height:900});
   assert.deepEqual(errors,[]);assert.deepEqual(missing,[]);
   fs.writeFileSync(path.join(review,'verification.json'),JSON.stringify({gyro,controls,assets,mechanics,jumpsAndChase,feedback,animation,comic,touch,errors,missing},null,2));
-  console.log('PASS: rounded finite waves, gyro/touch/keyboard, cutback/wake, jump/landing, shark chase/escape/dodge, beer, uncluttered HUD, 32 rear animation frames, comic timing, finish/restart, portrait and square.');
+  console.log('PASS: waves, gyro/touch/keyboard, cutback/wake, jump/landing, shark chase/escape/dodge, beer, HUD, 32 animation frames, comic timing, finish/restart, portrait and full desktop stage.');
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
 test().catch(error=>{console.error(error);process.exitCode=1;});

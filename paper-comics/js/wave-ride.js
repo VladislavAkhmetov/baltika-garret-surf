@@ -53,7 +53,7 @@ class WaveRide {
     const arrow=wave=>{
       const z=THREE.MathUtils.clamp(p.z+24,wave.from+24,wave.to-24);
       const delta=g.wave.crestX(wave,z)+wave.width*.42-p.x;
-      return delta<-.7?'←':delta>.7?'→':'↑';
+      return delta<-.7?'←':delta>.7?'→':'ПРЯМО';
     };
     if(w){
       const remaining=Math.max(0,Math.ceil(w.to-p.z)),next=waves.find(next=>next.id>w.id);
@@ -62,7 +62,7 @@ class WaveRide {
       const onSurface=s.wave?.id===w.id;
       const caught=onSurface&&this.caught;
       return {number:(w.id+1)+'/'+waves.length,phase:ending?'ending':caught?'ride':'catch',
-        label:onSurface?(s.zone==='back'||caught?zones[s.zone]:'ЛОВИ ВОЛНУ · ПЛАВНЫЙ КУРС'):'ВОЛНА РЯДОМ · ВХОДИ '+arrow(w),
+        label:onSurface?(s.zone==='back'?'ЗА ГРЕБНЕМ · ВЕРНИСЬ '+arrow(w):caught?zones[s.zone]:'ЛОВИ СКЛОН '+arrow(w)):'ВОЛНА РЯДОМ · ВХОДИ '+arrow(w),
         status:ending?(next?'ГОТОВЬ ПЕРЕХОД':'ПОСЛЕДНЯЯ ВОЛНА'):caught?'РАЗГОН +'+Math.round(this.boost):'ЛОВЛЯ '+Math.round(this.charge*100)+'%',
         remaining:ending&&next?'НОВАЯ '+arrow(next):'ЕЩЁ '+remaining+' М'};
     }

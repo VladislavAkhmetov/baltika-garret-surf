@@ -1,0 +1,37 @@
+/* Read the action at a glance; button symbols replace permanent key legends. */
+.beer-ticket .ticket-label,.score-ticket>span{display:none!important}
+.collection-ticket>span{font-size:24px}.collection-ticket{padding-top:10px}
+.bottom-hud{left:32%;right:28%;bottom:30px}
+.route-ticket{padding:0;background:none;filter:none;transform:none}
+.route-track{height:5px;margin:0;background:#fff2d166;border:1px solid #214a5450}
+.route-track i{background:#ffc43d}
+#jump-button{width:68px;height:68px;padding:0;font-size:38px;display:flex;align-items:center;justify-content:center}
+#jump-button b{font:inherit;line-height:1}
+#jump-button.spin-ready{background-color:#ffe198;filter:drop-shadow(0 0 9px #ffcc55);color:#123d49}
+#jump-button.spinning b{transform:rotate(-18deg)}
+.ride-coach strong{font-size:19px}.ride-coach span{font-size:17px;line-height:1.25}
+.balance-cue small{font-size:25px}.balance-cue strong{font-size:17px}
+.result-card{width:min(500px,90%);padding:30px 35px}
+.result-card h2{font-size:30px;margin:8px 0 16px}.result-beer{font-size:82px;line-height:1}
+.result-card #result-comment{font:22px/1.2 Rubik,sans-serif;margin:12px 0}
+.result-companion{margin:18px 0;gap:16px}.result-companion span{font-size:26px}
+.result-summary{display:flex;justify-content:center;align-items:center;gap:18px;margin:20px 0 24px}
+.result-summary>span{font:16px 'Russo One',sans-serif}.result-summary>strong{font:34px 'Russo One',sans-serif}
+.result-card .menu-link{display:block;margin:15px auto 0;font:17px Rubik,sans-serif;padding:8px}
+@media(max-width:650px){
+ .collection-ticket>span{font-size:20px}.collection-ticket{padding:10px 8px}
+ .ride-coach{max-width:83%;padding:15px 22px;left:50%}
+ .ride-coach strong{font-size:17px}.ride-coach span{font-size:16px}
+ .steer-controls button{font-size:32px;width:51px;height:59px}
+ #jump-button{width:66px;height:64px;font-size:37px;right:12px;bottom:16px}
+ .result-card{padding:25px 28px}.result-card h2{font-size:27px}.result-beer{font-size:76px}
+ .result-card #result-comment{font-size:21px}.result-companion span{font-size:24px}
+ .result-summary{margin:18px 0}.result-companion canvas{width:84px;height:76px}
+}
+@media(orientation:landscape) and (max-height:520px){
+ .ride-coach{max-width:370px;padding:12px 22px}.ride-coach strong{font-size:17px}.ride-coach span{font-size:16px}
+ .result-card{width:min(690px,90%);padding:18px 30px 18px 170px}
+ .result-card h2{font-size:25px;margin:0 0 7px}.result-beer{font-size:59px}.result-card #result-comment{font-size:19px;margin:6px 0}
+ .result-companion{left:22px;top:43px;width:128px;margin:0}.result-companion span{font-size:22px}
+ .result-summary{margin:10px 0;gap:16px}.result-summary>strong{font-size:28px}.result-card .menu-link{margin:5px auto 0;padding:4px;font-size:16px}
+}

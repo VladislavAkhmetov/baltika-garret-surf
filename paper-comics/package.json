@@ -3,7 +3,9 @@
     "dev": "node scripts/serve.js",
     "test:prototype": "node scripts/test_prototype.js",
     "test:chapter": "node scripts/test_chapter.cjs",
-    "test:playthrough": "node scripts/check-playthrough.cjs"
+    "test:playthrough": "node scripts/check-playthrough.cjs",
+    "test:novice": "node scripts/test_novice.cjs",
+    "test:wager": "node scripts/test_wager.cjs"
   },
   "dependencies": {
     "puppeteer-core": "^24.43.1"

@@ -1,12 +1,12 @@
 class ComicsWorld {
   constructor(game) {
     this.game=game;this.scene=game.scene;
-    this.jetskiTexture=new THREE.TextureLoader().load('assets/comics/jetski-directions-v1.png');
+    this.jetskiTexture=new THREE.TextureLoader().load('assets/comics/jetski-boris-v2.png');
     this.jetskiTexture.minFilter=THREE.LinearFilter;this.jetskiTexture.generateMipmaps=false;
     this.makeBeach();
     this.hazards=COMICS_COURSE.hazards.map((config,i)=>this.makeHazard(config,i));
     this.ready=Promise.all([new Promise((resolve,reject)=>{
-      new THREE.TextureLoader().load('assets/comics/jetski-directions-v1.png',texture=>{
+      new THREE.TextureLoader().load('assets/comics/jetski-boris-v2.png',texture=>{
         this.hazards.filter(h=>h.jetCard).forEach(h=>{h.jetCard.material.map.dispose();h.jetCard.material.map=texture.clone();h.jetCard.material.map.needsUpdate=true;});resolve();
       },undefined,()=>reject(Error('Аквабайк недоступен')));
     }),...this.hazards.filter(h=>h.fin).map(h=>new Promise((resolve,reject)=>{
@@ -73,7 +73,7 @@ class ComicsWorld {
   }
   endChase(h,escaped=false){
     h.done=true;h.chasing=false;h.escaped=escaped;h.endAt=this.game.time;
-    if(escaped){this.escapes++;this.game.awardTrick('ОТОРВАЛСЯ!',220);this.game.comics.trigger('ФУХ!','ОТОРВАЛИСЬ. ПИВО С НАМИ.','save',2);}
+    if(escaped){this.escapes++;this.game.awardTrick('ОТОРВАЛСЯ!',220);this.game.companion.react('escape',true);this.game.comics.trigger('ФУХ!','ОТОРВАЛИСЬ. ПИВО С НАМИ.','save',2);}
   }
   stepChaser(h,dt){
     const g=this.game,p=g.p;
@@ -81,6 +81,7 @@ class ComicsWorld {
     if(h.activeAt===null){
       if(p.z<h.initialZ-25||p.z>h.initialZ+70)return;
       h.activeAt=g.time;h.chasing=true;h.z=p.z-24;h.x=THREE.MathUtils.clamp(p.x-h.direction*3.5,-8,8);h.targetX=h.x;
+      g.companion.react('shark',true);
     }
     const age=g.time-h.activeAt;
     // Delayed steering gives a committed carve a useful effect on the chase.
@@ -135,7 +136,7 @@ class ComicsWorld {
       // in either direction, using the closest distance during the encounter.
       if(!h.passed&&h.crossed&&Math.abs(ahead)>4&&Math.sign(ahead)!==h.encounterSide){
         h.passed=true;
-        if(!h.hit){g.score+=40;if(h.nearestPass<2.7&&h.type!=='buoy'){g.awardTrick('РАЗОШЛИСЬ',120,true);g.comics.trigger('ФУХ!','БЫЛО БЛИЗКО. КРУЖКА ЦЕЛА.','save',2);}}
+        if(!h.hit){g.score+=40;if(h.nearestPass<2.7&&h.type!=='buoy'){g.awardTrick('РАЗОШЛИСЬ',120,true);g.companion.react('dodge');g.comics.trigger('ФУХ!','БЫЛО БЛИЗКО. КРУЖКА ЦЕЛА.','save',2);}}
       }
     });
   }

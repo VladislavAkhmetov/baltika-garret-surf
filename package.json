@@ -3,7 +3,9 @@
     "dev": "node scripts/serve.js",
     "test:prototype": "node paper-comics/scripts/test_prototype.js",
     "test:chapter": "node paper-comics/scripts/test_chapter.cjs",
-    "test:playthrough": "node paper-comics/scripts/check-playthrough.cjs"
+    "test:playthrough": "node paper-comics/scripts/check-playthrough.cjs",
+    "test:novice": "node paper-comics/scripts/test_novice.cjs",
+    "test:wager": "node paper-comics/scripts/test_wager.cjs"
   },
   "dependencies": {
     "puppeteer-core": "^24.43.1"

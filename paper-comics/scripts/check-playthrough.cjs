@@ -29,7 +29,8 @@ async function run(){
           if(!w)w=g.wave.waves.find(w=>w.to>p.z&&w.from<p.z+65);
           const desired=w?g.wave.crestX(w,p.z+5)+w.width*.38:1;
           const vx=(desired-p.x)*1.6+g.wave.sample(p.x,p.z).dx*.4;
-          g.input.target=THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(vx/(p.speed*.38),-.5,.5))/.55,-1,1);
+          const gain=(g.assist?.43:.55)*(g.balance.mode==='recovery'?.55:1);
+          g.input.target=g.balance.mode==='recovery'?THREE.MathUtils.clamp(-g.balance.roll*1.7-g.balance.velocity*.85,-1,1):THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(vx/(p.speed*.38),-.5,.5))/gain,-1,1);
           g.input.pitchTarget=.1;runReview.frames++;
           const threat=g.world.threat();
           if(!plannedJump&&p.z>95&&!p.airborne&&g.jump.cooldown===0){key('keydown');plannedJump=true;}
@@ -51,8 +52,8 @@ async function run(){
     }
     await page.waitForFunction(()=>game.state==='finished',{timeout:180000,polling:100});
     await page.screenshot({path:path.join(review,'07-finish.png')});
-    const result=await page.evaluate(()=>({state:game.state,z:game.p.z,seconds:game.elapsed,beer:game.mug.level,caught:game.waveRide.totalCaught,tricks:[...game.tricksSeen],jumps:game.jump.jumps,landings:game.jump.cleanLandings,escapes:game.world.escapes,sharks:game.world.hazards.filter(h=>h.type==='shark').map(h=>({hit:h.hit,escaped:h.escaped,done:h.done})),caps:game.collected,...runReview}));
-    assert.equal(result.state,'finished');assert.ok(result.caught>=5);assert.ok(result.beer>0);assert.ok(result.frames>100);assert.deepEqual(errors,[]);
+    const result=await page.evaluate(()=>({state:game.state,z:game.p.z,seconds:game.elapsed,beer:game.mug.level,caught:game.waveRide.totalCaught,falls:game.balance.falls,saves:game.balance.saves,tricks:[...game.tricksSeen],jumps:game.jump.jumps,landings:game.jump.cleanLandings,escapes:game.world.escapes,sharks:game.world.hazards.filter(h=>h.type==='shark').map(h=>({hit:h.hit,escaped:h.escaped,done:h.done})),caps:game.collected,...runReview}));
+    assert.equal(result.state,'finished');assert.ok(result.caught>=5);assert.ok(result.beer>=.3);assert.ok(result.frames>100);assert.deepEqual(errors,[]);
     assert.ok(result.jumps>=1&&result.landings>=1);assert.ok(result.sharks.every(h=>h.done),'both finite shark encounters should resolve');
     // Restart through the UI, so the route, props and result overlay reset together.
     await page.click('#replay-button');await page.waitForFunction(()=>game.state==='playing'&&game.p.z<10);

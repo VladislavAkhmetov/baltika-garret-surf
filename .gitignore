@@ -9,6 +9,16 @@ review/
 playtest-*.png
 scratch_test_*.png
 
+# Temporary scratch & downloads
+downloaded_sounds/
+*.zip
+*.ogg
+scripts/find_*.py
+scripts/get_*.py
+scripts/search_*.py
+scripts/test_wikimedia.py
+scripts/wikimedia_categories.py
+
 # Vercel
 .vercel/
 

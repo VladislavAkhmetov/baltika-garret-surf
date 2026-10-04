@@ -51,6 +51,9 @@ class PaperWave {
       [edge,fold,shadow].forEach((mesh,layer)=>{mesh.material.transparent=true;mesh.material.opacity=[.88,.38,.12][layer];mesh.material.depthWrite=false;});
       this.crests.push({edge, fold, shadow});
     }
+    this.rampCrests=Array.from({length:3},()=>({edge:this.ribbon(0xfff2d2,.65),fold:this.ribbon(0xffcc55,.18)}));
+    this.rampCrests.forEach(crest=>Object.values(crest).forEach(mesh=>{mesh.material.depthWrite=false;mesh.renderOrder=1;}));
+    this.resetRamps();
     this.flecks = [];
     const material = new THREE.MeshBasicMaterial({color:0xf3e8d0, side:THREE.DoubleSide});
     const geo = new THREE.PlaneGeometry(1, 1);
@@ -64,6 +67,28 @@ class PaperWave {
   }
 
   hash(n) { const a = Math.sin(n * 127.1 + 311.7) * 43758.5453; return a - Math.floor(a); }
+
+  resetRamps(seed=Math.random()*10000){
+    // Separate, local peaks: each run changes their route position and line.
+    this.ramps=[[181,195],[706,738],[1067,1090]].map(([from,to],i)=>({
+      id:i,z:from+(to-from)*this.hash(seed+i*13),
+      x:i===1?-3+this.hash(seed+i*19+7)*2:-3+this.hash(seed+i*19+7)*6,
+      width:4.2+this.hash(seed+i*23+11)*.7,length:12.5+this.hash(seed+i*31+17)*2,
+      height:5.6+this.hash(seed+i*37+21)*.9
+    }));
+    this.lastPrintFrame=-1;
+  }
+  rampField(x,z){
+    let best={ramp:null,lift:0,energy:0,along:0};
+    for(const ramp of this.ramps){
+      const across=(x-ramp.x)/ramp.width,along=(z-ramp.z)/ramp.length;
+      if(Math.abs(across)>=1||Math.abs(along)>=1)continue;
+      const energy=(.5+.5*Math.cos(Math.PI*across))*(.5+.5*Math.cos(Math.PI*along)),lift=ramp.height*energy;
+      if(lift>best.lift)best={ramp,lift,energy,along};
+    }
+    return best;
+  }
+  rampAhead(x,z){return this.ramps.filter(r=>r.z-z>-3&&r.z-z<42&&Math.abs(r.x-x)<r.width*.9).sort((a,b)=>a.z-b.z)[0]||null;}
 
   smooth(t){t=THREE.MathUtils.clamp(t,0,1);return t*t*(3-2*t);}
   envelope(w,z){return this.smooth((z-w.from)/24)*this.smooth((w.to-z)/24);}
@@ -87,7 +112,7 @@ class PaperWave {
   }
 
   height(x, z, time = this.time, includeWake = true) {
-    return -.32+this.field(x,z,time).lift+.065*Math.sin(z*.19+x*.41-time*1.4)+.035*Math.sin(x*.8-z*.09+time)+(includeWake&&this.wakeField?this.wakeField(x,z):0);
+    return -.32+this.field(x,z,time).lift+this.rampField(x,z).lift+.065*Math.sin(z*.19+x*.41-time*1.4)+.035*Math.sin(x*.8-z*.09+time)+(includeWake&&this.wakeField?this.wakeField(x,z):0);
   }
 
   sample(x, z) {
@@ -96,8 +121,8 @@ class PaperWave {
     const dz = (this.height(x, z + .15) - this.height(x, z - .15)) / .3;
     const baseDx=(this.height(x+.12,z,this.time,false)-this.height(x-.12,z,this.time,false))/.24;
     const baseDz=(this.height(x,z+.15,this.time,false)-this.height(x,z-.15,this.time,false))/.3;
-    const f=this.field(x,z);
-    return {height:h,dx,dz,baseDx,baseDz,...f,crest:f.wave?Math.max(0,1-Math.abs(f.face)*3):0};
+    const f=this.field(x,z),r=this.rampField(x,z);
+    return {height:h,dx,dz,baseDx,baseDz,...f,ramp:r.ramp,rampEnergy:r.energy,rampAlong:r.along,crest:f.wave?Math.max(0,1-Math.abs(f.face)*3):0};
   }
 
   ribbon(color, width) {
@@ -151,6 +176,23 @@ class PaperWave {
           }
         }
         p.needsUpdate = true;
+      });
+    });
+    this.rampCrests.forEach((crest,index)=>{
+      const ramp=this.ramps[index];
+      Object.values(crest).forEach((mesh,layer)=>{
+        mesh.visible=!!ramp&&ramp.z>playerZ-27&&ramp.z<playerZ+195;
+        if(!ramp)return;
+        const p=mesh.geometry.attributes.position;
+        for(let j=0;j<=80;j++){
+          const t=j/80*2-1,x=ramp.x+t*ramp.width*.95;
+          const z=ramp.z-1.4*t*t+(layer===1?-.7:0),rag=(this.hash(j+index*73)-.5)*.18;
+          for(let side=0;side<2;side++){
+            const zz=z+(side-.5)*mesh.userData.width*(1-t*t)+rag;
+            p.setXYZ(j*2+side,-x,this.height(x,zz)+.10,zz);
+          }
+        }
+        p.needsUpdate=true;
       });
     });
     this.flecks.forEach((f, i) => {

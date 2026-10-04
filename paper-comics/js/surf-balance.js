@@ -2,7 +2,7 @@
 class SurfBalance {
   constructor(game) { this.game=game; this.reset(); }
   reset() {
-    this.roll=this.velocity=this.settle=this.recoveryAge=this.fallTime=this.immunity=0;
+    this.roll=this.velocity=this.settle=this.recoveryAge=this.fallTime=this.immunity=this.overload=0;
     this.mode='stable';this.falls=this.saves=0;this.reason='';
     document.getElementById('wipeout-screen')?.classList.add('hidden');
   }
@@ -10,8 +10,9 @@ class SurfBalance {
     if(this.mode==='fall'||this.immunity>0)return;
     const p=this.game.p;
     const direction=side||Math.sign(p.lean)||Math.sign(this.roll)||1;
-    this.roll=THREE.MathUtils.clamp(this.roll+direction*strength,-.85,.85);
-    this.velocity+=direction*strength*.9;
+    const impulse=strength*(this.game.assist?.8:1);
+    this.roll=THREE.MathUtils.clamp(this.roll+direction*impulse,-.85,.85);
+    this.velocity+=direction*impulse*(this.game.assist?.6:.9);
     this.mode='recovery';this.reason=reason;this.settle=this.recoveryAge=0;p.recovering=.9;
   }
   fall() {
@@ -19,7 +20,7 @@ class SurfBalance {
     const g=this.game,p=g.p;
     this.mode='fall';this.fallTime=1.25;this.falls++;this.reason='НЕ УДЕРЖАЛ БАЛАНС';
     p.fallen=true;p.airborne=false;p.airY=0;p.jumpVelocity=0;p.recovering=0;
-    g.jump.cancel();g.comics.reset();g.waveRide.caught=false;g.waveRide.charge=g.waveRide.boost=0;
+    g.jump.cancel();g.jump.clearSpin();g.jump.rampJump=false;g.comics.reset();g.waveRide.caught=false;g.waveRide.charge=g.waveRide.boost=0;
     g.spill(.18,'Падение · возвращаемся на воду');g.emit(36,1.5);
     document.getElementById('wipeout-screen').classList.remove('hidden');
     g.container.classList.add('fallen');
@@ -36,7 +37,7 @@ class SurfBalance {
     p.x=candidates.find(x=>g.wave.sample(x,p.z).energy<.15&&g.world.hazards.every(h=>h.done||Math.abs(h.z-p.z)>7||Math.abs(h.x-x)>2))??8.5;
     p.heading=p.lean=p.pitch=p.smoothLean=p.sideVelocity=p.verticalVelocity=0;
     p.speed=19;p.y=g.wave.height(p.x,p.z);p.balance=0;p.fallen=false;p.recovering=0;
-    this.roll=this.velocity=this.settle=this.recoveryAge=0;this.mode='stable';this.immunity=2.5;
+    this.roll=this.velocity=this.settle=this.recoveryAge=this.overload=0;this.mode='stable';this.immunity=2.5;
     g.input.reset();g.impactCooldown=2.5;g.trailPoints=[];g.jump.cooldown=.6;g.spillFlash=0;
     g.world.hazards.filter(h=>h.chasing).forEach(h=>g.world.endChase(h));
     g.container.classList.remove('fallen');document.getElementById('wipeout-screen').classList.add('hidden');
@@ -50,26 +51,29 @@ class SurfBalance {
     const crest=surface.zone==='crest'&&surface.energy>.45&&this.immunity===0;
     const recovering=this.mode==='recovery';
     const unstable=crest||recovering;
-    const gust=crest?(.42+.65*Math.sin(g.time*2.3+(surface.wave?.id||0)*1.7))*surface.energy:0;
+    const lesson=g.assist&&(surface.wave?.id??1)===0;
+    const gust=crest?(.42+.65*Math.sin(g.time*2.3+(surface.wave?.id||0)*1.7))*surface.energy*(lesson?.5:g.assist?.7:1):0;
     const pitchRisk=Math.max(0,Math.abs(p.pitch)-(crest?.22:.5));
-    const force=(unstable?this.roll*2.5:-this.roll*6)+p.lean*(unstable?4.8:1.2)+gust
+    const force=(unstable?this.roll*(g.assist?1.4:2.5):-this.roll*6)+p.lean*(unstable?(g.assist?3.1:4.8):1.2)+gust
       +(unstable?Math.sign(this.roll||1)*pitchRisk*1.9:0)+Math.sin(g.time*7)*wake*.6;
-    this.velocity+=(force-this.velocity*(unstable?1.65:4))*dt;
+    this.velocity+=(force-this.velocity*(unstable?(g.assist?2.8:1.65):4))*dt;
     this.roll=THREE.MathUtils.clamp(this.roll+this.velocity*dt,-1.4,1.4);
     p.balance=THREE.MathUtils.clamp(Math.abs(this.roll)+Math.abs(this.velocity)*.16+jerk*.1,0,1.15);
-    if(crest&&p.balance>.53&&this.mode==='stable'){
+    if(crest&&p.balance>(g.assist?.48:.53)&&this.mode==='stable'){
       this.mode='recovery';this.reason='СРЫВ С ГРЕБНЯ';this.recoveryAge=this.settle=0;
     }
     if(this.mode==='recovery'){
       this.recoveryAge+=dt;p.recovering=.9;
-      const centered=Math.abs(this.roll)<.14&&Math.abs(this.velocity)<.32&&Math.abs(p.pitch)<.35;
+      const centered=Math.abs(this.roll)<(g.assist?.18:.14)&&Math.abs(this.velocity)<.32&&Math.abs(p.pitch)<.35;
       this.settle=centered?this.settle+dt:0;
       if(this.settle>.42){
-        this.mode='stable';p.recovering=0;this.saves++;this.settle=this.recoveryAge=0;
+        this.mode='stable';p.recovering=0;this.saves++;this.settle=this.recoveryAge=0;this.immunity=g.assist?1.3:.7;
         g.awardTrick('ВЫРУЛИЛ',130,true);g.comics.trigger('ФУХ!','БАЛАНС ПОЙМАН. КРУЖКА С НАМИ.','save',2);
-      }else if(this.recoveryAge>3.4||p.balance>=1.05)this.fall();
+      }else if(this.recoveryAge>(g.assist?5:3.4))this.fall();
     }else p.recovering=0;
-    if(this.mode!=='fall'&&p.balance>=1.05&&this.immunity===0)this.fall();
+    // A visible red warning gives time to react before the board tips over.
+    this.overload=p.balance>=1.05&&this.immunity===0?this.overload+dt:Math.max(0,this.overload-dt*2);
+    if(this.mode!=='fall'&&this.overload>(g.assist?.45:.12))this.fall();
   }
   updateHUD() {
     const g=this.game,p=g.p,el=document.getElementById('balance-cue');
@@ -77,8 +81,8 @@ class SurfBalance {
     el.classList.toggle('hidden',!g.container.classList.contains('playing')||p.fallen||p.airborne||(!crest&&this.mode!=='recovery'&&p.balance<.4));
     el.classList.toggle('catching',this.mode==='recovery');
     el.querySelector('strong').textContent=this.mode==='recovery'?'ПОЙМАЙ БАЛАНС':'ДЕРЖИ ГРЕБЕНЬ';
-    const control=g.input.mode==='keys'?(this.roll>.08?'← / A':this.roll<-.08?'→ / D':'ОТПУСТИ КУРС'):(this.roll>.08?'ВЛЕВО':this.roll<-.08?'ВПРАВО':'ПО ЦЕНТРУ');
-    el.querySelector('small').textContent=Math.abs(p.pitch)>.35?'↕ ВЕС К ЦЕНТРУ':control;
+    const control=this.roll>.08?'←':this.roll<-.08?'→':'ОТПУСТИ';
+    el.querySelector('small').textContent=Math.abs(p.pitch)>.35?'ОТПУСТИ ↑ ↓':control;
     el.querySelector('.balance-needle').style.left=(50+THREE.MathUtils.clamp(this.roll,-1,1)*43)+'%';
     el.querySelector('.catch-fill').style.width=(this.settle/.42*100)+'%';
     el.setAttribute('aria-label',(this.mode==='recovery'?'Поймай баланс. ':'Гребень. ')+control);

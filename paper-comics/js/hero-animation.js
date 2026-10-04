@@ -10,6 +10,16 @@ class HeroAnimator {
       right:{grips:[[333,116],[352,126],[355,150],[345,175],[346,134],[342,101],[324,98],[321,101]],feet:[[233,487],[234,486],[232,478],[222,473],[251,452],[269,452],[247,454],[226,462]]},
       recovery:{grips:[[329,111],[346,128],[323,152],[337,202],[343,104],[348,89],[339,90],[319,97]],feet:[[230,496],[251,494],[247,492],[215,493],[251,472],[259,470],[244,472],[220,472]]}
     };
+    // Sole contact points, individually measured in each 384×512 photograph.
+    this.soles={
+      trim:[[[149,452],[292,480]],[[163,448],[280,480]],[[157,438],[257,475]],[[149,452],[288,481]],[[211,421],[321,458]],[[222,396],[316,443]],[[153,420],[302,457]],[[150,430],[300,462]]],
+      left:[[[150,454],[278,478]],[[166,439],[298,476]],[[187,425],[299,470]],[[191,422],[284,468]],[[225,399],[316,443]],[[202,419],[284,454]],[[158,432],[296,462]],[[152,431],[284,458]]],
+      right:[[[147,450],[293,475]],[[169,438],[286,472]],[[175,423],[299,468]],[[171,422],[296,457]],[[194,397],[295,438]],[[207,412],[322,441]],[[172,428],[320,444]],[[173,431],[320,451]]],
+      recovery:[[[141,455],[290,482]],[[174,449],[317,484]],[[178,439],[302,480]],[[155,450],[273,478]],[[199,426],[313,461]],[[201,422],[312,460]],[[174,418],[303,456]],[[146,421],[296,456]]]
+    };
+    this.footAnchor=new THREE.Vector3();this.stance=new THREE.Vector3();this.deckAnchor=new THREE.Vector3();
+    this.cameraRight=new THREE.Vector3();this.cameraUp=new THREE.Vector3();this.deckX=new THREE.Vector3();this.deckY=new THREE.Vector3();
+    this.deckTurn=new THREE.Quaternion();this.deckBase=new THREE.Quaternion();this.deckBest=new THREE.Quaternion();
     const files={trim:'hero-trim-rear-v2.png',left:'hero-carve-left-rear-v2.png',right:'hero-carve-right-rear-v2.png',recovery:'hero-recovery-rear-v2.png'};
     const loader=new THREE.TextureLoader();
     this.ready=Promise.all(Object.entries(files).map(([key,file])=>new Promise((resolve,reject)=>{
@@ -42,9 +52,11 @@ class HeroAnimator {
     this.state=state;this.frame=frame;this.framesSeen.add(state+':'+frame);
     texture.offset.set(frame%4/4,(1-Math.floor(frame/4))*.5);
     this.clip.value.set(state==='recovery'&&frame===2?.065:0,.5);
-    const meta=this.metadata[state],grip=meta.grips[frame],foot=meta.feet[frame],card=this.game.player.card;
+    const meta=this.metadata[state],grip=meta.grips[frame],feet=this.soles[state][frame],foot=[(feet[0][0]+feet[1][0])/2,(feet[0][1]+feet[1][1])/2],card=this.game.player.card;
     card.material.map=texture;this.game.player.pose=state;
-    card.position.set((.5-foot[0]/384)*this.width,(foot[1]/512-.5)*this.height+.12,0);
+    this.footAnchor.set((foot[0]/384-.5)*this.width,(.5-foot[1]/512)*this.height,0);
+    this.stance.set((feet[1][0]-feet[0][0])/384*this.width,(feet[0][1]-feet[1][1])/512*this.height,0);
+    this.placeOnBoard();
     card.scale.set(1,1,1);
     this.currentGrip={x:(grip[0]/384-.5)*this.width,y:(.5-grip[1]/512)*this.height};
     const fingers=this.fingerTextures[state];
@@ -54,6 +66,32 @@ class HeroAnimator {
       if(!this.fingers.material.map)this.fingers.material.needsUpdate=true;
       this.fingers.material.map=fingers;this.fingers.position.set(this.currentGrip.x,this.currentGrip.y,.085);
     }
+  }
+  fitDeck(surfaceRotation,heading){
+    const board=this.game.player.board,card=this.game.player.card;
+    this.deckBase.copy(surfaceRotation).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/2));
+    this.cameraRight.set(1,0,0).applyQuaternion(this.game.camera.quaternion);this.cameraUp.set(0,1,0).applyQuaternion(this.game.camera.quaternion);
+    const stance=this.stance.clone().multiplyScalar(.5).applyQuaternion(card.quaternion),sx=stance.dot(this.cameraRight),sy=stance.dot(this.cameraUp);
+    const width=(board.geometry.parameters.width||1.52)*board.scale.x*.40,length=(board.geometry.parameters.height||4.8)*board.scale.y*.32;
+    let best=Infinity;
+    // The paper figure is a billboard. Fit its photographed stance to the projected
+    // deck rather than yawing the board independently underneath fixed feet.
+    for(let i=-6;i<=6;i++){
+      const yaw=i*.22;
+      this.deckTurn.copy(this.deckBase).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),Math.PI+heading*.45+yaw));
+      this.deckX.set(1,0,0).applyQuaternion(this.deckTurn);this.deckY.set(0,1,0).applyQuaternion(this.deckTurn);
+      const a=this.deckX.dot(this.cameraRight),b=this.deckY.dot(this.cameraRight),c=this.deckX.dot(this.cameraUp),d=this.deckY.dot(this.cameraUp),det=a*d-b*c;
+      if(Math.abs(det)<.025)continue;
+      const x=(sx*d-b*sy)/det,y=(a*sy-sx*c)/det,score=(x/width)**2+(y/length)**2+yaw*yaw*.04;
+      if(score<best){best=score;this.deckBest.copy(this.deckTurn);}
+    }
+    if(best<Infinity)board.quaternion.copy(this.deckBest);
+    this.placeOnBoard();
+  }
+  placeOnBoard(){
+    const board=this.game.player.board,card=this.game.player.card;
+    board.updateMatrix();this.deckAnchor.set(0,0,.018).applyMatrix4(board.matrix);
+    card.position.copy(this.deckAnchor).sub(this.footAnchor.clone().applyQuaternion(card.quaternion));
   }
   update(dt){
     const p=this.game.p;this.clock+=dt;

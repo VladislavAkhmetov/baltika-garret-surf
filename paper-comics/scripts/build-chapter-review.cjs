@@ -2,11 +2,13 @@ const fs=require('node:fs'),path=require('node:path'),puppeteer=require('puppete
 async function run(){
   const folder=path.resolve(__dirname,'../review/comics/chapter');
   const groups=[
-    ['menus',['mobile-01-home','mobile-02-character','mobile-03-location','mobile-04-story-1','mobile-04-story-2','mobile-04-story-3','mobile-05-ready']],
-    ['small-phone',['small-01-home','small-02-character','small-03-location','small-04-story-1','small-04-story-2','small-04-story-3','small-05-ready']],
-    ['gameplay',['scene-crest','scene-shark','scene-jetski-cross','scene-jetski-rear','scene-large-wave','scene-recovery','scene-fall','scene-finish']],
-    ['desktop',['desktop-01-home','desktop-02-character','desktop-03-location','desktop-04-story-1','desktop-04-story-2','desktop-04-story-3','desktop-05-ready']],
-    ['landscape',['landscape-01-home','landscape-02-character','landscape-03-location','landscape-04-story-1','landscape-04-story-2','landscape-04-story-3','landscape-05-ready']]
+    ['minimal-menus',['mobile-01-home','mobile-02-setup']],
+    ['onboarding',['mobile-05-onboarding','onboarding-jump','onboarding-release','onboarding-landing','onboarding-balance']],
+    ['menus',['mobile-01-home','mobile-02-setup','mobile-03-locked','mobile-04-story-1','mobile-04-story-2','mobile-04-story-3','mobile-04-story-4','mobile-05-onboarding']],
+    ['small-phone',['small-01-home','small-02-setup','small-03-locked','small-04-story-1','small-04-story-2','small-04-story-3','small-04-story-4','small-05-onboarding']],
+    ['gameplay',['scene-crest','scene-shark','scene-jetski-cross','scene-jetski-other-side','scene-jetski-rear','scene-large-wave','scene-collection','scene-recovery','scene-fall','scene-finish']],
+    ['desktop',['desktop-01-home','desktop-02-setup','desktop-03-locked','desktop-04-story-1','desktop-04-story-2','desktop-04-story-3','desktop-04-story-4','desktop-05-onboarding']],
+    ['landscape',['landscape-01-home','landscape-02-setup','landscape-03-locked','landscape-04-story-1','landscape-04-story-2','landscape-04-story-3','landscape-04-story-4','landscape-05-onboarding']]
   ];
   const browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--no-sandbox']});
   try{
@@ -18,7 +20,7 @@ async function run(){
       await page.setContent(html,{waitUntil:'load'});await page.screenshot({path:path.join(folder,'review-'+name+'.png'),fullPage:true});
       fs.writeFileSync(path.join(folder,'review-'+name+'.html'),html);
     }
-    console.log('Five visual review boards saved to '+folder);
+    console.log(groups.length+' visual review boards saved to '+folder);
   }finally{await browser.close();}
 }
 run().catch(e=>{console.error(e);process.exitCode=1;});

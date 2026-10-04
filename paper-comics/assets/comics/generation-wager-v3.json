@@ -1,0 +1,53 @@
+{
+  "mode": "built-in image_gen",
+  "assets": [
+    {
+      "file": "assets/comics/crab-kleshnya-sheet-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent game character sprite atlas for GARRET Paper Comics. Primary request: transform the crab reference into Клешня, a grumpy but funny beach aesthete and nervous surf navigator, matching the existing game's warm handmade paper photomontage. Input image 1 is the crab identity/anatomy reference; input image 2 is the game's paper character style reference. Create ONE 2x2 sprite sheet, four separate fully isolated cutouts of the SAME crab, one centered in each equal quadrant with generous transparent gutters. TOP LEFT: compact crab perched flat on a surfboard tail (do not draw the board), eight short splayed walking legs, two relaxed claws gripping below, orange-red shell, expressive dark stalk eyes, grumpy worried face. Front view, slightly from above, short wide silhouette, readable at 60px. TOP RIGHT: same crab, same size and view, both claws triumphantly raised, startled wide eyes, for jumps/shark panic. BOTTOM LEFT: same crab wearing black beach sunglasses and sitting on the rim of a full small amber foamy glass mug, smug victory pose with one claw raised; whole mug visible. BOTTOM RIGHT: same crab without sunglasses, dejected, squeezing/draining a wet claw with a few foam drops, no mug, comic frustration. Style/medium: realistic cut-paper collage illustration, warm sunset orange-red printed shell, tactile cream paper fibres and subtle halftone print grain, irregular thin ivory torn-paper silhouette border, natural details simplified for small-size readability. Match the human game sprites' warm printed paper medium, avoid shiny plastic or glossy 3D rendering. True transparent alpha everywhere outside cutouts and in gutters. No backgrounds, no rectangular panels, no cast drop shadows, no water, no words, no letters, no labels, no extra props, no cropped legs/claws, no photorealistic white studio background.",
+      "size": [
+        1536,
+        1024
+      ],
+      "frames": {
+        "rest": [
+          38,
+          195,
+          724,
+          312
+        ],
+        "raised": [
+          809,
+          2,
+          696,
+          539
+        ],
+        "victory": [
+          120,
+          493,
+          577,
+          527
+        ],
+        "defeat": [
+          826,
+          608,
+          652,
+          400
+        ]
+      }
+    },
+    {
+      "file": "assets/comics/surfboard-paper-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: single transparent surfboard top-deck texture for a 3D paper-collage surfing game. Reference image is the existing game's paper comics art; use its blue surfboard material and warm torn ivory paper edges. Generate ONE isolated full-length BLUE shortboard seen exactly orthographically from above, centered vertically, pointed rounded nose UP, softly squared swallow-free rounded tail DOWN, symmetrical natural surfboard outline, long-to-width ratio about 3.2:1. Board fills most of portrait canvas height with generous transparent padding. Deep cobalt blue deck with two broad aged ivory-white racing stripes running lengthwise, one thin ochre stringer, subtle brushed print wear, wax patches under feet, realistic board rail highlighted at edges, tactile printed-paper grain, thin irregular torn ivory paper border around entire silhouette. A restrained small unlettered sun/ray emblem near the nose is okay. Camera: flat true top down, no perspective foreshortening, no tilt. Clearly a real functional surfboard shape, not a pointed canoe, not an oval. Transparent background with genuine alpha outside the object, no cast shadow, no water, no surfer, no crab, no fins visible from top, no accessories, no leash, no text, no logo, no typography, no additional views, no rectangular paper sheet. Keep handcrafted photographic paper collage style matching the reference. Render only the board.",
+      "size": [
+        1024,
+        1536
+      ]
+    },
+    {
+      "file": "assets/comics/story-wager-v3.png",
+      "prompt": "Use case: compositing / precise-object-edit. Asset type: four-panel 2x2 cinematic story atlas for the existing GARRET Paper Comics game. Input image 1 is EDIT TARGET: existing four complete square panels in a seamless square 2x2 grid. Input image 2 is supporting CHARACTER reference: the SAME orange-red printed-paper crab Клешня; use the top-right worried raised-claw face and anatomy. Input image 3 is supporting SURFBOARD reference: cobalt deck, long ivory stripe, ochre stringer and sun emblem. Keep the target's four-panel grid, same adult character identities, same warm vivid Mediterranean sea at sunset, same realistic photographic torn-paper collage, ivory fibre silhouettes, layered cyan, saffron and coral paper and halftone. TOP LEFT: preserve the bar scene with grey-haired Tony holding a blank wooden sign, orange apron, and curly Max in white tank top/green floral shorts with his mug and blue board; Tony is animated and challenging Max to a friendly wager, not sad. Keep camera and bar. TOP RIGHT: replace the start pose with MAX actively surfing out from the pier, seen from rear three-quarter angle, bare feet planted on the COMPLETE blue striped surfboard, mug in raised right hand, a SMALL clearly readable orange paper crab perched on the TAIL of the board nearest the viewer, BEHIND Max's feet, both claws raised with alarm; all of the surfboard and crab visible in lower-central area of panel, don't hide crab behind human. The crab should be about one sixth of board length, not human-sized. Golden sun behind, energetic foaming wave. BOTTOM LEFT: preserve recognizably bald Boris on red and ivory jetski with yellow vest/dark green sleeveless top calling toward Max while raising a foamy curved wake; friendly competitive referee energy. BOTTOM RIGHT: preserve scenic wide bay finish with cheering friends at the beach bar and Max on blue board, add the same tiny paper crab clearly perched on the board's TAIL nearest viewer, a gleaming little gold seasonal trophy on the bar counter. Match board design in panels 2 and 4 to input image 3, physical realistic board proportions. No words, lettering, fake logos, signs with writing, captions, bubbles, UI, watermark. Full opaque scenic square atlas, no gutters, each quadrant independent complete scene, main human subjects centered with room for game overlay titles at upper left. Preserve clothing, face and coastline consistency."
+    }
+  ],
+  "placement": "Клешня расположен на хвосте доски ближе к камере, немного справа от оси. Поправка пользователя заменяет нос на хвост в сценарии и визуале.",
+  "win": "Заезд до бара по маршруту из семи волн, не менее 30% бокала. Три крышки коллекции — бонус, без скрытого условия победы."
+}
