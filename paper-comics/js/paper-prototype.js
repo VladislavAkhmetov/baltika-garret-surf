@@ -452,7 +452,17 @@ class PaperSurfGame {
   }
 }
 
-window.addEventListener('DOMContentLoaded',()=>{
-  try {window.game=new PaperSurfGame();}
-  catch(error){document.getElementById('error-screen').classList.remove('hidden');console.error(error);}
-});
+function initPaperSurf() {
+  if (window.game) return;
+  try { window.game = new PaperSurfGame(); }
+  catch(error) {
+    const err = document.getElementById('error-screen');
+    if (err) err.classList.remove('hidden');
+    console.error(error);
+  }
+}
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', initPaperSurf);
+} else {
+  initPaperSurf();
+}
