@@ -11,7 +11,7 @@ class SurfJump {
   }
   reset(){this.holding=this.requested=this.apexFired=false;this.charge=this.cooldown=this.airTime=this.lastHeight=0;this.takeoffZone='flat';this.jumps=this.cleanLandings=this.rampJumps=this.tricks=0;this.rampJump=false;this.clearSpin();this.cancel();this.button?.classList.remove('airborne');this.updateButton();}
   clearSpin(){this.spinStarted=this.spinCompleted=false;this.spinProgress=0;this.spinDirection=1;if(this.game.p)this.game.p.spin=0;}
-  get canSpin(){const p=this.game.p;return p.airborne&&this.rampJump&&!this.spinStarted&&p.jumpVelocity>-3&&this.airTime>.04;}
+  get canSpin(){const p=this.game.p;return !!p?.airborne&&this.rampJump&&!this.spinStarted&&p.jumpVelocity>-3&&this.airTime>.04;}
   cancel(){this.holding=this.requested=false;this.charge=0;this.button?.classList.remove('preparing');this.button?.style.setProperty('--jump-charge','0deg');this.button?.style.setProperty('--jump-percent','0%');}
   press(){
     if(this.game.state!=='playing')return;

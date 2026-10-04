@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/menus.css">
   <link rel="stylesheet" href="css/onboarding.css">
   <link rel="stylesheet" href="css/companion.css">
+  <link rel="stylesheet" href="css/ride-ui.css">
 </head>
 <body>
   <main id="app-container" aria-label="Игра Ни капли" tabindex="-1">
@@ -31,7 +32,7 @@
     </div>
 
     <div id="moment" class="moment" aria-live="polite"><strong></strong><span></span></div>
-    <aside id="crab-callout" class="crab-callout paper" aria-live="polite" aria-atomic="true"><strong>КРАБ КЛЕШНЯ</strong><span></span></aside>
+    <aside id="crab-callout" class="crab-callout paper" aria-live="polite" aria-atomic="true"><span></span></aside>
     <div id="comic-frame" class="comic-frame" aria-hidden="true">
       <div class="comic-scene"><canvas id="comic-snapshot"></canvas></div>
       <div class="comic-face-panel"><img id="comic-face-cutout" alt=""><i></i></div>
@@ -43,10 +44,10 @@
     <div id="shark-threat" aria-hidden="true"><i class="fin-icon"></i><b></b></div>
     <div id="balance-cue" class="balance-cue paper hidden" role="status"><strong>ДЕРЖИ ГРЕБЕНЬ</strong><div class="balance-rail"><i class="balance-safe"></i><i class="balance-needle"></i></div><small>ПО ЦЕНТРУ</small><div class="catch-track"><i class="catch-fill"></i></div></div>
     <div id="wipeout-screen" class="wipeout-screen hidden" role="status"><span>БУЛЬК!</span><strong>ДОСКА ЖДЁТ.</strong><p>−18% пива · комбо сброшено<br>Возвращаемся на спокойную воду</p></div>
-    <div class="steer-controls"><button id="steer-left" class="paper" aria-label="Повернуть влево">←<small>A / ←</small></button><button id="steer-right" class="paper" aria-label="Повернуть вправо">→<small>D / →</small></button></div><button id="jump-button" aria-label="Прыжок: удержать для подготовки, отпустить для вылета" title="Прыжок · пробел">↑<small>ПРЫЖОК</small><span>ДЕРЖИ · ОТПУСТИ</span></button>
+    <div class="steer-controls"><button id="steer-left" class="paper" aria-label="Повернуть влево">←</button><button id="steer-right" class="paper" aria-label="Повернуть вправо">→</button></div><button id="jump-button" aria-label="Прыжок: удержать и отпустить" title="Прыжок · пробел"><b id="jump-glyph">↑</b></button>
     <div id="bottom-hud" class="bottom-hud">
       <div class="speed-ticket"><strong id="speed-value">26</strong><span>М/С</span><div id="speed-meter"></div></div>
-      <div class="route-ticket paper"><b>ДО БАРА <span id="route-remaining">1 200 м</span></b><span id="section-value">ПОЙМАЙ РИТМ</span><div class="route-track"><i id="route-fill"></i></div></div>
+      <div class="route-ticket" aria-label="Путь до бара" role="progressbar" aria-valuemin="0" aria-valuemax="1200" aria-valuenow="0"><div class="route-track"><i id="route-fill"></i></div></div>
     </div>
     <div class="touch-guide" id="touch-guide"><span>↔ КУРС · ↕ ВЕС НА ДОСКЕ</span></div>
 
@@ -86,7 +87,7 @@
       <div class="pause-card paper"><span class="eyebrow">МИНУТКА НА БЕРЕГУ</span><h2>ВЫДОХНИ.</h2><p id="pause-help" class="pause-help">Вбок — курс по склону.<br>Вперёд / назад — вес на доске.</p><p class="pause-balance-help">На гребне и после жёсткой посадки выруливай против завала. Маркер в центре — баланс пойман.</p><button id="resume-button" class="yellow-button">ОБРАТНО НА ВОЛНУ ↗</button><button id="center-button" class="text-button" aria-label="Запомнить нейтральное положение телефона">◎ Запомнить нейтраль</button><button id="assist-toggle" class="text-button" aria-pressed="false">Сложность: обычная</button><button id="reset-button" class="text-button">Начать заново</button><button class="text-button menu-link" data-home>В главное меню</button></div>
     </section>
     <section id="result-screen" class="screen hidden">
-      <div class="result-card paper"><span class="eyebrow">КУБОК БУХТЫ GARRET</span><h2 id="result-title">ДОВЁЗ!</h2><strong class="result-beer" id="result-beer">100%</strong><p id="result-comment">Кубок ждёт на стойке.</p><div class="result-companion"><canvas id="result-crab" role="img" aria-label="Клешня на финише"></canvas><p><strong>КРАБ КЛЕШНЯ</strong><span id="result-crab-line"></span></p></div><div class="result-stats"><div><span>СЧЁТ</span><strong id="result-score">0</strong></div><div><span>БОНУСНЫЕ КРЫШКИ</span><strong id="result-caps">0</strong></div><div><span>КОЛЛЕКЦИЯ ВОЛН</span><strong id="result-landings">0</strong></div></div><p id="result-recovery" class="result-recovery"></p><p id="result-tricks" class="result-tricks"></p><button id="replay-button" class="yellow-button">ЕЩЁ ОДНУ ВОЛНУ ↗</button><button class="text-button menu-link" data-setup>Герой и локация</button></div>
+      <div class="result-card paper"><h2 id="result-title">ДОВЁЗ!</h2><strong class="result-beer" id="result-beer">100%</strong><p id="result-comment"></p><div class="result-companion"><canvas id="result-crab" role="img" aria-label="Клешня на финише"></canvas><p><span id="result-crab-line"></span></p></div><div class="result-summary"><span>СЧЁТ</span><strong id="result-score">0</strong></div><button id="replay-button" class="yellow-button">ЕЩЁ РАЗ</button><button class="text-button menu-link" data-setup>ВЫБОР</button></div>
     </section>
     <div id="error-screen" class="error-screen hidden" role="alert">Для игры нужен браузер с WebGL. Попробуй открыть её в Chrome, Edge или Safari.</div>
   </main>
