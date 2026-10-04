@@ -15,10 +15,11 @@
     <div class="note-controls paper">
       <span class="scribble">Две руки — одно приключение</span>
       <p><kbd>←</kbd> <kbd>→</kbd> &nbsp; карвинг</p>
-      <p><kbd>ПРОБЕЛ</kbd> &nbsp; держи — присед</p>
-      <p>Сжался → разогнулся — разгон.<br>Отпусти у гребня — вылет!</p>
-      <p>В воздухе: наклон — разворот.<br>Перед касанием — зажми пробел.</p>
-      <small>Мышью: тяни по волне и отпускай.<br>На телефоне: наклон + касание.</small>
+      <p><kbd>↑</kbd> <kbd>↓</kbd> &nbsp; вес на нос / на хвост</p>
+      <p><kbd>ПРОБЕЛ</kbd> &nbsp; держи и отпусти — прыжок</p>
+      <p>Вниз по склону — набирай скорость.<br>На гребне — держи тонкий баланс.</p>
+      <p>Волна кончается — лови следующую.<br>В следе аквабайка есть разгон.</p>
+      <small>Мышью: тяни вбок и вперёд / назад.<br>Телефон: два направления наклона.</small>
     </div>
     <span class="desktop-footer">Бумага. Соль. Хорошая компания.</span>
   </aside>
@@ -30,13 +31,15 @@
     <header class="hud" id="hud">
       <div class="beer-ticket paper"><canvas id="beer-canvas" width="104" height="144"></canvas><div><span class="ticket-label">ДОВЕЗИ</span><strong id="beer-value">100<span>%</span></strong><div class="beer-track"><i id="beer-fill"></i></div></div></div>
       <div class="score-ticket"><span>СЧЁТ</span><strong id="score-value">000000</strong></div>
-      <div class="caps-ticket paper"><img id="cap-icon" alt="Крышка"><span id="caps-value">0</span><span class="ticket-label">КРЫШЕК</span></div>
       <button id="pause-button" class="small-button paper" aria-label="Пауза">Ⅱ</button>
-      <button id="center-button" class="center-button paper" aria-label="Сделать текущее положение телефона нейтральным" title="Новая нейтраль">◎</button>
+    </header>
+    <div id="ride-debug" class="hidden" aria-hidden="true">
+      <div class="caps-ticket paper"><img id="cap-icon" alt="Крышка"><span id="caps-value">0</span><span class="ticket-label">КРЫШЕК</span></div>
       <span id="input-label" class="input-label paper">НАКЛОН ТЕЛЕФОНА</span>
       <span id="combo-value" class="combo-value">×1</span>
-    </header>
-    <div class="wave-ticket paper"><span id="wave-label">НАЙДИ ПЕННУЮ ЛИНИЮ</span><div><i id="wave-fill"></i></div></div>
+    <div class="wave-ticket paper"><div class="wave-heading"><span id="wave-label">НАЙДИ ПЕННУЮ ЛИНИЮ</span><b id="wave-number">1/7</b></div><div class="wave-contact"><i id="wave-fill"></i></div><div class="wave-readout"><span id="wave-status">СПОКОЙНЫЙ УЧАСТОК</span><span id="wave-remaining">ЧЕРЕЗ 35 М</span></div></div>
+    <div class="weight-ticket paper"><span id="weight-label">ВЕС ПО ЦЕНТРУ</span><div class="weight-axis"><span>ХВОСТ</span><i id="weight-dot"></i><span>НОС</span></div><div class="balance-readout"><span>РИСК СРЫВА</span><b id="balance-label">НИЗКИЙ</b></div><div class="balance-track"><i id="balance-fill"></i></div></div>
+    </div>
 
     <div id="moment" class="moment" aria-live="polite"><strong></strong><span></span></div>
     <div id="comic-frame" class="comic-frame" aria-hidden="true">
@@ -47,15 +50,13 @@
     </div>
     <div id="hint" class="hint paper">НАКЛОНЯЙ — РЕЖЬ ВОЛНУ ↔</div>
     <div id="spill-flash" aria-hidden="true"></div>
+    <div id="shark-threat" aria-hidden="true"><i class="fin-icon"></i><b></b></div>
+    <button id="jump-button" aria-label="Прыжок: удержать для подготовки, отпустить для вылета" title="Прыжок · пробел">↑</button>
     <div id="bottom-hud" class="bottom-hud">
       <div class="speed-ticket"><strong id="speed-value">26</strong><span>М/С</span><div id="speed-meter"></div></div>
       <div class="route-ticket paper"><span id="section-value">ПОЙМАЙ РИТМ</span><div class="route-track"><i id="route-fill"></i></div></div>
     </div>
-    <div class="action-controls">
-      <div class="surf-rhythm paper"><span>РИТМ ВОЛНЫ</span><strong>↓ СЖАЛСЯ<br>↑ РАЗОГНУЛСЯ</strong><small>На склоне — разгон<br>У гребня — вылет</small></div>
-      <button id="crouch-button" class="action-button crouch-button paper" aria-label="Удерживать сжатие, отпустить для разгона или вылета с гребня" aria-pressed="false"><span class="action-icon">↓</span><strong id="charge-label">ПРИСЕД</strong><small id="crouch-help">держи · отпусти ↑</small><i class="button-charge"><i id="charge-fill"></i></i></button>
-    </div>
-    <div class="touch-guide" id="touch-guide"><span>↔ ТЯНИ — ПОВОРОТ</span></div>
+    <div class="touch-guide" id="touch-guide"><span>↔ КУРС · ↕ ВЕС НА ДОСКЕ</span></div>
 
     <section id="start-screen" class="screen">
       <div class="start-stamp">GARRET SURF CLUB</div>
@@ -64,15 +65,15 @@
         <h2>НИ<br><em>КАПЛИ!</em></h2>
         <p>Волны большие.<br>Компания странная.<br>Пиво — твоё.</p>
         <button id="start-button" class="yellow-button">ЛОВИ ВОЛНУ <span>↗</span></button>
-        <p id="start-help" class="start-help">Держи телефон удобно — запомним нейтраль.<br>Наклон — курс · ПРИСЕД — работа ногами<br>Отпусти на склоне — разгон · у гребня — вылет</p>
+        <p id="start-help" class="start-help">Вбок — курс · вперёд / назад — вес.<br>Держи ↑ и отпусти — прыжок.<br>Лови разгон на волне, уходи от акулы.</p>
       </div>
       <span class="start-footnote">Сначала едешь. Потом рассказываешь.</span>
     </section>
     <section id="pause-screen" class="screen hidden">
-      <div class="pause-card paper"><span class="eyebrow">МИНУТКА НА БЕРЕГУ</span><h2>ВЫДОХНИ.</h2><button id="resume-button" class="yellow-button">ОБРАТНО НА ВОЛНУ ↗</button><button id="reset-button" class="text-button">Начать заново</button></div>
+      <div class="pause-card paper"><span class="eyebrow">МИНУТКА НА БЕРЕГУ</span><h2>ВЫДОХНИ.</h2><p id="pause-help" class="pause-help">Вбок — курс по склону.<br>Вперёд / назад — вес на доске.</p><button id="resume-button" class="yellow-button">ОБРАТНО НА ВОЛНУ ↗</button><button id="center-button" class="text-button" aria-label="Запомнить нейтральное положение телефона">◎ Запомнить нейтраль</button><button id="reset-button" class="text-button">Начать заново</button></div>
     </section>
     <section id="result-screen" class="screen hidden">
-      <div class="result-card paper"><span class="eyebrow">ПЛЯЖНЫЙ БАР GARRET</span><h2 id="result-title">ДОВЁЗ!</h2><strong class="result-beer" id="result-beer">100%</strong><p id="result-comment">Бармен одобряет.</p><div class="result-stats"><div><span>СЧЁТ</span><strong id="result-score">0</strong></div><div><span>КРЫШКИ</span><strong id="result-caps">0</strong></div><div><span>ЧИСТЫЕ ПОСАДКИ</span><strong id="result-landings">0</strong></div></div><p id="result-tricks" class="result-tricks"></p><button id="replay-button" class="yellow-button">ЕЩЁ ОДНУ ВОЛНУ ↗</button></div>
+      <div class="result-card paper"><span class="eyebrow">ПЛЯЖНЫЙ БАР GARRET</span><h2 id="result-title">ДОВЁЗ!</h2><strong class="result-beer" id="result-beer">100%</strong><p id="result-comment">Бармен одобряет.</p><div class="result-stats"><div><span>СЧЁТ</span><strong id="result-score">0</strong></div><div><span>КРЫШКИ</span><strong id="result-caps">0</strong></div><div><span>ПОЙМАЛ ВОЛН</span><strong id="result-landings">0</strong></div></div><p id="result-tricks" class="result-tricks"></p><button id="replay-button" class="yellow-button">ЕЩЁ ОДНУ ВОЛНУ ↗</button></div>
     </section>
     <div id="error-screen" class="error-screen hidden" role="alert">Для игры нужен браузер с WebGL. Попробуй открыть её в Chrome, Edge или Safari.</div>
   </main>
@@ -84,8 +85,10 @@
   <script src="js/comics-course.js"></script>
   <script src="js/paper-wave.js"></script>
   <script src="js/wave-ride.js"></script>
+  <script src="js/hero-animation.js"></script>
   <script src="js/hand-beer.js"></script>
   <script src="js/comics-world.js"></script>
+  <script src="js/surf-jump.js"></script>
   <script src="js/paper-prototype.js"></script>
 </body>
 </html>

@@ -1,7 +1,8 @@
 {
   "scripts": {
     "dev": "node scripts/serve.js",
-    "test:prototype": "node scripts/test_prototype.js"
+    "test:prototype": "node scripts/test_prototype.js",
+    "test:playthrough": "node scripts/check-playthrough.cjs"
   },
   "dependencies": {
     "puppeteer-core": "^24.43.1"

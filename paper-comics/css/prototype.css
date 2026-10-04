@@ -54,3 +54,48 @@ button{font:inherit;cursor:pointer;border:0;color:var(--ink);touch-action:manipu
 @media(max-height:710px){.wave-ticket{top:132px;width:205px}.hint{top:177px!important;font-size:17px!important}.action-button{min-height:75px}.action-icon{font-size:23px}.bottom-hud{bottom:107px}.comic-frame{bottom:94px}}
 
 .surf-rhythm{width:133px;padding:10px 11px;transform:rotate(-3deg);pointer-events:none}.surf-rhythm>span{font-size:8px;font-weight:700;letter-spacing:.5px}.surf-rhythm>strong{display:block;margin:6px 0;font-family:'Russo One',Impact,sans-serif;font-size:11px;line-height:1.4}.surf-rhythm>small{font-size:8px;line-height:1.45;display:block}.unstable .crouch-button{background-color:#ee8150}.action-controls{align-items:center}
+/* Weight replaces the artificial crouch button; knees react to the water. */
+.bottom-hud{bottom:max(24px,env(safe-area-inset-bottom));gap:10px}
+.touch-guide{bottom:95px;font-size:14px}
+.wave-ticket{width:235px;top:140px}
+.weight-ticket{position:absolute;z-index:5;top:190px;left:16px;width:180px;padding:6px 10px;transform:rotate(-1deg);pointer-events:none}
+.weight-ticket>span{font-size:8px;font-weight:800;display:block}
+.weight-ticket>div{position:relative;display:flex;justify-content:space-between;margin-top:5px;border-bottom:2px solid #b8ac8d;padding-bottom:3px;font-size:6px;font-weight:700}
+#weight-dot{position:absolute;left:50%;bottom:-5px;width:8px;height:8px;background:#e96843;border:1px solid #17282c;transform:rotate(45deg);transition:left .05s}
+.unstable .weight-ticket{background-color:#ffd080}
+.hint{top:245px!important;font-size:19px!important}
+.comic-frame{bottom:0}
+.comic-frame #comic-cutout{left:-6%;width:91%;top:10%;height:85%;transform:rotate(-5deg)}
+.comic-frame[data-variant=save] .comic-burst{background:repeating-conic-gradient(from 12deg at 44% 54%,#ec704d 0deg 8deg,#f7e8c9 8deg 9deg,#eaa13c 9deg 21deg)}
+.comic-face-panel img{object-position:50% 15%;transform:scale(1.4);transform-origin:50% 16%}
+#app-container:not(.playing) .weight-ticket,#app-container:not(.playing) .wave-ticket{opacity:.4}
+@media(max-height:710px){.wave-ticket{top:132px}.weight-ticket{top:176px}.hint{top:218px!important}.bottom-hud{bottom:20px}.comic-frame{bottom:0}}
+.comic-face-panel img{object-position:50% 0%;transform:scale(1.35);transform-origin:50% 0%}
+.comic-frame .comic-burst span{max-width:46%;font-size:18px;line-height:1.1;bottom:3%}
+/* Contact, wave ending and balance are visible before the player loses a line. */
+.wave-ticket{padding:7px 10px 8px;pointer-events:none}
+.wave-ticket .wave-heading,.wave-ticket .wave-readout{display:flex;justify-content:space-between;align-items:center;gap:5px;height:auto;background:none;margin:0}
+.wave-heading>span{font-size:9px;font-weight:900;line-height:1.3}.wave-heading>b{font-size:8px;white-space:nowrap;opacity:.65}
+.wave-ticket .wave-contact{height:4px;margin:5px 0;background:#c3cdb5}
+.wave-readout{font-size:7px;font-weight:800;letter-spacing:.1px}.wave-readout>span{white-space:nowrap}
+.wave-ticket[data-phase=ending]{background-color:#ffe398}.wave-ticket[data-phase=gap] .wave-contact i{background:#258c91}
+.weight-ticket{top:210px;width:180px;padding:7px 10px 8px}
+.weight-ticket .weight-axis{margin-top:5px}.weight-ticket .balance-readout{display:flex;justify-content:space-between;font-size:7px;font-weight:700;border:0;padding:0;margin-top:9px;gap:5px}
+.balance-readout b{font-size:7px}.weight-ticket .balance-track{display:block;height:3px;border:0;margin-top:4px;padding:0;background:#d4c6a4}
+#balance-fill{height:100%;display:block;background:#258c91;width:0;transition:width .08s}
+.unstable #balance-fill{background:#dc5d38}.hint{top:290px!important}
+@media(max-height:710px){.wave-ticket{top:132px}.weight-ticket{top:199px}.hint{top:276px!important}}
+/* The ride is the main screen. Readouts and instruction cards live in debug/menu. */
+.hud{grid-template-columns:112px 1fr 34px;grid-template-rows:auto;gap:12px;top:max(13px,env(safe-area-inset-top));left:12px;right:12px;align-items:start}
+.beer-ticket{grid-row:auto;padding:3px 7px 5px 1px;gap:1px}.beer-ticket .ticket-label{display:none}#beer-canvas{width:30px;height:42px}.beer-ticket strong{font-size:28px;line-height:1.15;letter-spacing:-1.4px}.beer-ticket strong span{font-size:17px}.beer-track{height:3px;margin-top:2px;border:0}
+.score-ticket{width:110px;justify-self:end;padding:3px 0}.score-ticket>span{display:none}.score-ticket strong{font-size:21px;letter-spacing:0;padding:5px 8px}
+.small-button{grid-row:auto;width:34px;height:34px;font-size:18px}
+#hint,.touch-guide,.speed-ticket,.route-ticket>span{display:none!important}
+.bottom-hud{left:20px;right:20px;bottom:max(12px,env(safe-area-inset-bottom));gap:0}.route-ticket{padding:0;background:transparent;clip-path:none;transform:none;filter:none}.route-track{height:3px;margin:0;background:#f4ead050}.route-track i{background:#f4ead0}
+.moment{top:auto;bottom:32px;max-width:80%;transform:translateX(-50%);width:max-content}.moment.visible{transform:translateX(-50%)}.moment strong{font-size:17px!important;background:none;padding:4px 8px;color:#fff0d0;text-shadow:1px 2px #173949;clip-path:none;box-shadow:none}.moment.bad strong{background:none;color:#ffca42}.moment span{display:none!important}
+.pause-help{font-size:12px;line-height:1.7;margin:0 0 20px}.pause-card .text-button{font-size:19px;padding-top:14px}
+#ride-debug{position:absolute;inset:0;z-index:5;pointer-events:none}#ride-debug .caps-ticket{position:absolute;top:90px;left:16px}#ride-debug .input-label{top:122px}.debug-mode .speed-ticket{display:block!important}
+#jump-button{position:absolute;right:20px;bottom:max(34px,calc(env(safe-area-inset-bottom) + 24px));z-index:7;width:54px;height:54px;border-radius:47% 52% 46% 51%;background:#ffca43;color:#17282c;border:3px solid #f4e8ca;font-size:34px;font-weight:900;line-height:1;touch-action:none;box-shadow:2px 3px #163d4c66}
+#jump-button::before{content:'';position:absolute;inset:-5px;border-radius:50%;background:conic-gradient(#ec7445 var(--jump-charge,0deg),transparent 0);z-index:-1}#jump-button.preparing{transform:scale(.92);background:#f2ad32}#jump-button.airborne{opacity:.55}
+#app-container:not(.playing) #jump-button,#app-container:not(.playing) #shark-threat{display:none}
+#shark-threat{position:absolute;bottom:38px;left:22px;z-index:6;width:44px;height:40px;opacity:0;pointer-events:none;transition:opacity .2s}.fin-icon{display:block;width:34px;height:29px;background:#153c4b;clip-path:polygon(0 100%,20% 77%,42% 49%,57% 0,72% 8%,74% 53%,100% 100%);filter:drop-shadow(2px 2px #fff0d3)}#shark-threat b{display:block;height:3px;background:#ffca43;margin-top:5px;transform-origin:left}#shark-threat.visible{opacity:1}#shark-threat.close .fin-icon{background:#e96640}

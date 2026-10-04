@@ -1,0 +1,10 @@
+const p=require('puppeteer-core'),fs=require('fs');
+(async()=>{const b=await p.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});const page=await b.newPage();await page.setViewport({width:393,height:650,isMobile:true,hasTouch:true});await page.goto('http://127.0.0.1:8081');await page.waitForFunction(()=>window.game);await page.evaluate(async()=>{await game.start(false);game.animationReview=true;game.state='paused';game.p.z=105;game.p.x=game.wave.crestX(game.wave.waves[0],105)+3;game.p.y=game.wave.height(game.p.x,105);game.updateCamera(1,true);const style=document.createElement('style');style.textContent='.hud,.screen,.wave-ticket,.weight-ticket,.bottom-hud,.hint,.moment,.touch-guide,.comic-frame{display:none!important}';document.head.append(style);});
+ const frames=[];
+ for(const state of ['trim','left','right','recovery'])for(let frame=0;frame<8;frame++){
+  await page.evaluate((state,frame)=>{game.heroAnimator.apply(state,frame);game.handBeer.update();game.renderer.render(game.scene,game.camera);},state,frame);
+  const data=await page.screenshot({encoding:'base64',clip:{x:70,y:270,width:300,height:330}});frames.push({state,frame,data});
+ }
+ const html='<!doctype html><html><meta charset="utf-8"><title>Кадры — проверка</title><style>body{background:#eee2c6;font:14px Arial;margin:0}section{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin:5px}img{width:100%}p{margin:4px;font-weight:bold}</style>'+['trim','left','right','recovery'].map(state=>'<p>'+state+'</p><section>'+frames.filter(f=>f.state===state).map(f=>'<div><img src="data:image/png;base64,'+f.data+'"><span>'+(f.frame+1)+'</span></div>').join('')+'</section>').join('');
+ await page.setViewport({width:1600,height:1050,isMobile:false,hasTouch:false});await page.setContent(html);await page.screenshot({path:'paper-comics/review/comics/32-frames-contact.png',fullPage:true});await b.close();
+})().catch(e=>{console.error(e);process.exitCode=1});

@@ -19,9 +19,9 @@ class HandBeer {
     this.texture=new THREE.CanvasTexture(this.canvas);this.texture.minFilter=THREE.LinearFilter;this.texture.generateMipmaps=false;
     this.frame=new Image();this.frame.src='assets/comics/mug-paper-frame.png';this.frame.onload=()=>{this.draw();this.texture.needsUpdate=true;};
     this.pivot=new THREE.Group();
-    this.mesh=new THREE.Mesh(new THREE.PlaneGeometry(1.72,2.15),new THREE.MeshBasicMaterial({map:this.texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
+    this.mesh=new THREE.Mesh(new THREE.PlaneGeometry(1.12,1.4),new THREE.MeshBasicMaterial({map:this.texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
     // The handle, rather than the centre of the glass, stays in the character's hand.
-    this.mesh.position.set(.447,-.108,.035);this.mesh.renderOrder=4;this.pivot.add(this.mesh);game.player.card.add(this.pivot);
+    this.mesh.position.set(.291,-.070,.035);this.mesh.renderOrder=4;this.pivot.add(this.mesh);game.player.card.add(this.pivot);
     this.liquid.addSpillListener((side,amount)=>this.emit(side,amount));
     this.reset();
   }
@@ -33,25 +33,20 @@ class HandBeer {
     if(this.game.state==='playing'&&this.game.p)this.game.emitBeer(sign,Math.min(10,3+Math.ceil(amount*100)));
   }
   step(dt,turnAcceleration,wake,jerk){
-    const g=this.game,p=g.p,assist=1-p.crouch*.45;
-    const target=(-p.lean*.34-jerk*.2+(p.airborne?Math.sin(p.spin*Math.PI/180)*.28:0))*assist;
+    const g=this.game,p=g.p,assist=1-p.crouch*.45-Math.max(0,-p.pitch)*.18;
+    const target=(-p.lean*.34-jerk*.12-p.pitch*.09)*assist;
     this.rollVelocity+=(target-this.roll)*48*dt-this.rollVelocity*8.5*dt;
     this.roll+=this.rollVelocity*dt;
     const drive=(turnAcceleration*.13+jerk*.4+wake*.8)*assist;
-    this.liquid.update(dt,drive,p.airborne?-.2:Math.abs(wake),-this.roll*.8+wake*assist);
+    this.liquid.update(dt,drive,Math.abs(wake),-this.roll*.8+wake*assist);
     this.peakSlosh=Math.max(this.peakSlosh,...this.liquid.h.map(Math.abs));
     this.drops=this.drops.filter(d=>{d.life-=dt;d.x+=d.vx*dt;d.y+=d.vy*dt;d.vy+=410*dt;return d.life>0;});
   }
   impact(clean){this.liquid.applyLandingImpulse(clean);this.rollVelocity+=(1-clean)*1.15;}
   update(){
-    const pose=this.game.player.pose;
-    const anchors={norma:[.26,.08],turn:[.37,.09],jump:[.20,.30]};
-    const anchor=anchors[pose]||anchors.norma,card=this.game.player.card;
-    // The turning photograph is mirrored with the card; the prop follows it.
-    this.pivot.position.set(anchor[0]*2.25,anchor[1]*3.1,0);
-    const mirror=card.scale.x<0?-1:1;
-    this.pivot.rotation.z=this.roll*mirror;this.pivot.scale.y=1/card.scale.y;
-    this.mesh.scale.x=mirror;this.mesh.position.x=.447*mirror;
+    const anchor=this.game.heroAnimator.currentGrip||{x:.85,y:1.0};
+    this.pivot.position.set(anchor.x,anchor.y,.01);
+    this.pivot.rotation.z=this.roll;
     const frame=Math.floor(this.game.time*30);
     if(frame!==this.printFrame){this.printFrame=frame;this.draw();this.texture.needsUpdate=true;}
   }

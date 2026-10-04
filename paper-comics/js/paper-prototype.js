@@ -1,92 +1,59 @@
 /* GARRET — a playable paper-surfing sketch, isolated from the existing slice. */
 class PaperInput {
-  constructor(container) {
-    this.container = container;
-    this.mode = matchMedia('(pointer:coarse)').matches ? 'touch' : 'keys';
-    this.lean = 0; this.target = 0; this.hold = false; this.holdTime = 0; this.released = 0;
-    this.keys = new Set(); this.pointers = new Map(); this.holdSources=new Set(); this.gamma = null; this.neutral = 0;
-    window.addEventListener('deviceorientation', e => {
-      if (e.gamma === null || e.beta === null) return;
-      const angle = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
-      this.gamma = angle === 90 ? -e.beta : angle === 270 || angle === -90 ? e.beta : angle === 180 ? -e.gamma : e.gamma;
-      if(this.orientationAngle!==undefined&&this.orientationAngle!==angle&&this.mode==='gyro'){this.neutral=this.gamma;this.lean=0;}
+  constructor(container){
+    this.container=container;this.mode=matchMedia('(pointer:coarse)').matches?'touch':'keys';
+    this.lean=this.pitch=this.target=this.pitchTarget=0;this.keys=new Set();this.pointers=new Map();
+    this.gamma=this.beta=null;this.neutral=this.neutralBeta=0;
+    window.addEventListener('deviceorientation',e=>{
+      if(!Number.isFinite(e.gamma)||!Number.isFinite(e.beta))return;
+      const angle=screen.orientation?.angle??window.orientation??0;
+      this.gamma=angle===90?-e.beta:angle===270||angle===-90?e.beta:angle===180?-e.gamma:e.gamma;
+      this.beta=angle===90?e.gamma:angle===270||angle===-90?-e.gamma:angle===180?-e.beta:e.beta;
+      if(this.orientationAngle!==undefined&&this.orientationAngle!==angle&&this.mode==='gyro')this.recenter();
       this.orientationAngle=angle;
     });
-    window.addEventListener('keydown', e => {
-      if (!['ArrowLeft','ArrowRight','KeyA','KeyD','Space','KeyW','ArrowUp'].includes(e.code)) return;
-      e.preventDefault(); if (e.repeat) return;
-      this.keys.add(e.code); this.mode = 'keys';
-      if (['Space','KeyW','ArrowUp'].includes(e.code)) this.startHold(e.code);
+    window.addEventListener('keydown',e=>{
+      if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyA','KeyD','KeyW','KeyS'].includes(e.code))return;
+      e.preventDefault();this.keys.add(e.code);this.mode='keys';
     });
-    window.addEventListener('keyup', e => {
-      this.keys.delete(e.code);
-      if (['Space','KeyW','ArrowUp'].includes(e.code)) this.endHold(e.code);
+    window.addEventListener('keyup',e=>this.keys.delete(e.code));
+    container.addEventListener('pointerdown',e=>{
+      if(e.target.closest('button,.screen')||this.mode==='gyro')return;
+      e.preventDefault();this.mode='touch';this.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(e.isTrusted)container.setPointerCapture(e.pointerId);
     });
-    container.addEventListener('pointerdown', e => {
-      if (e.target.closest('button,.screen')) return;
-      e.preventDefault();
-      const rect = container.getBoundingClientRect();
-      const steer = this.mode !== 'gyro' && (e.pointerType === 'mouse' || e.clientX - rect.left < rect.width * .55);
-      this.pointers.set(e.pointerId, {x:e.clientX, steer, hold:!steer || e.pointerType === 'mouse'});
-      if (steer) {this.mode = 'touch'; this.target = 0;}
-      if (!steer || e.pointerType === 'mouse') this.startHold('surface-'+e.pointerId);
-      container.setPointerCapture(e.pointerId);
+    container.addEventListener('pointermove',e=>{
+      const point=this.pointers.get(e.pointerId);if(!point)return;
+      this.target=THREE.MathUtils.clamp((e.clientX-point.x)/90,-1,1);
+      this.pitchTarget=THREE.MathUtils.clamp((point.y-e.clientY)/100,-1,1);
     });
-    container.addEventListener('pointermove', e => {
-      const p = this.pointers.get(e.pointerId);
-      if (p && p.steer) this.target = THREE.MathUtils.clamp((e.clientX - p.x) / 90, -1, 1);
-    });
-    const end = e => {
-      const p = this.pointers.get(e.pointerId); if (!p) return;
-      if (p.hold) this.endHold('surface-'+e.pointerId);
-      if (p.steer) this.target = 0;
-      this.pointers.delete(e.pointerId);
-    };
-    container.addEventListener('pointerup', end);
-    container.addEventListener('pointercancel', e => {end(e); this.released = 0;});
-    window.addEventListener('blur', () => this.reset());
-    for(const id of ['crouch-button']){
-      const button=document.getElementById(id);
-      button.addEventListener('pointerdown',e=>{
-        if(!container.classList.contains('playing'))return;
-        e.preventDefault();e.stopPropagation();button.setPointerCapture(e.pointerId);
-        const source=id+'-'+e.pointerId;
-        this.startHold(source);
-      });
-      const release=e=>{
-        e.preventDefault();e.stopPropagation();const source=id+'-'+e.pointerId;
-        this.endHold(source);
-        if(e.type==='pointercancel')this.released=0;
-      };
-      button.addEventListener('pointerup',release);button.addEventListener('pointercancel',release);button.addEventListener('lostpointercapture',release);
-    }
+    const end=e=>{this.pointers.delete(e.pointerId);if(!this.pointers.size)this.target=this.pitchTarget=0;};
+    container.addEventListener('pointerup',end);container.addEventListener('pointercancel',end);
+    window.addEventListener('blur',()=>this.reset());
   }
-  async calibrate() {
-    if (!matchMedia('(pointer:coarse)').matches) return;
-    try {
-      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-        if (await DeviceOrientationEvent.requestPermission() !== 'granted') {this.mode = 'touch'; return;}
-      }
+  async calibrate(){
+    if(!matchMedia('(pointer:coarse)').matches)return;
+    try{
+      if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'&&await DeviceOrientationEvent.requestPermission()!=='granted'){this.mode='touch';return;}
       const samples=[];
-      for(let i=0;i<8;i++){await new Promise(resolve=>setTimeout(resolve,60));if(this.gamma!==null)samples.push(this.gamma);}
-      if (samples.length) {this.neutral = samples.reduce((sum,value)=>sum+value,0)/samples.length; this.mode = 'gyro';}
-      else this.mode = 'touch';
-    } catch (_) {this.mode = 'touch';}
+      for(let i=0;i<8;i++){await new Promise(resolve=>setTimeout(resolve,60));if(this.gamma!==null&&this.beta!==null)samples.push([this.gamma,this.beta]);}
+      if(samples.length){this.neutral=samples.reduce((sum,v)=>sum+v[0],0)/samples.length;this.neutralBeta=samples.reduce((sum,v)=>sum+v[1],0)/samples.length;this.mode='gyro';}
+      else this.mode='touch';
+    }catch(_){this.mode='touch';}
   }
-  startHold(source='direct') {this.holdSources.add(source);if (!this.hold) {this.hold = true; this.holdTime = 0;}}
-  endHold(source='direct') {this.holdSources.delete(source);if (this.hold&&this.holdSources.size===0) {this.released = this.holdTime; this.hold = false;}}
-  consumeRelease() {const t = this.released; this.released = 0; return t;}
-  reset() {this.keys.clear(); this.pointers.clear();this.holdSources.clear(); this.target = this.lean = 0; this.hold = false; this.holdTime = this.released = 0;}
-  recenter(){if(this.gamma!==null){this.neutral=this.gamma;this.lean=0;}}
-  update(dt) {
-    if (this.hold) this.holdTime += dt;
-    let target = this.target;
-    if (this.mode === 'keys') target = (this.keys.has('ArrowRight') || this.keys.has('KeyD') ? 1 : 0) - (this.keys.has('ArrowLeft') || this.keys.has('KeyA') ? 1 : 0);
-    if (this.mode === 'gyro') {
-      const rel = (this.gamma || 0) - this.neutral;
-      target = Math.abs(rel) < 1.5 ? 0 : THREE.MathUtils.clamp((rel - Math.sign(rel) * 1.5) / 23, -1, 1);
+  reset(){this.keys.clear();this.pointers.clear();this.target=this.pitchTarget=this.lean=this.pitch=0;}
+  recenter(){if(this.gamma!==null&&this.beta!==null){this.neutral=this.gamma;this.neutralBeta=this.beta;this.lean=this.pitch=0;}}
+  update(dt){
+    let lean=this.target,pitch=this.pitchTarget;
+    if(this.mode==='keys'){
+      lean=Number(this.keys.has('ArrowRight')||this.keys.has('KeyD'))-Number(this.keys.has('ArrowLeft')||this.keys.has('KeyA'));
+      pitch=Number(this.keys.has('ArrowUp')||this.keys.has('KeyW'))-Number(this.keys.has('ArrowDown')||this.keys.has('KeyS'));
     }
-    this.lean += (target - this.lean) * (1 - Math.exp(-9 * dt));
+    if(this.mode==='gyro'){
+      const axis=(v,range)=>Math.abs(v)<1.5?0:THREE.MathUtils.clamp((v-Math.sign(v)*1.5)/range,-1,1);
+      lean=axis((this.gamma??this.neutral)-this.neutral,20);pitch=axis(this.neutralBeta-(this.beta??this.neutralBeta),12);
+    }
+    this.lean+=(lean-this.lean)*(1-Math.exp(-9*dt));this.pitch+=(pitch-this.pitch)*(1-Math.exp(-7*dt));
   }
 }
 
@@ -97,6 +64,8 @@ class PaperSurfGame {
     this.accumulator = 0; this.lastTime = 0; this.lastPoseFrame = -1;
     this.reducedMotion = matchMedia('(prefers-reduced-motion:reduce)').matches;
     this.input = new PaperInput(this.container);
+    this.debugMode=new URLSearchParams(location.search).get('debug')==='1';
+    this.container.classList.toggle('debug-mode',this.debugMode);document.getElementById('ride-debug').classList.toggle('hidden',!this.debugMode);
     this.audio = new SurfAudio();
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.Fog(0xc7d7c9, 100, 225);
@@ -112,9 +81,12 @@ class PaperSurfGame {
       this.textures[key] = loader.load(SPRITE_ASSETS[key]);
       this.textures[key].minFilter = THREE.LinearMipmapLinearFilter;
     });
-    this.textures.shark_fin=loader.load('assets/comics/shark-fin.png');
+    this.textures.shark_fin=loader.load('assets/comics/shark-directions-sheet.png');
+    this.textures.shark_fin.userData={directionAtlas:true};
+    this.textures.shark_fin.generateMipmaps=false;this.textures.shark_fin.minFilter=THREE.LinearFilter;
     this.wave = new PaperWave(this.scene);
     this.player = this.makeSurfer(1, 0x145990);
+    this.player.board.scale.set(2.7,1.25,1);
     this.mug = new ComicBeerLiquid();
     this.mug.addSpillListener((side, amount) => {
       if (this.state !== 'playing') return;
@@ -122,12 +94,12 @@ class PaperSurfGame {
     });
     this.beerCanvas = document.getElementById('beer-canvas');
     this.beerCtx = this.beerCanvas.getContext('2d');
-    this.handBeer=new HandBeer(this);this.waveRide=new WaveRide(this);
+    this.heroAnimator=new HeroAnimator(this);this.handBeer=new HandBeer(this);this.waveRide=new WaveRide(this);
     this.initBackdrop(); this.initParticles(); this.initTrail(); this.initRivals(); this.initCaps(); this.initFinish();
-    this.world=new ComicsWorld(this);this.comics=new ComicDirector(this);
+    this.world=new ComicsWorld(this);this.wave.wakeField=(x,z)=>this.world.wakeAt(x,z);this.comics=new ComicDirector(this);this.jump=new SurfJump(this);
     this.reset(); this.resize(); this.bindUI();
     document.getElementById('cap-icon').src = SPRITE_ASSETS.cap_fish;
-    if (!matchMedia('(pointer:coarse)').matches) document.getElementById('start-help').innerHTML = '← → / A D — карвинг · пробел — сжатие<br>Отпусти на склоне — разгон · у гребня — вылет<br>Держись пенной линии и веди плавную дугу';
+    if (!matchMedia('(pointer:coarse)').matches) document.getElementById('start-help').innerHTML = '← → / A D — курс · ↑ ↓ / W S — вес<br>Держи пробел и отпусти — прыжок.<br>Лови разгон на волне, уходи от акулы.';
     window.addEventListener('resize', () => this.resize());
     document.addEventListener('visibilitychange', () => {if (document.hidden && this.state === 'playing') this.pause();});
     window.addEventListener('keydown', e => {if (e.code === 'Escape' || e.code === 'KeyP') {if (this.state === 'playing') this.pause(); else if (this.state === 'paused') this.resume();}});
@@ -146,6 +118,8 @@ class PaperSurfGame {
     shape.moveTo(0, 1.28); shape.quadraticCurveTo(.44, .7, .43, -.8); shape.quadraticCurveTo(0, -1.35, -.43, -.8); shape.quadraticCurveTo(-.44, .7, 0, 1.28);
     const board = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({color, side:THREE.DoubleSide}));
     board.rotation.x = -Math.PI / 2; board.position.y = .055; board.scale.setScalar(scale); group.add(board);
+    const rim=new THREE.Mesh(board.geometry,new THREE.MeshBasicMaterial({color:0xf6ebd0,side:THREE.DoubleSide}));
+    rim.scale.set(1.07,1.025,1);rim.position.z=-.008;board.add(rim);
     this.scene.add(group);
     const shadow = new THREE.Mesh(new THREE.CircleGeometry(.85, 24), new THREE.MeshBasicMaterial({color:0x062c40, transparent:true, opacity:.25, depthWrite:false}));
     shadow.rotation.x = -Math.PI / 2; shadow.scale.set(1, 1.5, 1); this.scene.add(shadow);
@@ -212,40 +186,43 @@ class PaperSurfGame {
     document.getElementById('pause-button').addEventListener('click',()=>this.pause());
     document.getElementById('resume-button').addEventListener('click',()=>this.resume());
     document.getElementById('reset-button').addEventListener('click',()=>this.start(false));
-    document.getElementById('center-button').addEventListener('click',()=>{this.input.recenter();this.hint(this.input.mode==='gyro'?'НЕЙТРАЛЬ ЗАПОМНИЛИ':'НА ТЕЛЕФОНЕ — НАКЛОН. СЕЙЧАС — ТАЧ ИЛИ КЛАВИШИ',2.5);});
+    document.getElementById('center-button').addEventListener('click',()=>{this.input.recenter();document.getElementById('center-button').textContent='◎ Нейтраль запомнили';});
   }
   reset() {
-    this.input.reset();this.time=0;this.elapsed=0;this.accumulator=0;this.score=0;this.collected=0;this.cleanLandings=0;
-    this.p={x:0,z:0,y:0,speed:26,heading:0,lean:0,smoothLean:0,airborne:false,vy:0,airY:0,crouch:0,flightTime:0,peak:0,pump:0,spin:0,grabTime:0,landingCompression:0,apexShown:false,carveTime:0,carveDirection:0};
-    this.p.y=this.wave.height(0,0,0);
-    this.p.compressionEnergy=0;this.p.pumpCooldown=0;this.p.pumpCycles=0;this.p.balance=0;this.p.recovering=0;
-    this.spillFlash=0;this.impactCooldown=0;this.momentTime=0;this.hintTime=7;this.hintIndex=0;
-    this.combo=1;this.comboTime=0;this.tricksSeen=new Set();this.trickCooldown=0;this.lastCarveWave=-999;this.carveCommitted=0;this.world.reset();this.comics.reset();this.sprayAccumulator=this.trailClock=0;
-    this.lastLanding=null;
-    this.mug.reset();this.mug.foam=.18;this.mug.totalSpilled=0;
-    this.handBeer.reset();this.waveRide.reset();
-    this.trailPoints=[];this.particles.forEach(d=>{d.life=0;d.mesh.visible=false;});
+    this.input.reset();this.time=this.elapsed=this.accumulator=this.score=this.collected=0;
+    this.p={x:1,z:0,y:0,speed:23,heading:0,lean:0,pitch:0,smoothLean:0,sideVelocity:0,verticalVelocity:0,crouch:.1,balance:0,recovering:0,airborne:false,airY:0,spin:0};
+    this.spillFlash=this.impactCooldown=this.momentTime=this.hintIndex=this.comboTime=this.trickCooldown=this.carveClock=this.wakeClock=0;
+    this.combo=1;this.hintTime=6;this.tricksSeen=new Set();this.world.reset();this.comics.reset();
+    this.mug.reset();this.mug.foam=.18;this.mug.totalSpilled=0;this.mug.lastSpillTime=0;
+    this.waveRide.reset();this.heroAnimator.reset();this.handBeer.reset();this.jump.reset();
+    this.p.y=this.wave.height(this.p.x,0,0);this.trailPoints=[];this.sprayAccumulator=this.trailClock=0;
+    this.particles.forEach(d=>{d.life=0;d.mesh.visible=false;});
     this.caps.forEach(c=>{c.collected=false;c.mesh.visible=true;});
-    this.rivals.forEach((r,i)=>{r.x=[-3.2,4,1.3][i];r.z=[30,45,72][i];r.lean=0;r.airY=0;r.vy=0;r.airborne=false;r.passed=false;r.chat=false;r.cooldown=0;});
+    this.rivals.forEach((r,i)=>{r.x=[-3.2,4,1.3][i];r.z=[30,45,72][i];r.lean=0;r.airY=0;r.passed=r.chat=r.contactLocked=false;r.yieldTime=0;r.yieldSide=0;});
     document.getElementById('moment').classList.remove('visible');document.getElementById('hint').classList.remove('invisible');
-    this.wave.update(0,0,true);this.updateCamera(1,true);this.updateHUD();
+    this.wave.update(0,0,true);this.updateCamera(1,true);this.updateVisuals(0);this.updateHUD();
   }
+
   async start(calibrate = true) {
     if (this.starting) return;this.starting=true;
     try {
       this.audio.unlock();
       const button=document.getElementById('start-button');button.disabled=true;
       if(calibrate&&matchMedia('(pointer:coarse)').matches)button.textContent='ЗАПОМИНАЕМ НАКЛОН…';
-      if (calibrate) await this.input.calibrate();
+      await Promise.all([this.heroAnimator.ready,this.comics.ready,this.world.ready,calibrate?this.input.calibrate():Promise.resolve()]);
       this.reset();this.state='playing';this.container.classList.add('playing');
       ['start-screen','pause-screen','result-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));
       document.getElementById('touch-guide').classList.toggle('visible',this.input.mode==='touch');
-      this.hint(this.input.mode==='touch'?'ТЯНИ — ПОВОРОТ. ПРИСЕД — КНОПКА ↓':'НАКЛОНЯЙ — РЕЖЬ ВОЛНУ ↔',5);
+      this.hint(this.input.mode==='touch'?'ТЯНИ ВБОК — КУРС. ВВЕРХ / ВНИЗ — ВЕС.':'↔ КУРС ПО СКЛОНУ · ↕ ВЕС НА ДОСКЕ',5);
       this.audio.startBGM();
-    } finally {this.starting=false;const button=document.getElementById('start-button');button.disabled=false;button.innerHTML='ЛОВИ ВОЛНУ <span>↗</span>';}
+    } catch(error){console.error(error);this.hint('НЕ УДАЛОСЬ ЗАГРУЗИТЬ ГЕРОЯ. ОБНОВИ СТРАНИЦУ.',8);} finally {this.starting=false;const button=document.getElementById('start-button');button.disabled=false;button.innerHTML='ЛОВИ ВОЛНУ <span>↗</span>';}
   }
   pause() {
-    if(this.state!=='playing')return;this.state='paused';this.input.reset();this.audio.stopBGM();
+    if(this.state!=='playing')return;this.state='paused';this.input.reset();this.jump.cancel();this.audio.stopBGM();
+    document.getElementById('center-button').textContent='◎ Запомнить нейтраль';
+    document.getElementById('center-button').classList.toggle('hidden',this.input.mode!=='gyro');
+    document.getElementById('pause-help').innerHTML=this.input.mode==='keys'?'← → / A D — курс по склону.<br>↑ ↓ / W S — вес на доске.':this.input.mode==='touch'?'Тяни вбок — курс по склону.<br>Вверх / вниз — вес на доске.':'Вбок — курс по склону.<br>Вперёд / назад — вес на доске.';
+    document.getElementById('pause-help').innerHTML+='<br>↑ Кнопка / пробел: держи — готовься, отпусти — прыгай.';
     document.getElementById('pause-screen').classList.remove('hidden');
   }
   resume() {if(this.state!=='paused')return;this.state='playing';this.input.reset();document.getElementById('pause-screen').classList.add('hidden');this.audio.startBGM();}
@@ -256,7 +233,7 @@ class PaperSurfGame {
   awardTrick(name,points,quiet=false){
     this.tricksSeen.add(name);this.score+=points*this.combo*this.mug.multiplier;
     this.combo=Math.min(4,this.combo+1);this.comboTime=4.5;
-    if(!quiet)this.moment(name,'+'+points+' · комбо ×'+this.combo,false,.85);
+    if(!quiet&&name!=='ПОЙМАЛ ВОЛНУ')this.moment(name,'',false,.65);
   }
   spill(amount,reason) {
     this.combo=1;this.comboTime=0;
@@ -266,115 +243,80 @@ class PaperSurfGame {
 
   step(dt) {
     this.time+=dt;this.elapsed+=dt;this.wave.time=this.time;this.input.update(dt);
-    const p=this.p,s=this.wave.sample(p.x,p.z),prevLean=p.lean,prevHeading=p.heading;
-    this.waveRide.step(dt);
-    this.comboTime=Math.max(0,this.comboTime-dt);if(this.comboTime===0)this.combo=1;this.trickCooldown=Math.max(0,this.trickCooldown-dt);
-    p.lean=this.input.lean;p.smoothLean+=(p.lean-p.smoothLean)*(1-Math.exp(-dt/.32));
-    p.heading+=(p.lean*.62-p.heading)*(1-Math.exp(-7*dt));
-    p.crouch+=(Number(this.input.hold&&!p.airborne)-p.crouch)*(1-Math.exp(-12*dt));
-    const lateral=Math.sin(p.heading)*p.speed*.52;
-    const slopeTravel=s.dz*Math.cos(p.heading)+s.dx*Math.sin(p.heading)*.52;
-    p.pumpCooldown=Math.max(0,p.pumpCooldown-dt);p.recovering=Math.max(0,p.recovering-dt);
-    if(!p.airborne&&this.input.hold){
-      const loading=(Math.abs(p.lean)>.22&&s.crest<.6)||(slopeTravel>.025&&s.crest<.76);
-      if(loading)p.compressionEnergy=Math.min(1,p.compressionEnergy+dt*(1.3+Math.abs(p.lean)));
-    }
-    if(!p.airborne){
-      const turning=Math.abs(p.lean)>.35;
-      if(turning){p.carveTime+=dt;p.carveDirection=Math.sign(p.lean);}else p.carveTime=Math.max(0,p.carveTime-dt*2);
-      const waveId=Math.floor((p.z-this.time*this.wave.drift)/this.wave.period);
-      if(p.carveTime>.35&&this.input.hold&&s.crest<.42&&this.lastCarveWave!==waveId){this.lastCarveWave=waveId;p.pump=Math.min(8,p.pump+2.5);this.awardTrick('КАРВИНГ',100);}
-      if(Math.abs(p.lean)>.5)this.carveCommitted=Math.sign(p.lean);
-      if(this.carveCommitted&&this.input.target!==undefined&&p.lean*this.carveCommitted<-.25&&s.crest>.45&&this.trickCooldown===0){this.awardTrick('КАТБЭК',180);this.carveCommitted=Math.sign(p.lean);this.trickCooldown=2;}
-    }
-    p.pump*=Math.exp(-dt*.75);
-    const target=THREE.MathUtils.clamp(27-slopeTravel*19+p.pump+this.waveRide.boost-Math.abs(p.heading)*3-(this.input.hold&&this.input.holdTime>1.3?.65:0),20,48);
-    p.speed+=(target-p.speed)*(1-Math.exp(-2.4*dt));
-    p.x=THREE.MathUtils.clamp(p.x+lateral*dt,-8.5,8.5);p.z+=Math.cos(p.heading)*p.speed*dt;
-    const release=this.input.consumeRelease();
-    if(!p.airborne&&release>.12&&s.crest>.67&&slopeTravel>-.14){
-      p.airborne=true;p.vy=5+Math.min(release,.65)*7+(s.crest>.65?3.3:0);p.airY=.03;p.y=s.height+.03;p.flightTime=0;p.peak=0;p.spin=0;p.grabTime=0;p.landingCompression=0;p.apexShown=false;
-      this.audio.playJump();this.emit(15,.8);
-      if(s.crest>.65)this.moment('С ГРЕБНЯ!', 'Держи кружку!',false,.8);
-      p.compressionEnergy=0;
-    }else if(!p.airborne&&release>.12){
-      if(p.compressionEnergy>.22&&p.pumpCooldown===0){p.pump=Math.min(9,p.pump+2+p.compressionEnergy*5);p.pumpCycles++;p.pumpCooldown=.8;this.score+=60;this.moment('РАЗОГНАЛСЯ!','Сжатие → разгибание',false,.8);}
-      p.compressionEnergy=0;
-    }
-    const nextSurface=this.wave.sample(p.x,p.z);
-    if(p.airborne){
-      const previousVy=p.vy;
-      p.flightTime+=dt;p.vy-=17*dt;p.y+=p.vy*dt;p.airY=Math.max(0,p.y-nextSurface.height);p.peak=Math.max(p.peak,p.airY);
-      if(Math.abs(p.lean)>.2)p.spin+=p.lean*390*dt;
-      if(this.input.hold&&p.vy>0)p.grabTime+=dt;
-      p.landingCompression+=(Number(this.input.hold&&p.vy<0)-p.landingCompression)*(1-Math.exp(-15*dt));
-      p.crouch=Math.max(p.landingCompression,this.input.hold?.75:0);
-      if(previousVy>0&&p.vy<=0&&!p.apexShown&&p.peak>1.3){p.apexShown=true;this.comics.trigger('УАУ!',p.grabTime>.12?'ДЕРЖИ ДОСКУ. СПАСАЙ ПИВО.':'ВЫШЕ ВОЛНЫ!',p.grabTime>.12?'grab':'air');}
-      if(p.y<=nextSurface.height&&p.vy<0){
-        p.airborne=false;p.y=nextSurface.height;p.airY=0;
-        const spinError=Math.abs(p.spin-Math.round(p.spin/180)*180);
-        const clean=Math.abs(p.lean)<.65&&spinError<35&&p.landingCompression>.45;
-        this.lastLanding={spin:p.spin,spinError,compression:p.landingCompression,lean:p.lean,clean};
-        if(clean){
-          this.cleanLandings++;this.handBeer.impact(.92);this.awardTrick('ВЫЛЕТ',200+Math.round(p.peak*35),true);
-          if(p.grabTime>.14)this.awardTrick('ЗАХВАТ',150,true);
-          const turns=Math.floor((Math.abs(p.spin)+35)/180);
-          if(turns>=1)this.awardTrick(turns>=2?'РАЗВОРОТ 360°':'РАЗВОРОТ 180°',turns>=2?450:280,true);
-          this.moment('ЧИСТО!','Сжатие спасло кружку',false,.9);
-          if(turns>=2)this.comics.trigger('ВОТ ЭТО!', '360° · ПИВО НА МЕСТЕ',p.grabTime>.14?'grab':'air',3);
-        }else{this.handBeer.impact(p.landingCompression>.45?.5:0);this.spill(p.landingCompression>.45?.035:.075,spinError>=35?'Выравнивай доску перед касанием':'Зажми перед посадкой');p.speed*=.87;}
-        p.spin=0;p.grabTime=0;
-        this.emit(24,1.4);this.audio.playSlam();
-      }
-    }else{p.y=nextSurface.height;p.airY=0;}
+    const p=this.p,s=this.wave.sample(p.x,p.z),previousLean=p.lean,previousHeading=p.heading,previousY=p.y;
+    p.lean=this.input.lean;p.pitch=this.input.pitch;p.smoothLean+=(p.lean-p.smoothLean)*(1-Math.exp(-dt/.32));
     this.impactCooldown=Math.max(0,this.impactCooldown-dt);
-    const jerk=p.lean-p.smoothLean;
-    const turbulent=(Math.sin(this.time*19)+Math.sin(this.time*27)*.3)*s.crest*.05;
-    let wake=0;
-    this.rivals.forEach(r=>{const ahead=r.z-p.z;if(ahead>1&&ahead<10&&Math.abs(r.x-p.x)<1.2)wake+=Math.sin(this.time*32)*.17;});
-    wake+=this.world.wakeAt(p.x,p.z);
-    this.handBeer.step(dt,(p.heading-prevHeading)/dt,turbulent+wake,jerk);
-    const risk=(Math.abs(jerk)*2.3+Math.abs(wake)*2.5+Math.abs(p.lean)*(s.crest<.3?.65:.25))*(1-p.crouch*.6);
-    p.balance=THREE.MathUtils.clamp(p.balance+(risk-.48)*dt,0,1.2);
-    if(!p.airborne&&p.balance>1&&this.impactCooldown===0){p.balance=.3;p.recovering=.8;p.speed*=.7;this.spill(.12,'Слишком резкая дуга. Смягчи колени');this.impactCooldown=2;}
-    if((p.lean-prevLean)/dt*Math.sign(p.lean)>6&&Math.abs(jerk)>.75&&this.impactCooldown===0&&!p.airborne){this.spill(.025,'Резкая перекладка');this.impactCooldown=1.1;}
-    this.updateRivals(dt);this.updateCaps(dt);this.world.step(dt);
-    if(!p.airborne){
-      this.sprayAccumulator=(this.sprayAccumulator||0)+dt*(9+Math.abs(p.heading)*40+s.crest*14);
-      if(this.sprayAccumulator>1){this.emit(Math.floor(this.sprayAccumulator),.35);this.sprayAccumulator%=1;}
-      this.trailClock=(this.trailClock||0)+dt;
-      if(this.trailClock>.035){this.trailPoints.unshift({x:p.x,z:p.z});this.trailPoints=this.trailPoints.slice(0,34);this.trailClock=0;}
+    const wasRecovering=p.recovering>0;p.recovering=Math.max(0,p.recovering-dt);
+    p.heading+=(p.lean*.55-p.heading)*(1-Math.exp(-6*dt));
+    const lateral=Math.sin(p.heading)*p.speed*.38-(p.airborne?0:s.baseDx*.4);
+    p.sideVelocity+=(lateral-p.sideVelocity)*(1-Math.exp(-6*dt));
+    // The moving wake transfers energy; it is not a static hill to climb.
+    // Its full surface still controls board height, banking, knees and beer.
+    const slope=p.airborne?0:s.baseDz*Math.cos(p.heading)+s.baseDx*p.sideVelocity/Math.max(1,p.speed);
+    this.waveRide.step(dt);
+    const wake=p.airborne?0:this.world.wakeQualityAt(p.x,p.z);
+    const trim=p.pitch*(this.waveRide.caught||wake>.3?3.2:.6);
+    const target=THREE.MathUtils.clamp(22+this.waveRide.boost-slope*38+trim-Math.abs(p.heading)*2+(wake>.3?5*wake:0)-(p.recovering>0?7:0),17,42);
+    p.speed+=(target-p.speed)*(1-Math.exp(-2.3*dt));
+    p.x=THREE.MathUtils.clamp(p.x+p.sideVelocity*dt,-9,9.2);p.z+=p.speed*Math.cos(p.heading)*dt;
+    const next=this.wave.sample(p.x,p.z);this.jump.step(dt,next);
+    const vertical=(p.y-previousY)/dt,verticalImpulse=THREE.MathUtils.clamp((vertical-p.verticalVelocity)*.16,-1.5,1.5);
+    p.verticalVelocity+=(vertical-p.verticalVelocity)*(1-Math.exp(-10*dt));
+    const autoKnees=THREE.MathUtils.clamp(.12+Math.abs(p.lean)*.4+Math.abs(next.dx)*.15+Math.abs(vertical)*.035+wake*.35+this.jump.charge*.5,.12,.85);
+    p.crouch+=(autoKnees-p.crouch)*(1-Math.exp(-10*dt));
+    const jerk=Math.abs(p.lean-p.smoothLean),high=!p.airborne&&next.zone==='crest'&&next.energy>.7;
+    const risk=jerk*.6+wake*.6+Math.max(0,p.pitch-.45)*Math.max(0,-slope)*9+(high?(Math.abs(p.lean)*.75+Math.abs(p.pitch)*1.05):0);
+    p.balance=THREE.MathUtils.clamp(p.balance+dt*(risk-.45),0,1.15);
+    if(p.balance>1&&this.impactCooldown===0){
+      p.balance=.4;p.recovering=.9;p.speed*=.72;this.impactCooldown=2.2;
+      this.spill(.10,'Сорвался с линии — перенеси вес на хвост');this.emit(24,1.2);
     }
-    this.updateParticles(dt);
+    if(wasRecovering&&p.recovering===0&&Math.abs(p.pitch)<.5&&p.balance<.6){
+      this.awardTrick('ВЫРУЛИЛ',130,true);this.comics.trigger('ФУХ!','КОЛЕНИ МЯГЧЕ. КРУЖКУ ДОВЕЗЁМ.','save',2);
+    }
+    this.comboTime=Math.max(0,this.comboTime-dt);if(this.comboTime===0)this.combo=1;
+    this.trickCooldown=Math.max(0,this.trickCooldown-dt);
+    this.carveClock=this.waveRide.caught&&Math.abs(p.lean)>.35?this.carveClock+dt:0;
+    if(this.carveClock>.6&&this.trickCooldown===0){this.awardTrick('КАРВИНГ',100);this.trickCooldown=3;this.carveClock=0;}
+    this.wakeClock=wake>.4&&p.balance<.7?this.wakeClock+dt:0;
+    if(this.wakeClock>.45&&this.trickCooldown===0){this.awardTrick('НА ХВОСТЕ',180);this.trickCooldown=3;this.world.wakeRides++;this.comics.trigger('ПОГНАЛИ!','ПОЙМАЛ СЛЕД АКВАБАЙКА','transfer');}
+    this.handBeer.step(dt,(p.heading-previousHeading)/dt,wake+verticalImpulse,THREE.MathUtils.clamp((p.lean-previousLean)/dt,-3,3));
+    this.world.step(dt);this.updateRivals(dt);this.updateCaps(dt);this.updateParticles(dt);
+    if(!p.airborne)this.sprayAccumulator+=dt*(Math.abs(p.lean)*20+this.waveRide.boost*.55+wake*12);
+    if(this.sprayAccumulator>1){const n=Math.floor(this.sprayAccumulator);this.emit(n,.6+Math.abs(p.lean));this.sprayAccumulator-=n;}
+    this.trailClock+=dt;if(!p.airborne&&this.trailClock>.035){this.trailClock=0;this.trailPoints.unshift({x:p.x,z:p.z-.7});if(this.trailPoints.length>34)this.trailPoints.pop();}
     this.momentTime-=dt;if(this.momentTime<=0)document.getElementById('moment').classList.remove('visible');
     this.hintTime-=dt;if(this.hintTime<=0)document.getElementById('hint').classList.add('invisible');
-    if(p.z>45&&this.hintIndex===0){this.hint('В ПЕННУЮ ЛИНИЮ — ПОЙМАЙ ВОЛНУ!');this.hintIndex++;}
-    if(p.z>150&&this.hintIndex===1){this.hint('НА СКЛОНЕ — РАЗГОН. У ГРЕБНЯ — ВЫЛЕТ.');this.hintIndex++;}
-    if(p.z>340&&this.hintIndex===2){this.hint('В ВОЗДУХЕ НАКЛОН — РАЗВОРОТ');this.hintIndex++;}
+    if(p.z>40&&this.hintIndex===0){this.hint('ВОЛНА СЛЕВА — ВХОДИ ПЛАВНО НА СКЛОН');this.hintIndex++;}
+    if(p.z>145&&this.hintIndex===1){this.hint('ВНИЗ ПО СКЛОНУ — РАЗГОН. НАВЕРХУ — БАЛАНС.');this.hintIndex++;}
+    if(p.z>350&&this.hintIndex===2){this.hint('ВОЛНА ЗАКОНЧИЛАСЬ — ИЩИ СЛЕДУЮЩУЮ');this.hintIndex++;}
     this.spillFlash=Math.max(0,this.spillFlash-dt*1.8);
     if(p.z>=this.distance)this.finish();
   }
 
-  updateRivals(dt) {
+
+  updateRivals(dt){
     const p=this.p;
     this.rivals.forEach(r=>{
-      const previousX=r.x;
-      const desired=r.kind==='calm'?3.8+Math.sin(this.time*.5)*.8:r.kind==='showoff'?-3.5+Math.sin(this.time*1.2)*2.7:Math.sin(this.time*1.8+r.index)*4.7;
-      r.x+=(desired-r.x)*(1-Math.exp(-dt*(r.kind==='wobbly'?2.2:1.2)));
-      r.lean=THREE.MathUtils.clamp((r.x-previousX)/dt*.15,-1,1);
-      const s=this.wave.sample(r.x,r.z),catchup=THREE.MathUtils.clamp((p.z-r.z)*.06,-3.5,4);
-      r.speed+=(27-s.dz*16+(r.kind==='showoff'?2:0)+catchup-r.speed)*(1-Math.exp(-dt*2));r.z+=r.speed*dt;
-      r.cooldown=Math.max(0,r.cooldown-dt);
-      if(r.kind==='showoff'&&s.crest>.95&&!r.airborne&&r.cooldown===0){r.airborne=true;r.vy=8;r.cooldown=2.2;}
-      if(r.airborne){r.airY+=r.vy*dt;r.vy-=17*dt;if(r.airY<=0){r.airY=0;r.airborne=false;}}
-      if(!r.chat&&Math.abs(r.z-p.z)<18&&this.momentTime<0){this.moment(r.line,r.name,false,1.15);r.chat=true;}
-      if(!r.passed&&p.z-r.z>3){r.passed=true;this.score+=100;if(this.momentTime<0)this.moment('ПРОЛЕТЕЛ МИМО!',r.name+' машет вслед',false,.85);}
-      if(Math.abs(r.z-p.z)<1.5&&Math.abs(r.x-p.x)<.85&&p.airY<.8&&r.airY<.8&&this.impactCooldown===0){
-        this.spill(.09,r.name+': «Сорян!»');p.speed*=.8;this.impactCooldown=1.6;r.x+=r.x>p.x?1.5:-1.5;r.z+=2;this.emit(20,1.1);
+      const previousX=r.x,w=this.wave.waves.find(w=>r.z>w.from&&r.z<w.to);
+      const fraction=r.kind==='showoff'?.15:r.kind==='calm'?.65:.4+.22*Math.sin(this.time*1.8+r.index);
+      r.yieldTime=Math.max(0,r.yieldTime-dt);
+      if(r.contactLocked&&r.yieldTime===0&&(Math.abs(r.z-p.z)>8||Math.abs(r.x-p.x)>3))r.contactLocked=false;
+      const line=w?this.wave.crestX(w,r.z)+w.width*fraction:Math.sin(this.time*.5+r.index)*3;
+      const desired=THREE.MathUtils.clamp(line+(r.yieldTime>0?r.yieldSide*1.8:0),-8,8);
+      r.x+=(desired-r.x)*(1-Math.exp(-dt*1.5));r.lean=THREE.MathUtils.clamp((r.x-previousX)/dt*.15,-1,1);
+      const catchup=THREE.MathUtils.clamp((p.z-r.z)*.045,-3.5,4),sample=this.wave.sample(r.x,r.z);
+      r.speed+=(25+sample.energy*5+catchup-r.speed)*(1-Math.exp(-dt*2));r.z+=r.speed*dt;r.airY=0;
+      if(!r.chat&&Math.abs(r.z-p.z)<12)r.chat=true;
+      if(!r.passed&&p.z-r.z>3){r.passed=true;this.score+=100;}
+      if(!r.contactLocked&&Math.abs(r.z-p.z)<1.5&&Math.abs(r.x-p.x)<.85&&this.impactCooldown===0){
+        r.contactLocked=true;r.yieldTime=3.5;r.yieldSide=r.x>p.x?1:-1;
+        this.spill(.08,r.name+': «Сорян!»');p.speed*=.8;this.impactCooldown=1.6;r.x+=r.yieldSide*1.5;r.z+=2;this.emit(16,1);
       }
-      if(r.z<p.z-24){r.z=p.z+50+r.index*13;r.passed=false;r.chat=false;}
+      if(r.z<p.z-24){r.z=p.z+50+r.index*13;r.passed=r.chat=r.contactLocked=false;r.yieldTime=0;}
     });
   }
+
   updateCaps(dt) {
     this.caps.forEach(c=>{
       if(c.collected)return;
@@ -410,33 +352,33 @@ class PaperSurfGame {
     document.getElementById('result-title').textContent=pct>=70?'ДОВЁЗ!':'ДОПЛЕСКАЛ!';
     document.getElementById('result-beer').textContent=pct+'%';
     document.getElementById('result-comment').textContent=pct>=90?'Бармен просит мастер-класс.':pct>=70?'Есть что поднять за волну.':pct>=40?'Главное — кружку довёз.':'Зато красиво приехал.';
-    document.getElementById('result-score').textContent=Math.round(this.score);document.getElementById('result-caps').textContent=this.collected+' / '+this.caps.length;document.getElementById('result-landings').textContent=this.cleanLandings;
-    document.getElementById('result-tricks').textContent=this.tricksSeen.size?'Твои манёвры: '+[...this.tricksSeen].join(' · '):'Следующая волна — попробуй вылет и мягкую посадку.';
+    document.getElementById('result-score').textContent=Math.round(this.score);document.getElementById('result-caps').textContent=this.collected+' / '+this.caps.length;document.getElementById('result-landings').textContent=this.waveRide.totalCaught;
+    document.getElementById('result-tricks').textContent=this.tricksSeen.size?'Твои манёвры: '+[...this.tricksSeen].join(' · '):'Следующая волна — попробуй карвинг и тонкий баланс на гребне.';
     this.comics.reset();
     document.getElementById('result-screen').classList.remove('hidden');this.container.classList.remove('playing');document.getElementById('moment').classList.remove('visible');
   }
 
-  updateSurfer(rig,x,z,y,lean,airY,crouch,poseFrame) {
-    const s=this.wave.sample(x,z);
-    rig.group.position.set(-x,y,z);
-    rig.board.rotation.z=Math.atan(s.dx);rig.board.rotation.x=-Math.PI/2+Math.atan(s.dz)*.7;rig.board.visible=airY<.3;
-    rig.card.quaternion.copy(this.camera.quaternion);
-    rig.card.rotateZ(-lean*.18-Math.atan(s.dx)*.25);
-    if(poseFrame!==this.lastPoseFrame){
-      const pose=airY>.15?'jump':Math.abs(lean)>.2||crouch>.4?'turn':'norma';
-      rig.card.material.map=this.textures['surfer_'+pose];rig.pose=pose;
-      rig.card.scale.set(pose==='turn'&&lean<0?-1:1,1-crouch*.15,1);
-      rig.card.position.y=1.46*rig.scale-crouch*.2;
+  updateSurfer(rig,x,z,y,lean,airY,crouch,poseFrame){
+    const sample=this.wave.sample(x,z);rig.group.position.set(-x,y,z);
+    const normal=rig===this.player&&this.p.airborne?new THREE.Vector3(0,1,0):new THREE.Vector3(sample.dx,1,-sample.dz).normalize();
+    rig.board.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),normal)
+      .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/2))
+      .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),Math.PI+(rig===this.player?this.p.heading:lean*.3)));
+    rig.board.position.y=.12;rig.board.visible=true;
+    rig.card.quaternion.copy(this.camera.quaternion);rig.card.rotateZ(-lean*.16+Math.atan(sample.dx)*.30);
+    if(rig!==this.player&&poseFrame!==this.lastPoseFrame){
+      const pose=Math.abs(lean)>.2?'turn':'norma';rig.card.material.map=this.textures['surfer_'+pose];rig.pose=pose;
+      rig.card.scale.set(pose==='turn'&&lean<0?-1:1,1,1);
     }
-    rig.shadow.position.set(-x,s.height+.04,z-.15);rig.shadow.material.opacity=.27/(1+airY*.7);
-    rig.shadow.rotation.z=Math.atan(s.dx);rig.shadow.scale.set(1+airY*.2,1.5+airY*.25,1);
+    rig.shadow.position.set(-x,sample.height+.04,z-.15);rig.shadow.material.opacity=.25/(1+airY*.8);
+    rig.shadow.rotation.z=Math.atan(sample.dx);rig.shadow.scale.set(1,1.5,1);
   }
+
   updateVisuals(dt) {
     const p=this.p,frame=Math.floor(this.time*12);
     this.updateCamera(dt);
     this.updateSurfer(this.player,p.x,p.z,p.y,p.lean,p.airY,p.crouch,frame);
-    if(p.airborne)this.player.card.rotateY(p.spin*Math.PI/180);
-    if(p.recovering>0)this.player.card.rotateZ(Math.sin(p.recovering*Math.PI/.8)*.8);
+    if(!this.animationReview)this.heroAnimator.update(this.state==='playing'?dt*this.comics.timeScale:0);
     this.rivals.forEach(r=>{
       const s=this.wave.sample(r.x,r.z);this.updateSurfer(r.rig,r.x,r.z,s.height+r.airY,r.lean,r.airY,0,frame);
       r.wake.forEach((drop,i)=>{const z=r.z-1-i*.65;const x=r.x+Math.sin(i*2+this.time*4)*.2;drop.position.set(-x,this.wave.height(x,z)+.06,z);drop.scale.set(.4+i*.05,.14+i*.02,1);drop.visible=r.airY<.3;});
@@ -459,13 +401,16 @@ class PaperSurfGame {
   }
   updateCamera(dt,snap=false) {
     const p=this.p,s=this.wave.sample(p.x,p.z);
-    const target=new THREE.Vector3(-p.x*.7,p.y*.55+5.6,p.z-9.7);
+    const chase=this.world.threat(),desiredBack=chase?15.5:9.7;
+    if(snap||!this.cameraBack)this.cameraBack=desiredBack;else this.cameraBack+=(desiredBack-this.cameraBack)*(1-Math.exp(-4*dt));
+    const back=this.cameraBack;
+    const target=new THREE.Vector3(-p.x*.84,p.y+5.3,p.z-back);
     if(snap)this.camera.position.copy(target);else this.camera.position.lerp(target,1-Math.exp(-6*dt));
-    this.camera.position.z=p.z-9.7;
-    const look=new THREE.Vector3(-p.x*.68-Math.sin(p.heading)*2,s.height*.3+1,p.z+17);
+    this.camera.position.z=p.z-back;
+    const look=new THREE.Vector3(-p.x*.78-Math.sin(p.heading)*2,p.y*.64+1,p.z+17);
     this.camera.lookAt(look);
     if(!this.reducedMotion)this.camera.rotateZ(-p.lean*.025);
-    this.camera.fov=58+Math.max(0,p.speed-26)*.45+(p.airborne?2:0);this.camera.updateProjectionMatrix();
+    this.camera.fov=58+Math.max(0,p.speed-26)*.45;this.camera.updateProjectionMatrix();
   }
   drawBeer() {
     const c=this.beerCtx,w=this.beerCanvas.width,h=this.beerCanvas.height;
@@ -476,17 +421,22 @@ class PaperSurfGame {
     const pct=Math.round(this.mug.level*100);document.getElementById('beer-value').innerHTML=pct+'<span>%</span>';document.getElementById('beer-fill').style.width=pct+'%';
     document.getElementById('score-value').textContent=Math.round(this.score).toString().padStart(6,'0');document.getElementById('caps-value').textContent=this.collected;
     document.getElementById('combo-value').textContent='×'+this.combo;
-    document.getElementById('input-label').textContent=this.input.mode==='gyro'?'ГИРОСКОП · ◎ НЕЙТРАЛЬ':this.input.mode==='touch'?'ТАЧ: СЛЕВА ↔ СПРАВА ↓':'КЛАВИШИ: ← → ПРОБЕЛ';
+    document.getElementById('input-label').textContent=this.input.mode==='gyro'?'НАКЛОН: ↔ КУРС · ↕ ВЕС':this.input.mode==='touch'?'ТЯНИ: ↔ КУРС · ↕ ВЕС':'← → КУРС · ↑ ↓ ВЕС';
     document.getElementById('speed-value').textContent=Math.round(this.p.speed);document.getElementById('speed-meter').style.width=THREE.MathUtils.clamp(this.p.speed/42*100,20,100)+'%';
     document.getElementById('route-fill').style.width=Math.min(100,this.p.z/this.distance*100)+'%';
     document.getElementById('section-value').textContent=(COMICS_COURSE.sections.find(section=>this.p.z>=section.from&&this.p.z<section.to)||COMICS_COURSE.sections.at(-1)).title;
-    document.getElementById('charge-fill').style.width=(this.input.hold?Math.min(1,this.input.holdTime/.65)*100:0)+'%';
-    document.getElementById('charge-label').textContent=this.p.airborne?(this.p.vy<0?'ПОСАДКА':'ЗАХВАТ'):this.input.hold?'ОТПУСТИ ↑':'ПРИСЕД';
-    document.getElementById('crouch-help').textContent=this.p.airborne?(this.p.vy<0?'держи · мягче':'держи · за доску'):'держи · отпусти ↑';
-    const crouchButton=document.getElementById('crouch-button');crouchButton.classList.toggle('pressed',this.input.hold);crouchButton.setAttribute('aria-pressed',String(this.input.hold));
+    document.getElementById('weight-dot').style.left=(50+this.p.pitch*40)+'%';
+    document.getElementById('weight-label').textContent=this.p.pitch>.2?'ВЕС НА НОС':this.p.pitch<-.2?'ВЕС НА ХВОСТ':'ВЕС ПО ЦЕНТРУ';
+    document.getElementById('balance-fill').style.width=Math.min(100,this.p.balance*100)+'%';
+    document.getElementById('balance-label').textContent=this.p.recovering>0?'ВЫРУЛИВАЙ':this.p.balance>.6?(Math.abs(this.p.pitch)>.45?'ВЕС К ЦЕНТРУ':'ПЛАВНЕЕ КУРС'):this.p.balance>.3?'РАСТЁТ':'НИЗКИЙ';
     const ride=this.waveRide;document.getElementById('wave-fill').style.width=ride.charge*100+'%';
-    document.getElementById('wave-label').textContent=ride.caught?'НА ВОЛНЕ · +'+Math.round(ride.boost)+' М/С':ride.quality>.38?'ДЕРЖИСЬ В ЛИНИИ':ride.segment(this.p.z)?'ЛОВИ ПЕННУЮ ЛИНИЮ':'ВОЛНА ВПЕРЕДИ';
+    const guidance=ride.guidance();document.querySelector('.wave-ticket').dataset.phase=guidance.phase;
+    document.getElementById('wave-label').textContent=guidance.label;document.getElementById('wave-number').textContent=guidance.number;
+    document.getElementById('wave-status').textContent=guidance.status;document.getElementById('wave-remaining').textContent=guidance.remaining;
+
     this.container.classList.toggle('wave-caught',ride.caught);this.container.classList.toggle('unstable',this.p.balance>.6);
+    const threat=this.world.threat(),danger=threat?THREE.MathUtils.clamp(1-Math.max(0,threat.gap)/36,0,1):0;
+    const fin=document.getElementById('shark-threat');fin.classList.toggle('visible',!!threat);fin.classList.toggle('close',danger>.7);fin.querySelector('b').style.transform='scaleX('+danger+')';
     document.getElementById('spill-flash').style.opacity=this.spillFlash;this.drawBeer();
   }
   resize() {const {width,height}=this.container.getBoundingClientRect();this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();}

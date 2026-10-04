@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ни капли — просмотр анимаций</title><style>
+*{box-sizing:border-box}body{margin:0;background:#e8ddc0;color:#17282c;font:15px Arial;display:grid;grid-template-columns:minmax(320px,480px) minmax(260px,420px);gap:28px;justify-content:center;padding:24px}
+iframe{border:6px solid #17282c;width:100%;height:min(88vh,880px);border-radius:8px;background:#287c98}
+aside{align-self:center}h1{font-size:30px;line-height:1.05}p{line-height:1.6}button,select,input{font:inherit}button,select{background:#fff0ca;border:2px solid #17282c;padding:12px;margin:3px 0}button{cursor:pointer}input{width:100%;accent-color:#e96942}.frame-number{font-size:36px;font-weight:900;color:#125577}.states{display:grid;gap:8px}.states button.active{background:#ffca43}a{color:#125577}small{line-height:1.5;display:block}
+@media(max-width:760px){body{grid-template-columns:1fr;padding:10px;gap:16px}iframe{height:68vh}aside{padding:0 10px 20px}}
+</style></head><body>
+<iframe id="preview" src="./" title="Сёрфер с живой кружкой"></iframe>
+<aside><h1>ПО КАДРАМ.<br>НИ КАПЛИ.</h1><p>32 позы в четырёх последовательностях. Здесь можно рассмотреть рваные края и крепление кружки к пальцам.</p>
+<div class="states"><button data-state="trim" class="active">Перенос веса</button><button data-state="left">Левая дуга</button><button data-state="right">Правая дуга</button><button data-state="recovery">Вернуть равновесие</button></div>
+<p class="frame-number" id="count">1 / 8</p><input id="frame" type="range" min="0" max="7" value="0" aria-label="Кадр анимации">
+<p><button id="play">Ⅱ Пауза</button> <select id="fps" aria-label="Скорость просмотра"><option value="8">8 кадров/с</option><option value="14" selected>14 кадров/с</option><option value="4">4 кадра/с</option></select></p>
+<small>Кадры удерживаются в стопмоушен-ритме. В игре фаза поворота зависит от наклона, затем переходит в выход из дуги. Кружка и жидкость рисуются отдельно; участок пальцев лежит поверх ручки.</small>
+<p><a href="./">Открыть игру →</a></p></aside>
+<script>
+let game,state='trim',frame=0,playing=true,last=0;
+const slider=document.getElementById('frame'),preview=document.getElementById('preview');
+preview.addEventListener('load',async()=>{
+  game=preview.contentWindow.game;if(!game)return;
+  await game.heroAnimator.ready;await game.comics.ready;await game.start(false);
+  game.state='paused';game.animationReview=true;game.p.z=110;game.p.x=game.wave.crestX(game.wave.waves[0],110)+3.2;game.p.y=game.wave.height(game.p.x,110);game.updateCamera(1,true);
+  const style=preview.contentDocument.createElement('style');style.textContent='.hud,.screen,.wave-ticket,.weight-ticket,.bottom-hud,.hint,.moment,.touch-guide,.comic-frame,#jump-button,#shark-threat{display:none!important}.desktop-note{display:none!important}body{padding:0;display:block;background:#287b96}#app-container{width:100vw!important;height:100vh!important;border-radius:0!important;box-shadow:none!important}';preview.contentDocument.head.append(style);game.resize();show();
+});
+function show(){if(!game)return;game.heroAnimator.apply(state,frame);game.handBeer.update();slider.value=frame;document.getElementById('count').textContent=(frame+1)+' / 8';}
+document.querySelectorAll('[data-state]').forEach(button=>button.onclick=()=>{state=button.dataset.state;frame=0;document.querySelectorAll('[data-state]').forEach(b=>b.classList.toggle('active',b===button));show();});
+slider.oninput=()=>{playing=false;document.getElementById('play').textContent='▶ Играть';frame=+slider.value;show();};
+document.getElementById('play').onclick=()=>{playing=!playing;document.getElementById('play').textContent=playing?'Ⅱ Пауза':'▶ Играть';};
+function tick(now){requestAnimationFrame(tick);if(game&&playing&&now-last>1000/+document.getElementById('fps').value){last=now;frame=(frame+1)%8;show();}}requestAnimationFrame(tick);
+</script></body></html>

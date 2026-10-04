@@ -3,8 +3,8 @@ class PaperWave {
   constructor(scene) {
     this.scene = scene;
     this.time = 0;
-    this.period = 58;
-    this.drift = 3.2;
+    this.waves = COMICS_COURSE.waves;
+    this.wakeField = null;
     this.lastPrintFrame = -1;
     this.colors = [new THREE.Color('#063957'), new THREE.Color('#207ca3'), new THREE.Color('#65aeb4')];
     const texture = new THREE.TextureLoader().load(SPRITE_ASSETS.wave_paper_texture);
@@ -44,10 +44,11 @@ class PaperWave {
     this.sea.frustumCulled = false;
     scene.add(this.sea);
     this.crests = [];
-    for (let i = 0; i < 6; i++) {
-      const edge = this.ribbon(0xf5ebd2, 1.1);
-      const fold = this.ribbon(0xd4cbb3, .45);
-      const shadow = this.ribbon(0x092e48, 1.25);
+    for (let i = 0; i < this.waves.length; i++) {
+      const edge = this.ribbon(0xf6f0da, 1.1);
+      const fold = this.ribbon(0x76c9cc, 1.8);
+      const shadow = this.ribbon(0x092e48, 2.4);
+      [edge,fold,shadow].forEach((mesh,layer)=>{mesh.material.transparent=true;mesh.material.opacity=[.88,.38,.12][layer];mesh.material.depthWrite=false;});
       this.crests.push({edge, fold, shadow});
     }
     this.flecks = [];
@@ -64,25 +65,39 @@ class PaperWave {
 
   hash(n) { const a = Math.sin(n * 127.1 + 311.7) * 43758.5453; return a - Math.floor(a); }
 
-  phase(x,z,time=this.time){return (z-time*this.drift+x*.82)/this.period*Math.PI*2+.4*Math.sin(z*.017)+.19*Math.sin(x*.18+z*.009);}
-  crestZ(n,x,time){let z=n*this.period+this.period/4+time*this.drift-x*.82;for(let i=0;i<4;i++){const error=this.phase(x,z,time)-(n*Math.PI*2+Math.PI/2);z-=error/(Math.PI*2/this.period+.0068*Math.cos(z*.017)+.00171*Math.cos(x*.18+z*.009));}return z;}
+  smooth(t){t=THREE.MathUtils.clamp(t,0,1);return t*t*(3-2*t);}
+  envelope(w,z){return this.smooth((z-w.from)/24)*this.smooth((w.to-z)/24);}
+  crestX(w,z,time=this.time){
+    const t=THREE.MathUtils.clamp((z-w.from)/(w.to-w.from),0,1);
+    return w.start+(w.end-w.start)*t+(w.arc||0)*Math.sin(Math.PI*t)+.22*Math.sin(z*.045+w.id)+THREE.MathUtils.clamp((time-w.from/30)*.07,-.55,.65);
+  }
+  field(x,z,time=this.time){
+    let best={wave:null,energy:0,face:2,lift:0,zone:'flat'};
+    for(const w of this.waves){
+      const energy=this.envelope(w,z);if(energy===0)continue;
+      const face=(x-this.crestX(w,z,time))/w.width;
+      // Both flanks meet with zero slope at a rounded crest. The shoreward
+      // face stays broad enough to carve rather than acting like a knife edge.
+      const radius=face>=0?face:-face/.72;
+      const profile=radius<1?.5+.5*Math.cos(Math.PI*radius):0;
+      const lift=w.height*energy*profile;
+      if(lift>best.lift)best={wave:w,energy,face,lift,zone:face<0?'back':face<.18?'crest':face<.65?'face':'base'};
+    }
+    return best;
+  }
 
-  height(x, z, time = this.time) {
-    const phase = this.phase(x,z,time);
-    const ridge = Math.pow((Math.sin(phase) + 1) * .5, 3);
-    const leftBank = Math.max(0, Math.min(1, (-x + 1) / 10));
-    const rightBank = Math.max(0, Math.min(1, (x - 3) / 12));
-    const wall = 1.6 * leftBank * leftBank * (.6 + .4 * Math.sin(z * .035));
-    const amplitude=3.8*(1+.13*Math.sin(z*.026)+.08*Math.sin(x*.08+z*.013));
-    return -.5 + amplitude * ridge + wall + .7 * rightBank * rightBank + .12 * Math.sin(z * .23 + x * .41 - time * 1.4);
+  height(x, z, time = this.time, includeWake = true) {
+    return -.32+this.field(x,z,time).lift+.065*Math.sin(z*.19+x*.41-time*1.4)+.035*Math.sin(x*.8-z*.09+time)+(includeWake&&this.wakeField?this.wakeField(x,z):0);
   }
 
   sample(x, z) {
     const h = this.height(x, z);
     const dx = (this.height(x + .12, z) - this.height(x - .12, z)) / .24;
     const dz = (this.height(x, z + .15) - this.height(x, z - .15)) / .3;
-    const phase = this.phase(x,z);
-    return {height:h, dx, dz, crest:Math.pow((Math.sin(phase) + 1) * .5, 3)};
+    const baseDx=(this.height(x+.12,z,this.time,false)-this.height(x-.12,z,this.time,false))/.24;
+    const baseDz=(this.height(x,z+.15,this.time,false)-this.height(x,z-.15,this.time,false))/.3;
+    const f=this.field(x,z);
+    return {height:h,dx,dz,baseDx,baseDz,...f,crest:f.wave?Math.max(0,1-Math.abs(f.face)*3):0};
   }
 
   ribbon(color, width) {
@@ -116,23 +131,23 @@ class PaperWave {
       c.copy(this.colors[0]).lerp(this.colors[1], Math.min(1, crest * 2.5));
       if (crest > .65) c.lerp(this.colors[2], (crest - .65) * 1.3);
       // Preserve the photographic water grain while making troughs visibly deeper.
-      col.setXYZ(i, .72 + c.r * .45, .72 + c.g * .35, .74 + c.b * .32);
+      col.setXYZ(i, .59 + c.r * .64, .64 + c.g * .44, .68 + c.b * .35);
     }
     pos.needsUpdate = col.needsUpdate = true;
     this.sea.geometry.computeVertexNormals();
-    const first = Math.floor((playerZ - 26 - time * this.drift) / this.period);
     this.crests.forEach((crest, index) => {
-      const n = first + index;
+      const w=this.waves[index];
       [crest.shadow, crest.fold, crest.edge].forEach((mesh, layer) => {
+        mesh.visible=w.to>playerZ-27&&w.from<playerZ+205;
         const p = mesh.geometry.attributes.position;
         for (let j = 0; j <= 80; j++) {
-          const x = -64 + j / 80 * 76;
-          const center = this.crestZ(n,x,time);
-          const rag = (this.hash(j + n * 89) - .5) * .55;
+          const z=w.from+j/80*(w.to-w.from),center=this.crestX(w,z,time),energy=this.envelope(w,z);
+          const rag=(this.hash(j+index*89)-.5)*.22;
+          const patch=layer===2&&(j+index*17)%19>14?.08:.45+this.hash(j*3+index*71)*.7;
           for (let side = 0; side < 2; side++) {
-            const z = center + (side - .5) * mesh.userData.width + rag + (layer === 1 ? -.38 : 0);
-            const lift = layer === 0 ? .025 : layer === 1 ? .08 + side * .16 : .16 + side * .2;
-            p.setXYZ(j * 2 + side, -x, this.height(x, z) + lift, z);
+            const x=center+((side-.5)*mesh.userData.width*patch+rag+(layer===1?.35:layer===0?-.3:0))*energy;
+            const lift=(layer===0?.025:layer===1?.045:.07)*energy;
+            p.setXYZ(j*2+side,-x,this.height(x,z)+lift,z);
           }
         }
         p.needsUpdate = true;

@@ -1,55 +1,75 @@
-/* Long pockets of moving foam: choose a line, stay with it, earn speed. */
+/* The sloped surface itself is the rideable wave; no independent booster lane. */
 class WaveRide {
-  constructor(game) {
-    this.game=game;this.segments=[];
-    for(let i=0;i<8;i++)this.segments.push({from:55+i*139,to:150+i*139,id:i});
-    const geometry=new THREE.BufferGeometry(),count=96;
-    geometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array((count+1)*2*3),3));
-    geometry.setAttribute('color',new THREE.BufferAttribute(new Float32Array((count+1)*2*3),3));
-    const indices=[];for(let i=0;i<count;i++){const a=i*2;indices.push(a,a+1,a+2,a+1,a+3,a+2);}geometry.setIndex(indices);
-    this.ribbon=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}));
-    this.ribbon.frustumCulled=false;game.scene.add(this.ribbon);
-    this.arrows=[];
-    const canvas=document.createElement('canvas');canvas.width=96;canvas.height=96;
-    const c=canvas.getContext('2d');c.strokeStyle='#fff3cf';c.lineWidth=9;c.lineCap='square';
-    for(let i=0;i<2;i++){c.beginPath();c.moveTo(23,64-i*26);c.lineTo(48,44-i*26);c.lineTo(73,64-i*26);c.stroke();}
-    const texture=new THREE.CanvasTexture(canvas),geo=new THREE.PlaneGeometry(.75,.9);geo.rotateX(-Math.PI/2);
-    for(let i=0;i<15;i++){const arrow=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));game.scene.add(arrow);this.arrows.push(arrow);}
-    this.reset();this.lastFrame=-1;
+  constructor(game){this.game=game;this.reset();}
+  reset(){
+    this.charge=this.boost=this.quality=0;this.caught=false;this.zone='flat';this.totalCaught=0;this.transfers=0;
+    this.capturedIds=new Set();this.crestAwards=new Set();this.cutbackAwards=new Set();this.lastId=null;this.lastCatchTime=-100;
+    this.crestTime=0;this.departure=null;this.activeId=null;this.previousFace=null;
   }
-  reset(){this.charge=0;this.boost=0;this.quality=0;this.caught=false;this.lastAward=-1;this.totalCaught=0;}
-  line(z,time=this.game.time){return 3.7*Math.sin(z*.011+1.1)+1.25*Math.sin(z*.032-.4)+.35*Math.sin(time*.6);}
-  segment(z){return this.segments.find(s=>z>=s.from&&z<=s.to);}
   step(dt){
-    const g=this.game,p=g.p,segment=this.segment(p.z);
-    const line=this.line(p.z),error=Math.abs(p.x-line);
-    const direction=Math.atan((this.line(p.z+2)-this.line(p.z-2))/4/.52);
-    const alignment=Math.max(0,1-Math.abs(p.heading-direction)/.7);
-    this.quality=segment&&!p.airborne?Math.max(0,1-error/1.65)*alignment:0;
-    const engaging=this.quality>.38;
-    this.charge=THREE.MathUtils.clamp(this.charge+dt*(engaging?this.quality*.95:-1.3),0,1);
-    this.caught=engaging&&this.charge>.32;
-    const target=this.caught?this.charge*11:0;
-    this.boost+=(target-this.boost)*(1-Math.exp(-dt*(this.caught?3:2.5)));
-    if(this.charge>.82&&segment&&this.lastAward!==segment.id){this.lastAward=segment.id;this.totalCaught++;g.score+=150*g.mug.multiplier;g.moment('ПОЙМАЛ ВОЛНУ!','Держи линию · разгон',false,.95);}
-  }
-  update(){
-    const g=this.game,p=g.p,pos=this.ribbon.geometry.attributes.position,col=this.ribbon.geometry.attributes.color;
-    const frame=Math.floor(g.time*24);if(frame===this.lastFrame)return;this.lastFrame=frame;
-    const mint=new THREE.Color('#b9efe0'),gold=new THREE.Color('#ffd65b'),foam=new THREE.Color('#f7eed4');
-    for(let i=0;i<=96;i++){
-      const z=p.z-10+i/96*170,segment=this.segment(z),x=this.line(z);
-      const fade=segment?Math.min(1,(z-segment.from)/8,(segment.to-z)/8):0;
-      const rag=(g.wave.hash(Math.floor(z*1.2))-.5)*.2;
-      for(let side=0;side<2;side++){
-        const xx=x+(side-.5)*(1.1+rag)*Math.max(0,fade);
-        pos.setXYZ(i*2+side,-xx,g.wave.height(xx,z)+.075,z);
-        const color=mint.clone().lerp(this.caught?gold:foam,g.wave.hash(Math.floor(z*.7))*.65);
-        col.setXYZ(i*2+side,color.r,color.g,color.b);
+    const g=this.game,p=g.p,s=g.wave.sample(p.x,p.z),w=s.wave;
+    this.zone=s.zone;
+    const direction=w?Math.atan((g.wave.crestX(w,p.z+1)-g.wave.crestX(w,p.z-1))/2/.38):0;
+    const alignment=Math.max(.2,1-Math.abs(p.heading-direction)/1.2);
+    const energy=s.face<0?0:s.face<.18?.72:s.face<.65?1:.5;
+    this.quality=w&&s.face<.96?s.energy*energy*alignment:0;
+    const engaging=this.quality>.2&&p.recovering===0&&!p.airborne;
+    const waveId=w?.id??null;
+    if(waveId!==this.activeId){this.charge*=.5;this.crestTime=0;this.departure=null;this.previousFace=null;this.activeId=waveId;}
+    if(this.departure&&(g.time-this.departure.time>3||p.recovering>0))this.departure=null;
+    this.charge=THREE.MathUtils.clamp(this.charge+dt*(engaging?2.3*this.quality:-1.35),0,1);
+    this.caught=engaging&&this.charge>.24;
+    const pocket=Math.exp(-Math.pow((s.face-.42)/.28,2));
+    const target=this.caught?(s.zone==='crest'?7:3+9*pocket)*this.charge*s.energy:0;
+    this.boost+=(target-this.boost)*(1-Math.exp(-dt*(this.caught?3:1.8)));
+    if(this.caught&&w){
+      if(!this.capturedIds.has(w.id)){
+        const transfer=this.lastId!==null&&this.lastId!==w.id&&g.time-this.lastCatchTime<4.8;
+        this.capturedIds.add(w.id);this.totalCaught++;this.lastId=w.id;g.awardTrick('ПОЙМАЛ ВОЛНУ',120);
+        if(transfer){this.transfers++;g.awardTrick('ПЕРЕХОД',220,true);if(p.speed>31&&p.balance<.35)g.comics.trigger('ВЖУХ!','С ОДНОЙ ВОЛНЫ НА ДРУГУЮ','transfer');}
+      }
+      this.lastCatchTime=g.time;
+      this.crestTime=s.zone==='crest'&&p.balance<.5?this.crestTime+dt:Math.max(0,this.crestTime-dt*2);
+      if(this.crestTime>1.15&&!this.crestAwards.has(w.id)){
+        this.crestAwards.add(w.id);g.awardTrick('НА ГРЕБНЕ',250,true);g.comics.trigger('УАУ!','ВЫШЕ ВСЕХ. ПИВО НА МЕСТЕ.','crest');
       }
     }
-    pos.needsUpdate=col.needsUpdate=true;
-    this.arrows.forEach((arrow,i)=>{const z=Math.floor((p.z-8)/11)*11+i*11,x=this.line(z),s=this.segment(z);arrow.visible=!!s;arrow.position.set(-x,g.wave.height(x,z)+.11,z);arrow.rotation.z=Math.atan(g.wave.sample(x,z).dx);arrow.material.color.set(this.caught?0xffd454:0xe7f6e5);});
+    // A shoulder turn briefly loses the pocket's acceleration. Keep the
+    // departure outside the caught state, then require contact on the return.
+    const relativeHeading=p.heading-direction;
+    if(w&&!this.departure&&this.capturedIds.has(w.id)&&g.time-this.lastCatchTime<1&&this.previousFace!==null&&this.previousFace<=.67&&s.face>.67&&relativeHeading>.06&&!this.cutbackAwards.has(w.id)){
+      this.departure={id:w.id,time:g.time,returning:false};
+    }
+    if(this.departure&&relativeHeading<-.06)this.departure.returning=true;
+    if(this.departure?.returning&&this.caught&&s.face<.53&&!this.cutbackAwards.has(w.id)){
+      this.cutbackAwards.add(w.id);g.awardTrick('КАТБЭК',180);this.departure=null;
+    }
+    this.previousFace=w?s.face:null;
   }
+  guidance(){
+    const g=this.game,p=g.p,s=g.wave.field(p.x,p.z),waves=g.wave.waves;
+    let w=s.wave;
+    if(!w)w=waves.filter(w=>p.z>w.from&&p.z<w.to).sort((a,b)=>g.wave.envelope(b,p.z)-g.wave.envelope(a,p.z))[0];
+    const arrow=wave=>{
+      const z=THREE.MathUtils.clamp(p.z+24,wave.from+24,wave.to-24);
+      const delta=g.wave.crestX(wave,z)+wave.width*.42-p.x;
+      return delta<-.7?'←':delta>.7?'→':'↑';
+    };
+    if(w){
+      const remaining=Math.max(0,Math.ceil(w.to-p.z)),next=waves.find(next=>next.id>w.id);
+      const ending=remaining<=30;
+      const zones={crest:'ГРЕБЕНЬ · ДЕРЖИ БАЛАНС',face:'СКЛОН · РЕЖЬ ДУГУ',base:'ПОДНОЖИЕ · НАБИРАЙ ВЫСОТУ',back:'ЗА ГРЕБНЕМ · ВЕРНИСЬ'};
+      const onSurface=s.wave?.id===w.id;
+      const caught=onSurface&&this.caught;
+      return {number:(w.id+1)+'/'+waves.length,phase:ending?'ending':caught?'ride':'catch',
+        label:onSurface?(s.zone==='back'||caught?zones[s.zone]:'ЛОВИ ВОЛНУ · ПЛАВНЫЙ КУРС'):'ВОЛНА РЯДОМ · ВХОДИ '+arrow(w),
+        status:ending?(next?'ГОТОВЬ ПЕРЕХОД':'ПОСЛЕДНЯЯ ВОЛНА'):caught?'РАЗГОН +'+Math.round(this.boost):'ЛОВЛЯ '+Math.round(this.charge*100)+'%',
+        remaining:ending&&next?'НОВАЯ '+arrow(next):'ЕЩЁ '+remaining+' М'};
+    }
+    const next=waves.find(w=>w.from>=p.z);
+    return next?{number:(next.id+1)+'/'+waves.length,phase:'gap',label:'ВОЛНА ВПЕРЕДИ '+arrow(next),status:'СПОКОЙНЫЙ УЧАСТОК',remaining:'ЧЕРЕЗ '+Math.ceil(next.from-p.z)+' М'}:
+      {number:waves.length+'/'+waves.length,phase:'finish',label:'БАР ПРЯМО ПО КУРСУ',status:'ДОВЕЗИ ОСТАТКИ',remaining:Math.max(0,Math.ceil(g.distance-p.z))+' М'};
+  }
+  update(){}
 }
 window.WaveRide=WaveRide;
