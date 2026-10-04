@@ -207,8 +207,10 @@ async function test(){
   const animation=await page.evaluate(()=>{
     const g=game;g.animationReview=true;const animator=g.heroAnimator,frames=[];
     for(const state of ['trim','left','right','recovery'])for(let f=0;f<8;f++){
-      animator.apply(state,f);g.handBeer.update();const expected=animator.currentGrip,actual=g.handBeer.pivot.position;
-      frames.push({state,f,error:Math.hypot(expected.x-actual.x,expected.y-actual.y),feet:g.player.card.position.y-(animator.metadata[state].feet[f][1]/512-.5)*animator.height,uv:[g.player.card.material.map.offset.x,g.player.card.material.map.offset.y]});
+      animator.apply(state,f);g.handBeer.update();g.scene.updateMatrixWorld(true);const expected=animator.currentGrip,actual=g.handBeer.pivot.position;
+      const mean=animator.footAnchor.clone();g.player.card.localToWorld(mean);
+      const deck=new THREE.Vector3(0,0,.018);g.player.board.localToWorld(deck);
+      frames.push({state,f,error:Math.hypot(expected.x-actual.x,expected.y-actual.y),anchorError:mean.distanceTo(deck),uv:[g.player.card.material.map.offset.x,g.player.card.material.map.offset.y]});
     }
     g.animationReview=false;animator.reset();g.p.lean=-.8;g.p.recovering=0;for(let i=0;i<60;i++)animator.update(1/120);g.p.lean=0;for(let i=0;i<60;i++)animator.update(1/120);
     const played=[...animator.framesSeen];animator.reset();g.p.lean=.8;for(let i=0;i<60;i++)animator.update(1/120);g.p.lean=0;for(let i=0;i<60;i++)animator.update(1/120);const playedRight=[...animator.framesSeen];
@@ -219,7 +221,7 @@ async function test(){
     g.p.lean=0;animator.reset();
     return {frames,played,playedRight,reversal,earlyRelease,mug:g.handBeer.mesh.geometry.parameters,fingerTexture:g.heroAnimator.fingerTextures.trim.version};
   });
-  assert.equal(animation.frames.length,32);for(const f of animation.frames){assert.equal(f.error,0);assert.ok(Math.abs(f.feet-.12)<.001);}
+  assert.equal(animation.frames.length,32);for(const f of animation.frames){assert.equal(f.error,0);assert.ok(f.anchorError<1e-6);}
   for(let i=0;i<8;i++){assert.ok(animation.played.includes('left:'+i));assert.ok(animation.playedRight.includes('right:'+i));}
   assert.deepEqual(animation.reversal.slice(0,5),['left:4','left:5','left:6','left:7','right:0']);assert.ok(animation.reversal.includes('right:4'));
   assert.ok(animation.earlyRelease.includes('trim:0'));assert.ok(!animation.earlyRelease.includes('left:4'),'releasing an unfinished carve should unwind toward neutral');

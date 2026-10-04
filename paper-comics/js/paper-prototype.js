@@ -240,7 +240,7 @@ class PaperSurfGame {
     } catch(error){console.error(error);this.journey?.showError('Не удалось загрузить изображения. Проверь соединение и попробуй ещё раз.');} finally {this.starting=false;const button=document.getElementById('start-button');button.disabled=false;button.textContent='ИГРАТЬ';}
   }
   pause() {
-    if(this.state!=='playing')return;this.state='paused';this.input.reset();this.jump.cancel();this.audio.stopBGM();
+    if(this.state!=='playing')return;this.state='paused';this.input.reset();this.jump.cancel();this.audio.stopBGM();this.audio.stopJetski?.();
     document.getElementById('center-button').textContent='◎ Запомнить нейтраль';
     document.getElementById('center-button').classList.toggle('hidden',this.input.mode!=='gyro');
     document.getElementById('pause-help').innerHTML=this.input.mode==='keys'?'← → / A D — курс по склону.<br>↑ ↓ / W S — вес на доске.':this.input.mode==='touch'?'Тяни вбок — курс по склону.<br>Вверх / вниз — вес на доске.':'Вбок — курс по склону.<br>Вперёд / назад — вес на доске.';
@@ -258,6 +258,15 @@ class PaperSurfGame {
     this.combo=Math.min(4,this.combo+1);this.comboTime=4.5;
     if(!quiet)this.moment(name,name==='ПОЙМАЛ ВОЛНУ'?'КРЫШКА В КОЛЛЕКЦИЮ · +120':'+'+points,false,name==='ПОЙМАЛ ВОЛНУ'?1.25:.7);
     if(!['ПОЙМАЛ ВОЛНУ','ОТОРВАЛСЯ!','РАЗОШЛИСЬ'].includes(name))this.companion.react('trick');
+    if(this.audio){
+      if(points>=180||this.combo>=3){
+        this.audio.playCrowdCheer(true);
+        this.audio.playTrickTriumph(0.9);
+      }else{
+        this.audio.playTrickTriumph(0.65);
+        this.audio.playCrowdCheer(false);
+      }
+    }
   }
   spill(amount,reason) {
     this.combo=1;this.comboTime=0;
@@ -364,9 +373,18 @@ class PaperSurfGame {
     this.particles.forEach(d=>{if(d.life<=0)return;d.life-=dt;d.x+=d.vx*dt;d.y+=d.vy*dt;d.z+=d.vz*dt;d.vy-=12*dt;d.mesh.position.set(d.x,d.y,d.z);d.mesh.material.rotation=Math.floor(this.time*12)*.37;d.mesh.scale.setScalar(Math.max(0,d.life)*.45);if(d.life<=0)d.mesh.visible=false;});
   }
   finish() {
-    this.state='finished';this.audio.stopBGM();this.audio.playSlam();this.input.reset();
+    this.state='finished';this.audio.stopBGM();this.audio.stopJetski?.();this.input.reset();
     const pct=Math.floor(this.mug.level*100);
     const success=this.mug.level>=.30;
+    if(this.audio){
+      if(success){
+        this.audio.playFanfareWin();
+        this.audio.playCrowdCheer(true);
+        this.audio.playCrowdApplause();
+      }else{
+        this.audio.playSlam();
+      }
+    }
     document.getElementById('result-title').textContent=success?'ПАРИ ВЫИГРАНО!':'ЕЩЁ ПОПРОБУЕМ?';
     document.getElementById('result-beer').textContent=pct+'%';
     document.getElementById('result-comment').textContent=success?'Кубок бухты твой.':'Довези хотя бы 30%.';
@@ -389,7 +407,13 @@ class PaperSurfGame {
       rig.card.rotateZ(-this.balance.roll*.3);
       surfaceRotation.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),this.balance.roll*.12));
       this.heroAnimator.fitDeck(surfaceRotation,this.p.heading);
-      if(this.p.airborne&&this.p.spin)rig.group.quaternion.setFromAxisAngle(new THREE.Vector3(0,0,1).applyQuaternion(this.camera.quaternion),this.p.spin);
+      if(this.p.airborne&&this.p.spin){
+        rig.group.quaternion.setFromAxisAngle(new THREE.Vector3(0,0,1).applyQuaternion(this.camera.quaternion),this.p.spin);
+        // Rotate the whole cutout around its centre, keeping the mug and board
+        // attached and the silhouette inside the phone's narrow viewport.
+        const pivot=new THREE.Vector3(0,1.4,0).applyQuaternion(this.camera.quaternion);
+        rig.group.position.add(pivot.clone().sub(pivot.applyQuaternion(rig.group.quaternion)));
+      }
       rig.group.visible=!this.p.fallen||this.balance.fallTime>.55;
       if(this.p.fallen){rig.group.position.y-=Math.max(0,1.25-this.balance.fallTime)*2;rig.card.rotateZ((1.25-this.balance.fallTime)*1.2);}
     }
@@ -484,8 +508,8 @@ class PaperSurfGame {
     }
     else if(threat){id='danger';title='АКУЛА НА ХВОСТЕ!';line='Уйди с её линии в сторону.';this.onboarding.highlight='';}
     else if(obstacle){id='danger';title=(obstacle.type==='buoy'?'БУЙ ВПЕРЕДИ':'АКВАБАЙК РЯДОМ')+' '+(p.x<obstacle.x?'←':'→');line='Обойди или перепрыгни.';this.onboarding.highlight='';}
-    else if(this.wave.rampAhead(p.x,p.z)){id='ramp';title='ТРАМПЛИН ↑';line=this.jump.holding?'Отпусти на гребне.':this.input.mode==='keys'&&!matchMedia('(pointer:coarse)').matches?'Держи пробел, отпусти на гребне.':'Держи ↑, отпусти на гребне.';this.onboarding.highlight='jump';}
     else if(lesson){({title,line,id}=lesson);}
+    else if(this.wave.rampAhead(p.x,p.z)){id='ramp';title='ТРАМПЛИН ↑';line=this.jump.holding?'Отпусти на гребне.':this.input.mode==='keys'&&!matchMedia('(pointer:coarse)').matches?'Держи пробел, отпусти на гребне.':'Держи ↑, отпусти на гребне.';this.onboarding.highlight='jump';}
     else if(this.assist&&s.zone==='crest'){id='crest';title='ДЕРЖИ ГРЕБЕНЬ';line='Выруливай против завала.';}
     else if(this.assist&&!this.waveRide.caught){id='guide';title=guidance.label;}
     const urgent=['balance','landing','danger','release','ramp','spin'].includes(id),coach=document.getElementById('ride-coach');coach.dataset.lesson=id;
@@ -505,6 +529,16 @@ class PaperSurfGame {
       this.comics.update(realDt);this.accumulator+=dt*Math.min(this.comics.timeScale,this.onboarding.timeScale);
       while(this.accumulator>=1/120&&this.state==='playing'){this.step(1/120);this.accumulator-=1/120;if(this.comics.pending){this.accumulator=0;break;}}
       this.audio.updateWave(this.p.speed/32,false);
+      this.audio.updateAmbient?.(realDt);
+      const wake=this.p.airborne?0:this.world.wakeQualityAt(this.p.x,this.p.z);
+      const jetski=this.world.hazards.find(h=>h.type==='jetski'&&h.activeAt!==null&&Math.abs(h.z-this.p.z)<48);
+      if(jetski){
+        const dist=Math.hypot(jetski.x-this.p.x,jetski.z-this.p.z);
+        const lateral=(jetski.x-this.p.x)/8;
+        this.audio.updateJetski(dist,wake,lateral);
+      }else{
+        this.audio.updateJetski(999,0,0);
+      }
     }
     this.wave.update(this.p.z,this.time);this.updateVisuals(dt);this.updateHUD();this.renderer.render(this.scene,this.camera);this.comics.capture();
   }

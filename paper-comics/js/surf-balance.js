@@ -21,6 +21,7 @@ class SurfBalance {
     this.mode='fall';this.fallTime=1.25;this.falls++;this.reason='НЕ УДЕРЖАЛ БАЛАНС';
     p.fallen=true;p.airborne=false;p.airY=0;p.jumpVelocity=0;p.recovering=0;
     g.jump.cancel();g.jump.clearSpin();g.jump.rampJump=false;g.comics.reset();g.waveRide.caught=false;g.waveRide.charge=g.waveRide.boost=0;
+    if(g.audio)g.audio.playWipeout();
     g.spill(.18,'Падение · возвращаемся на воду');g.emit(36,1.5);
     document.getElementById('wipeout-screen').classList.remove('hidden');
     g.container.classList.add('fallen');

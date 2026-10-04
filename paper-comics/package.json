@@ -5,7 +5,8 @@
     "test:chapter": "node scripts/test_chapter.cjs",
     "test:playthrough": "node scripts/check-playthrough.cjs",
     "test:novice": "node scripts/test_novice.cjs",
-    "test:wager": "node scripts/test_wager.cjs"
+    "test:wager": "node scripts/test_wager.cjs",
+    "test:airwaves": "node scripts/test_airwaves.cjs"
   },
   "dependencies": {
     "puppeteer-core": "^24.43.1"

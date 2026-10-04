@@ -5,7 +5,8 @@
     "test:chapter": "node paper-comics/scripts/test_chapter.cjs",
     "test:playthrough": "node paper-comics/scripts/check-playthrough.cjs",
     "test:novice": "node paper-comics/scripts/test_novice.cjs",
-    "test:wager": "node paper-comics/scripts/test_wager.cjs"
+    "test:wager": "node paper-comics/scripts/test_wager.cjs",
+    "test:airwaves": "node paper-comics/scripts/test_airwaves.cjs"
   },
   "dependencies": {
     "puppeteer-core": "^24.43.1"

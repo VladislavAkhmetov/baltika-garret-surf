@@ -78,11 +78,13 @@ class HeroAnimator {
     // deck rather than yawing the board independently underneath fixed feet.
     for(let i=-6;i<=6;i++){
       const yaw=i*.22;
-      this.deckTurn.copy(this.deckBase).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),Math.PI+heading*.45+yaw));
+      this.deckTurn.copy(this.deckBase).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),Math.PI+heading+yaw));
       this.deckX.set(1,0,0).applyQuaternion(this.deckTurn);this.deckY.set(0,1,0).applyQuaternion(this.deckTurn);
       const a=this.deckX.dot(this.cameraRight),b=this.deckY.dot(this.cameraRight),c=this.deckX.dot(this.cameraUp),d=this.deckY.dot(this.cameraUp),det=a*d-b*c;
       if(Math.abs(det)<.025)continue;
-      const x=(sx*d-b*sy)/det,y=(a*sy-sx*c)/det,score=(x/width)**2+(y/length)**2+yaw*yaw*.04;
+      const x=(sx*d-b*sy)/det,y=(a*sy-sx*c)/det;
+      const taper=1-Math.min(.5,(Math.abs(y)/length)**2*.3);
+      const score=Math.max(0,Math.abs(x)/(width*taper)-1)**2*25+Math.max(0,Math.abs(y)/length-1)**2*25+yaw*yaw;
       if(score<best){best=score;this.deckBest.copy(this.deckTurn);}
     }
     if(best<Infinity)board.quaternion.copy(this.deckBest);

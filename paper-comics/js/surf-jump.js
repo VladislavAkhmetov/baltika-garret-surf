@@ -32,6 +32,7 @@ class SurfJump {
         p.airborne=true;p.jumpVelocity=this.rampJump?10+this.charge*4+Math.max(0,rise)*.5:6+this.charge*3+rise+(surface.zone==='crest'&&surface.energy>.35?1.6:0);p.y=surface.height+.06;this.jumps++;
         if(this.rampJump)this.rampJumps++;
         g.heroAnimator.beginTurn(0);g.emit(12,.7);
+        if(g.audio)g.audio.playJump();
       }
       this.charge=0;
     }
@@ -46,6 +47,7 @@ class SurfJump {
       this.lastHeight=Math.max(this.lastHeight,p.airY);
       if(!this.apexFired&&p.jumpVelocity<=0){
         this.apexFired=true;
+        if(p.airY>1.5&&g.audio)g.audio.playCrowdAwe();
         if(!this.rampJump&&p.airY>1.6&&this.takeoffZone==='crest')g.comics.trigger('УАУ!','ВЫШЕ ВОЛНЫ!','crest',2);
       }
       if(p.jumpVelocity<0&&p.y<=surface.height){
@@ -53,6 +55,7 @@ class SurfJump {
         const unfinished=this.spinStarted&&!this.spinCompleted;
         const clean=THREE.MathUtils.clamp(1-Math.abs(p.pitch)*.85-Math.abs(p.lean-p.smoothLean)*.8-Math.abs(p.heading)*.22-(unfinished?.6:0),0,1);
         g.handBeer.impact(clean);g.emit(18,.8);p.crouch=.85;
+        if(g.audio)g.audio.playLanding(clean>.72);
         if(clean>.72){
           this.cleanLandings++;
           if(this.spinCompleted){this.tricks++;g.awardTrick('360°',600);g.comics.trigger('360°','ЧИСТАЯ ПОСАДКА!','crest',2);}

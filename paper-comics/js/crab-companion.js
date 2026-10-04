@@ -98,7 +98,7 @@ class CrabCompanion {
   showResult(success){
     this.draw(document.getElementById('result-crab'),success?'victory':'defeat');
     document.getElementById('result-crab').setAttribute('aria-label',success?'Клешня в солнечных очках сидит на бокале':'Расстроенный Клешня выжимает мокрую клешню');
-    document.getElementById('result-crab-line').textContent=success?'«Я всё рассчитал! Мы легенды!»':'«Ну вот, растряс весь вкус... В следующий раз рулю я!»';
+    document.getElementById('result-crab-line').textContent=success?'«Мы легенды!»':'«В следующий раз рулю я!»';
     document.getElementById('result-screen').dataset.outcome=success?'victory':'defeat';
     document.getElementById('crab-callout')?.classList.remove('visible');
   }

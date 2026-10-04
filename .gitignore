@@ -27,3 +27,6 @@ scripts/wikimedia_categories.py
 Thumbs.db
 scripts/inspect_*.py
 scripts/segment_*.py
+scripts/extract_cheer_clips.py
+scripts/list_all_cheers.py
+scripts/prepare_audio_assets.py
