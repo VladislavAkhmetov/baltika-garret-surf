@@ -25,3 +25,4 @@ scripts/wikimedia_categories.py
 # OS files
 .DS_Store
 Thumbs.db
+scripts/inspect_*.py
