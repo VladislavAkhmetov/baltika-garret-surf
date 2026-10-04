@@ -26,3 +26,4 @@ scripts/wikimedia_categories.py
 .DS_Store
 Thumbs.db
 scripts/inspect_*.py
+scripts/segment_*.py
