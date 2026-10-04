@@ -5,10 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#103f58">
   <title>GARRET — Ни капли! / Бумажные комиксы</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Caveat:wght@600;700&family=Rubik:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/fonts/fonts.css">
   <link rel="stylesheet" href="css/prototype.css">
+  <link rel="stylesheet" href="css/journey.css">
 </head>
 <body>
   <aside class="desktop-note">
@@ -54,6 +53,8 @@
     <div id="hint" class="hint paper">НАКЛОНЯЙ — РЕЖЬ ВОЛНУ ↔</div>
     <div id="spill-flash" aria-hidden="true"></div>
     <div id="shark-threat" aria-hidden="true"><i class="fin-icon"></i><b></b></div>
+    <div id="balance-cue" class="balance-cue paper hidden" role="status"><strong>ДЕРЖИ ГРЕБЕНЬ</strong><div class="balance-rail"><i class="balance-safe"></i><i class="balance-needle"></i></div><small>ПО ЦЕНТРУ</small><div class="catch-track"><i class="catch-fill"></i></div></div>
+    <div id="wipeout-screen" class="wipeout-screen hidden" role="status"><span>БУЛЬК!</span><strong>ДОСКА ЖДЁТ.</strong><p>−18% пива · комбо сброшено<br>Возвращаемся на спокойную воду</p></div>
     <button id="jump-button" aria-label="Прыжок: удержать для подготовки, отпустить для вылета" title="Прыжок · пробел">↑</button>
     <div id="bottom-hud" class="bottom-hud">
       <div class="speed-ticket"><strong id="speed-value">26</strong><span>М/С</span><div id="speed-meter"></div></div>
@@ -61,22 +62,43 @@
     </div>
     <div class="touch-guide" id="touch-guide"><span>↔ КУРС · ↕ ВЕС НА ДОСКЕ</span></div>
 
-    <section id="start-screen" class="screen">
-      <div class="start-stamp">GARRET SURF CLUB</div>
-      <div class="start-card paper">
-        <span class="eyebrow">БУМАЖНОЕ ПРИКЛЮЧЕНИЕ</span>
-        <h2>НИ<br><em>КАПЛИ!</em></h2>
-        <p>Волны большие.<br>Компания странная.<br>Пиво — твоё.</p>
-        <button id="start-button" class="yellow-button">ЛОВИ ВОЛНУ <span>↗</span></button>
-        <p id="start-help" class="start-help">Вбок — курс · вперёд / назад — вес.<br>Держи ↑ и отпусти — прыжок.<br>Лови разгон на волне, уходи от акулы.</p>
-      </div>
-      <span class="start-footnote">Сначала едешь. Потом рассказываешь.</span>
+    <section id="start-screen" class="screen journey home-screen" aria-label="Главное меню">
+      <div class="home-art" aria-hidden="true"></div>
+      <div class="home-brand"><span>GARRET</span><small>SURF CLUB / PAPER COMICS</small></div>
+      <span class="issue-label">ВЫПУСК 01<br>ЗА МЫСОМ</span>
+      <div class="home-copy"><span class="eyebrow">ОДНА КРУЖКА. СЕМЬ ВОЛН.</span><h2>НИ<br><em>КАПЛИ!</em></h2><p>Большая волна.<br>Маленькое обещание.</p></div>
+      <div class="home-actions"><button id="start-button" class="yellow-button" data-primary>НАЧАТЬ ИСТОРИЮ <span>↗</span></button><button id="home-how" class="home-how" aria-expanded="false" aria-controls="home-instructions">Как играть <span>＋</span></button><div id="home-instructions" class="home-instructions paper hidden"><p id="start-help">Вбок — курс · вверх / вниз — вес.<br>Держи ↑ и отпусти — прыжок.</p><p>На гребне и после жёсткой посадки выруливай против завала. При падении: −18% пива и возврат на воду.</p></div><span class="home-footer">БУМАГА. СОЛЬ. ХОРОШАЯ КОМПАНИЯ.</span></div>
+    </section>
+    <section id="character-screen" class="screen journey selection-screen hidden" aria-label="Выбор персонажа">
+      <header class="journey-header"><button class="back-button" data-journey-back="start" aria-label="Вернуться в меню">←</button><span>ТВОЯ ИСТОРИЯ</span><b>01 / 02</b></header>
+      <div class="selection-body"><span class="eyebrow">КТО ПОЙМАЕТ ВОЛНУ?</span><h2>ЗНАКОМЬСЯ.<br><em>ЭТО ТЫ.</em></h2>
+      <div class="hero-selection"><div class="hero-selection-art"><img src="assets/comics/hero-crest-close.png" alt="Макс: кудрявый сёрфер с кружкой на синей доске"><span class="selected-label">✓ ВЫБРАН</span></div><div class="hero-bio"><span class="mini-label">МЕСТНЫЙ ОПТИМИСТ</span><h3>МАКС</h3><p>Доска — под ногами.<br>Обещание — в руках.</p><dl><div><dt>СТИЛЬ</dt><dd>Карвинг</dd></div><div><dt>ДОСКА</dt><dd>Blue Classic</dd></div></dl></div></div>
+      <div class="locked-roster"><button disabled class="locked-choice" aria-label="Витя — персонаж пока закрыт"><span class="lock-mark">▣</span><strong>ВИТЯ</strong><small>СКОРО</small></button><button disabled class="locked-choice" aria-label="Стас — персонаж пока закрыт"><span class="lock-mark">▣</span><strong>СТАС</strong><small>СКОРО</small></button><p>Они уже на волне.<br>Их истории ещё впереди.</p></div></div>
+      <footer class="journey-footer"><button id="character-next" class="yellow-button" data-primary>ВЫБРАТЬ БУХТУ →</button></footer>
+    </section>
+    <section id="location-screen" class="screen journey selection-screen hidden" aria-label="Выбор локации">
+      <header class="journey-header"><button class="back-button" data-journey-back="character" aria-label="Вернуться к персонажу">←</button><span>МЕСТО ВСТРЕЧИ</span><b>02 / 02</b></header>
+      <div class="selection-body"><span class="eyebrow">НАЧИНАЕМ У БЕРЕГА</span><h2>БАР<br><em>ЗА МЫСОМ.</em></h2>
+      <div class="location-card"><div class="location-art"><span class="selected-label">✓ ВЫБРАНА</span><span class="location-number">01</span></div><div class="location-description"><span class="mini-label">GARRET BAY / ЗАКАТ</span><h3>БУХТА GARRET</h3><p>Семь волн. Аквабайки. Старые знакомые.<br>И бар, до которого надо добраться.</p><div class="location-tags"><span>1 200 М</span><span>7 ВОЛН</span><span>ПЕРВАЯ ГЛАВА</span></div></div></div>
+      <div class="locked-locations"><button disabled class="locked-choice"><span class="lock-mark">▣</span><strong>СЕВЕРНЫЙ<br>РИФ</strong><small>СКОРО</small></button><button disabled class="locked-choice"><span class="lock-mark">▣</span><strong>НОЧНОЙ<br>ПОРТ</strong><small>СКОРО</small></button></div></div>
+      <footer class="journey-footer"><button id="location-next" class="yellow-button" data-primary>ОТКРЫТЬ ПЕРВУЮ ГЛАВУ ↗</button></footer>
+    </section>
+    <section id="story-screen" class="screen journey story-screen hidden" aria-label="Сюжетный комикс" data-page="0">
+      <div class="story-art" aria-hidden="true"></div><div class="story-speedlines" aria-hidden="true"></div>
+      <header class="journey-header"><button id="story-prev" class="back-button" aria-label="Предыдущая сцена">←</button><span id="story-tag">01 / ОБЕЩАНИЕ</span><button id="story-skip" class="skip-button">Пропустить</button></header>
+      <h2 id="story-title">ДО БАРА.<br>НИ КАПЛИ.</h2><strong id="story-word" class="story-word">ДЗЫНЬ!</strong>
+      <div class="story-bottom"><p id="story-line" class="story-dialogue paper"></p><p id="story-caption" class="story-caption"></p><div class="story-nav"><div class="story-dots" aria-label="Три сцены"><i class="story-dot active"></i><i class="story-dot"></i><i class="story-dot"></i></div><button id="story-next" class="yellow-button" data-primary>ДАЛЬШЕ →</button></div></div>
+    </section>
+    <section id="ready-screen" class="screen journey ready-screen hidden" aria-label="Как играть">
+      <header class="journey-header"><button class="back-button" data-journey-back="location" aria-label="Вернуться к локации">←</button><span>ПЕРЕД ПЕРВОЙ ВОЛНОЙ</span><b>↗</b></header>
+      <div class="selection-body"><span class="eyebrow">КРУЖКУ КРЕПЧЕ. КОЛЕНИ МЯГЧЕ.</span><h2>ПОЙМАЙ<br><em>СВОЙ РИТМ.</em></h2><div class="control-lessons"><div><b>↔</b><p><strong>РЕЖЬ ВОЛНУ</strong><span>← → / A D или движение вбок.<br>На телефоне — наклон или жест.</span></p></div><div><b>↕</b><p><strong>ПЕРЕНОСИ ВЕС</strong><span>↑ ↓ / W S или движение вверх / вниз.<br>На посадке держи вес по центру.</span></p></div><div><b>↑</b><p><strong>ПРЫГАЙ</strong><span>Держи кнопку ↑ или пробел.<br>Отпусти, чтобы оттолкнуться.</span></p></div><div class="balance-lesson"><b>≈</b><p><strong>ПОЙМАЙ БАЛАНС</strong><span>Выруливай против завала доски.<br>Удержи маркер в центре шкалы.</span></p></div></div><p class="respawn-note">Упал? −18% пива, комбо с нуля.<br>Доска вернётся на спокойную воду.</p><p id="launch-error" class="launch-error hidden" role="alert"></p></div>
+      <footer class="journey-footer"><button id="ride-button" class="yellow-button" data-primary>ЛОВИ ВОЛНУ ↗</button><span>На телефоне запомним удобный наклон.</span></footer>
     </section>
     <section id="pause-screen" class="screen hidden">
-      <div class="pause-card paper"><span class="eyebrow">МИНУТКА НА БЕРЕГУ</span><h2>ВЫДОХНИ.</h2><p id="pause-help" class="pause-help">Вбок — курс по склону.<br>Вперёд / назад — вес на доске.</p><button id="resume-button" class="yellow-button">ОБРАТНО НА ВОЛНУ ↗</button><button id="center-button" class="text-button" aria-label="Запомнить нейтральное положение телефона">◎ Запомнить нейтраль</button><button id="reset-button" class="text-button">Начать заново</button></div>
+      <div class="pause-card paper"><span class="eyebrow">МИНУТКА НА БЕРЕГУ</span><h2>ВЫДОХНИ.</h2><p id="pause-help" class="pause-help">Вбок — курс по склону.<br>Вперёд / назад — вес на доске.</p><p class="pause-balance-help">На гребне и после жёсткой посадки выруливай против завала. Маркер в центре — баланс пойман.</p><button id="resume-button" class="yellow-button">ОБРАТНО НА ВОЛНУ ↗</button><button id="center-button" class="text-button" aria-label="Запомнить нейтральное положение телефона">◎ Запомнить нейтраль</button><button id="reset-button" class="text-button">Начать заново</button><button class="text-button menu-link" data-home>В главное меню</button></div>
     </section>
     <section id="result-screen" class="screen hidden">
-      <div class="result-card paper"><span class="eyebrow">ПЛЯЖНЫЙ БАР GARRET</span><h2 id="result-title">ДОВЁЗ!</h2><strong class="result-beer" id="result-beer">100%</strong><p id="result-comment">Бармен одобряет.</p><div class="result-stats"><div><span>СЧЁТ</span><strong id="result-score">0</strong></div><div><span>КРЫШКИ</span><strong id="result-caps">0</strong></div><div><span>ПОЙМАЛ ВОЛН</span><strong id="result-landings">0</strong></div></div><p id="result-tricks" class="result-tricks"></p><button id="replay-button" class="yellow-button">ЕЩЁ ОДНУ ВОЛНУ ↗</button></div>
+      <div class="result-card paper"><span class="eyebrow">ПЛЯЖНЫЙ БАР GARRET</span><h2 id="result-title">ДОВЁЗ!</h2><strong class="result-beer" id="result-beer">100%</strong><p id="result-comment">Бармен одобряет.</p><div class="result-stats"><div><span>СЧЁТ</span><strong id="result-score">0</strong></div><div><span>КРЫШКИ</span><strong id="result-caps">0</strong></div><div><span>ПОЙМАЛ ВОЛН</span><strong id="result-landings">0</strong></div></div><p id="result-recovery" class="result-recovery"></p><p id="result-tricks" class="result-tricks"></p><button id="replay-button" class="yellow-button">ЕЩЁ ОДНУ ВОЛНУ ↗</button><button class="text-button menu-link" data-home>Герой и локация</button></div>
     </section>
     <div id="error-screen" class="error-screen hidden" role="alert">Для игры нужен браузер с WebGL. Попробуй открыть её в Chrome, Edge или Safari.</div>
   </main>
@@ -92,6 +114,8 @@
   <script src="js/hand-beer.js"></script>
   <script src="js/comics-world.js"></script>
   <script src="js/surf-jump.js"></script>
+  <script src="js/surf-balance.js"></script>
+  <script src="js/surf-journey.js"></script>
   <script src="js/paper-prototype.js"></script>
 </body>
 </html>

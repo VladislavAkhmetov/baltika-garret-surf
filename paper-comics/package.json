@@ -2,6 +2,7 @@
   "scripts": {
     "dev": "node scripts/serve.js",
     "test:prototype": "node scripts/test_prototype.js",
+    "test:chapter": "node scripts/test_chapter.cjs",
     "test:playthrough": "node scripts/check-playthrough.cjs"
   },
   "dependencies": {

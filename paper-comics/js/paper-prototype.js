@@ -96,8 +96,9 @@ class PaperSurfGame {
     this.beerCtx = this.beerCanvas.getContext('2d');
     this.heroAnimator=new HeroAnimator(this);this.handBeer=new HandBeer(this);this.waveRide=new WaveRide(this);
     this.initBackdrop(); this.initParticles(); this.initTrail(); this.initRivals(); this.initCaps(); this.initFinish();
-    this.world=new ComicsWorld(this);this.wave.wakeField=(x,z)=>this.world.wakeAt(x,z);this.comics=new ComicDirector(this);this.jump=new SurfJump(this);
+    this.world=new ComicsWorld(this);this.wave.wakeField=(x,z)=>this.world.wakeAt(x,z);this.comics=new ComicDirector(this);this.jump=new SurfJump(this);this.balance=new SurfBalance(this);
     this.reset(); this.resize(); this.bindUI();
+    this.journey=new SurfJourney(this);
     document.getElementById('cap-icon').src = SPRITE_ASSETS.cap_fish;
     if (!matchMedia('(pointer:coarse)').matches) document.getElementById('start-help').innerHTML = '← → / A D — курс · ↑ ↓ / W S — вес<br>Держи пробел и отпусти — прыжок.<br>Лови разгон на волне, уходи от акулы.';
     window.addEventListener('resize', () => this.resize());
@@ -181,7 +182,7 @@ class PaperSurfGame {
     }
   }
   bindUI() {
-    document.getElementById('start-button').addEventListener('click',()=>this.start(true));
+    document.getElementById('start-button').addEventListener('click',()=>this.journey.open('character'));
     document.getElementById('replay-button').addEventListener('click',()=>this.start(false));
     document.getElementById('pause-button').addEventListener('click',()=>this.pause());
     document.getElementById('resume-button').addEventListener('click',()=>this.resume());
@@ -194,7 +195,7 @@ class PaperSurfGame {
     this.spillFlash=this.impactCooldown=this.momentTime=this.hintIndex=this.comboTime=this.trickCooldown=this.carveClock=this.wakeClock=0;
     this.combo=1;this.hintTime=6;this.tricksSeen=new Set();this.world.reset();this.comics.reset();
     this.mug.reset();this.mug.foam=.18;this.mug.totalSpilled=0;this.mug.lastSpillTime=0;
-    this.waveRide.reset();this.heroAnimator.reset();this.handBeer.reset();this.jump.reset();
+    this.waveRide.reset();this.heroAnimator.reset();this.handBeer.reset();this.jump.reset();this.balance.reset();this.container.classList.remove('fallen');
     this.p.y=this.wave.height(this.p.x,0,0);this.trailPoints=[];this.sprayAccumulator=this.trailClock=0;
     this.particles.forEach(d=>{d.life=0;d.mesh.visible=false;});
     this.caps.forEach(c=>{c.collected=false;c.mesh.visible=true;});
@@ -211,11 +212,12 @@ class PaperSurfGame {
       if(calibrate&&matchMedia('(pointer:coarse)').matches)button.textContent='ЗАПОМИНАЕМ НАКЛОН…';
       await Promise.all([this.heroAnimator.ready,this.comics.ready,this.world.ready,calibrate?this.input.calibrate():Promise.resolve()]);
       this.reset();this.state='playing';this.container.classList.add('playing');
+      this.journey?.hideAll();
       ['start-screen','pause-screen','result-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));
       document.getElementById('touch-guide').classList.toggle('visible',this.input.mode==='touch');
       this.hint(this.input.mode==='touch'?'ТЯНИ ВБОК — КУРС. ВВЕРХ / ВНИЗ — ВЕС.':'↔ КУРС ПО СКЛОНУ · ↕ ВЕС НА ДОСКЕ',5);
       this.audio.startBGM();
-    } catch(error){console.error(error);this.hint('НЕ УДАЛОСЬ ЗАГРУЗИТЬ ГЕРОЯ. ОБНОВИ СТРАНИЦУ.',8);} finally {this.starting=false;const button=document.getElementById('start-button');button.disabled=false;button.innerHTML='ЛОВИ ВОЛНУ <span>↗</span>';}
+    } catch(error){console.error(error);this.journey?.showError('Не удалось загрузить изображения. Проверь соединение и попробуй ещё раз.');} finally {this.starting=false;const button=document.getElementById('start-button');button.disabled=false;button.innerHTML='НАЧАТЬ ИСТОРИЮ <span>↗</span>';}
   }
   pause() {
     if(this.state!=='playing')return;this.state='paused';this.input.reset();this.jump.cancel();this.audio.stopBGM();
@@ -243,10 +245,10 @@ class PaperSurfGame {
 
   step(dt) {
     this.time+=dt;this.elapsed+=dt;this.wave.time=this.time;this.input.update(dt);
+    if(this.p.fallen){this.balance.stepFall(dt);return;}
     const p=this.p,s=this.wave.sample(p.x,p.z),previousLean=p.lean,previousHeading=p.heading,previousY=p.y;
     p.lean=this.input.lean;p.pitch=this.input.pitch;p.smoothLean+=(p.lean-p.smoothLean)*(1-Math.exp(-dt/.32));
     this.impactCooldown=Math.max(0,this.impactCooldown-dt);
-    const wasRecovering=p.recovering>0;p.recovering=Math.max(0,p.recovering-dt);
     p.heading+=(p.lean*.55-p.heading)*(1-Math.exp(-6*dt));
     const lateral=Math.sin(p.heading)*p.speed*.38-(p.airborne?0:s.baseDx*.4);
     p.sideVelocity+=(lateral-p.sideVelocity)*(1-Math.exp(-6*dt));
@@ -264,16 +266,8 @@ class PaperSurfGame {
     p.verticalVelocity+=(vertical-p.verticalVelocity)*(1-Math.exp(-10*dt));
     const autoKnees=THREE.MathUtils.clamp(.12+Math.abs(p.lean)*.4+Math.abs(next.dx)*.15+Math.abs(vertical)*.035+wake*.35+this.jump.charge*.5,.12,.85);
     p.crouch+=(autoKnees-p.crouch)*(1-Math.exp(-10*dt));
-    const jerk=Math.abs(p.lean-p.smoothLean),high=!p.airborne&&next.zone==='crest'&&next.energy>.7;
-    const risk=jerk*.6+wake*.6+Math.max(0,p.pitch-.45)*Math.max(0,-slope)*9+(high?(Math.abs(p.lean)*.75+Math.abs(p.pitch)*1.05):0);
-    p.balance=THREE.MathUtils.clamp(p.balance+dt*(risk-.45),0,1.15);
-    if(p.balance>1&&this.impactCooldown===0){
-      p.balance=.4;p.recovering=.9;p.speed*=.72;this.impactCooldown=2.2;
-      this.spill(.10,'Сорвался с линии — перенеси вес на хвост');this.emit(24,1.2);
-    }
-    if(wasRecovering&&p.recovering===0&&Math.abs(p.pitch)<.5&&p.balance<.6){
-      this.awardTrick('ВЫРУЛИЛ',130,true);this.comics.trigger('ФУХ!','КОЛЕНИ МЯГЧЕ. КРУЖКУ ДОВЕЗЁМ.','save',2);
-    }
+    this.balance.step(dt,next,wake,Math.abs(p.lean-p.smoothLean));
+    if(p.fallen)return;
     this.comboTime=Math.max(0,this.comboTime-dt);if(this.comboTime===0)this.combo=1;
     this.trickCooldown=Math.max(0,this.trickCooldown-dt);
     this.carveClock=this.waveRide.caught&&Math.abs(p.lean)>.35?this.carveClock+dt:0;
@@ -354,6 +348,7 @@ class PaperSurfGame {
     document.getElementById('result-comment').textContent=pct>=90?'Бармен просит мастер-класс.':pct>=70?'Есть что поднять за волну.':pct>=40?'Главное — кружку довёз.':'Зато красиво приехал.';
     document.getElementById('result-score').textContent=Math.round(this.score);document.getElementById('result-caps').textContent=this.collected+' / '+this.caps.length;document.getElementById('result-landings').textContent=this.waveRide.totalCaught;
     document.getElementById('result-tricks').textContent=this.tricksSeen.size?'Твои манёвры: '+[...this.tricksSeen].join(' · '):'Следующая волна — попробуй карвинг и тонкий баланс на гребне.';
+    document.getElementById('result-recovery').textContent='Спасений: '+this.balance.saves+' · Падений: '+this.balance.falls;
     this.comics.reset();
     document.getElementById('result-screen').classList.remove('hidden');this.container.classList.remove('playing');document.getElementById('moment').classList.remove('visible');
   }
@@ -366,6 +361,12 @@ class PaperSurfGame {
       .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),Math.PI+(rig===this.player?this.p.heading:lean*.3)));
     rig.board.position.y=.12;rig.board.visible=true;
     rig.card.quaternion.copy(this.camera.quaternion);rig.card.rotateZ(-lean*.16+Math.atan(sample.dx)*.30);
+    if(rig===this.player){
+      rig.card.rotateZ(-this.balance.roll*.3);
+      rig.board.rotateY(this.balance.roll*.22);
+      rig.group.visible=!this.p.fallen||this.balance.fallTime>.55;
+      if(this.p.fallen){rig.group.position.y-=Math.max(0,1.25-this.balance.fallTime)*2;rig.card.rotateZ((1.25-this.balance.fallTime)*1.2);}
+    }
     if(rig!==this.player&&poseFrame!==this.lastPoseFrame){
       const pose=Math.abs(lean)>.2?'turn':'norma';rig.card.material.map=this.textures['surfer_'+pose];rig.pose=pose;
       rig.card.scale.set(pose==='turn'&&lean<0?-1:1,1,1);
@@ -438,8 +439,9 @@ class PaperSurfGame {
     const threat=this.world.threat(),danger=threat?THREE.MathUtils.clamp(1-Math.max(0,threat.gap)/36,0,1):0;
     const fin=document.getElementById('shark-threat');fin.classList.toggle('visible',!!threat);fin.classList.toggle('close',danger>.7);fin.querySelector('b').style.transform='scaleX('+danger+')';
     document.getElementById('spill-flash').style.opacity=this.spillFlash;this.drawBeer();
+    this.balance.updateHUD();
   }
-  resize() {const {width,height}=this.container.getBoundingClientRect();this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();}
+  resize() {const {width,height}=this.container.getBoundingClientRect();this.container.style.setProperty('--panel-size',Math.max(width,height)+'px');this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();}
   animate(now) {
     requestAnimationFrame(this.animate);
     const realDt=this.lastTime?Math.min((now-this.lastTime)/1000,.25):1/60,dt=Math.min(realDt,.05);this.lastTime=now;

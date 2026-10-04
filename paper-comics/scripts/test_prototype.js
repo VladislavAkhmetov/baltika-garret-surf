@@ -17,7 +17,7 @@ async function test(){
   await page.evaluate(async()=>{await Promise.all([game.heroAnimator.ready,game.comics.ready,game.world.ready]);});
   const review=path.resolve(__dirname,'../review/comics');fs.mkdirSync(review,{recursive:true});
   await page.screenshot({path:path.join(review,'01-mobile-start.png')});
-  await page.click('#start-button');await page.waitForFunction(()=>game.state==='playing');
+  await page.click('#start-button');await page.click('#character-next');await page.click('#location-next');await page.click('#story-skip');await page.click('#ride-button');await page.waitForFunction(()=>game.state==='playing');
   const gyro=await page.evaluate(()=>{
     clearInterval(sensorTimer);const g=game;g.state='paused';g.reset();g.state='playing';
     const before=g.p.x;g.input.gamma=g.input.neutral+18;g.input.beta=g.input.neutralBeta-8;
@@ -77,7 +77,7 @@ async function test(){
     setup(90,.42);for(let i=0;i<120;i++){control(.42,-.35);g.step(dt);}const rear=g.p.speed;
     setup(90,.42);g.input.target=.5;for(let i=0;i<40;i++)g.step(dt);const down=g.p.speed;
     setup(90,.42);g.input.target=-.5;for(let i=0;i<40;i++)g.step(dt);const up=g.p.speed;
-    setup(90,.08);for(let i=0;i<330;i++){control(.08);g.step(dt);g.comics.update(dt);}const crest={awards:[...g.waveRide.crestAwards],event:g.comics.lastEvent,beer:g.mug.level,balance:g.p.balance};
+    setup(90,.08);for(let i=0;i<330;i++){control(.08);g.input.target=THREE.MathUtils.clamp(g.input.target-g.balance.roll*1.7-g.balance.velocity*.85,-1,1);g.step(dt);g.comics.update(dt);}const crest={awards:[...g.waveRide.crestAwards],event:g.comics.lastEvent,beer:g.mug.level,balance:g.p.balance};
     setup(90,.08);for(let i=0;i<600;i++){control(.08,1);g.step(dt);}const risk={beer:g.mug.level,balance:g.p.balance};
     setup(190,.4);g.waveRide.lastId=0;g.waveRide.lastCatchTime=g.time;g.waveRide.capturedIds.add(0);
     for(let i=0;i<300;i++){control(.4);g.step(dt);g.comics.update(dt);}const transfers={count:g.waveRide.transfers,tricks:[...g.tricksSeen]};
@@ -237,7 +237,7 @@ async function test(){
   const afterPause=await page.evaluate(()=>({elapsed:game.comics.elapsed,time:game.time,visible:!document.getElementById('pause-screen').classList.contains('hidden')}));
   assert.equal(beforePause.elapsed,afterPause.elapsed);assert.equal(beforePause.time,afterPause.time);assert.equal(afterPause.visible,true);
   const noSpam=await page.evaluate(()=>game.comics.trigger('ЕЩЁ!','','save'));
-  await page.click('#resume-button');await page.waitForFunction(()=>game.comics.timeScale===.14);const slow=await page.evaluate(()=>game.comics.timeScale);
+  await page.click('#resume-button');const slow=await page.waitForFunction(()=>game.comics.timeScale===.14?.14:false).then(handle=>handle.jsonValue());
   await page.waitForFunction(()=>!game.comics.active);
   const comic=await page.evaluate(()=>{const g=game;g.pause();document.getElementById('pause-screen').classList.add('hidden');return{ended:!g.comics.active,photos:g.comics.images.crest.complete,paused:true,resumed:g.time>0};});Object.assign(comic,{noSpam,slow});
   assert.equal(comic.noSpam,false);assert.equal(comic.slow,.14);assert.equal(comic.ended,true);assert.equal(comic.photos,true);assert.equal(comic.resumed,true);
@@ -249,7 +249,7 @@ async function test(){
   const fallback=await browser.newPage();fallback.on('pageerror',e=>errors.push(e.message));
   await fallback.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
   await fallback.evaluateOnNewDocument(()=>{Object.defineProperty(DeviceOrientationEvent,'requestPermission',{value:async()=>'denied'});});
-  await fallback.goto(base);await fallback.click('#start-button');await fallback.waitForFunction(()=>game.state==='playing');
+  await fallback.goto(base,{waitUntil:'domcontentloaded'});await fallback.click('#start-button');await fallback.click('#character-next');await fallback.click('#location-next');await fallback.click('#story-skip');await fallback.click('#ride-button');await fallback.waitForFunction(()=>game.state==='playing');
   const touch=await fallback.evaluate(()=>{const g=game;g.state='paused';const el=g.container;const event=(name,x,y)=>el.dispatchEvent(new PointerEvent(name,{pointerId:11,pointerType:'touch',clientX:x,clientY:y,bubbles:true}));event('pointerdown',90,490);event('pointermove',140,435);g.input.update(.2);const result={mode:g.input.mode,lean:g.input.lean,pitch:g.input.pitch};event('pointercancel',140,435);g.input.update(1);result.cancelled=Math.abs(g.input.pitch)+Math.abs(g.input.lean);return result;});
   assert.equal(touch.mode,'touch');assert.ok(touch.lean>.3&&touch.pitch>.3);assert.ok(touch.cancelled<.002);
   await fallback.close();

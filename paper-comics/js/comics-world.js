@@ -1,14 +1,20 @@
 class ComicsWorld {
   constructor(game) {
     this.game=game;this.scene=game.scene;
+    this.jetskiTexture=new THREE.TextureLoader().load('assets/comics/jetski-directions-v1.png');
+    this.jetskiTexture.minFilter=THREE.LinearFilter;this.jetskiTexture.generateMipmaps=false;
     this.makeBeach();
     this.hazards=COMICS_COURSE.hazards.map((config,i)=>this.makeHazard(config,i));
-    this.ready=Promise.all(this.hazards.filter(h=>h.fin).map(h=>new Promise((resolve,reject)=>{
+    this.ready=Promise.all([new Promise((resolve,reject)=>{
+      new THREE.TextureLoader().load('assets/comics/jetski-directions-v1.png',texture=>{
+        this.hazards.filter(h=>h.jetCard).forEach(h=>{h.jetCard.material.map.dispose();h.jetCard.material.map=texture.clone();h.jetCard.material.map.needsUpdate=true;});resolve();
+      },undefined,()=>reject(Error('Аквабайк недоступен')));
+    }),...this.hazards.filter(h=>h.fin).map(h=>new Promise((resolve,reject)=>{
       new THREE.TextureLoader().load('assets/comics/shark-directions-sheet.png',texture=>{
         texture.minFilter=THREE.LinearFilter;texture.generateMipmaps=false;texture.userData={directionAtlas:true};
         h.fin.material.map.dispose();h.fin.material.map=texture;resolve();
       },undefined,()=>reject(Error('Плавники недоступны')));
-    })));
+    }))]);
     this.ready.catch(error=>{this.error=error;});
     this.wakeRides=0;this.reset();
   }
@@ -43,7 +49,7 @@ class ComicsWorld {
     }
   }
   makeHazard(config,index) {
-    const group=new THREE.Group();let labelText='',color='#ae533b',fin=null;
+    const group=new THREE.Group();let labelText='',color='#ae533b',fin=null,jetCard=null;
     const cream=this.material(0xf3e8cc),red=this.material(0xe66540),dark=this.material(0x153d4d);
     if(config.type==='buoy'){
       const base=new THREE.Mesh(new THREE.CylinderGeometry(.7,.95,.3,8),cream);group.add(base);
@@ -53,17 +59,13 @@ class ComicsWorld {
     }else if(config.type==='shark'){
       fin=new THREE.Mesh(new THREE.PlaneGeometry(2.4,2.4),new THREE.MeshBasicMaterial({map:this.game.textures.shark_fin.clone(),transparent:true,alphaTest:.12,side:THREE.DoubleSide}));fin.material.map.userData={directionAtlas:true};fin.position.y=.8;group.add(fin);
     }else{
-      const hull=new THREE.Mesh(new THREE.ConeGeometry(.8,3.1,5),cream);hull.rotation.x=Math.PI/2;hull.scale.y=1;group.add(hull);
-      const hood=new THREE.Mesh(new THREE.BoxGeometry(1.05,.58,1.35),red);hood.position.set(0,.35,.3);group.add(hood);
-      const saddle=new THREE.Mesh(new THREE.BoxGeometry(.7,.25,1.3),dark);saddle.position.set(0,.65,-.5);group.add(saddle);
-      const torso=new THREE.Mesh(new THREE.BoxGeometry(.5,.75,.3),this.material(0xf0c445));torso.position.set(0,1.1,-.55);torso.rotation.x=.28;group.add(torso);
-      const head=new THREE.Mesh(new THREE.SphereGeometry(.22,6,5),this.material(0xc99260));head.position.set(0,1.64,-.43);group.add(head);
-      labelText='';
+      jetCard=new THREE.Mesh(new THREE.PlaneGeometry(4.5,4.5),new THREE.MeshBasicMaterial({map:this.jetskiTexture.clone(),transparent:true,alphaTest:.12,side:THREE.DoubleSide}));
+      jetCard.position.y=1.55;group.add(jetCard);
     }
     this.scene.add(group);
     const label=labelText?this.game.sprite(this.game.label(labelText,color),config.type==='jetski'?3.7:2.5,.7):null;
     const wake=[];if(config.type==='jetski')for(let j=0;j<2;j++){const foam=this.game.wave.ribbon(0xf5ecd4,.23);foam.material.transparent=true;foam.material.depthWrite=false;wake.push(foam);}
-    return {...config,initialX:config.x,initialZ:config.z,group,label,wake,index,fin,view:0};
+    return {...config,initialX:config.x,initialZ:config.z,group,label,wake,index,fin,jetCard,view:0};
   }
   reset(){
     this.wakeRides=this.escapes=0;
@@ -174,7 +176,11 @@ class ComicsWorld {
       const y=g.wave.height(h.x,h.z);h.group.position.set(-h.x,y+.18-diving*2,h.z);h.group.visible=Math.abs(h.z-p.z)<160&&(h.type!=='shark'||h.activeAt!==null&&diving<1);
       h.group.rotation.z=h.type==='shark'?Math.sin(g.time*2+h.index)*.05:0;
       if(h.fin){h.fin.quaternion.copy(g.camera.quaternion);const t=h.fin.material.map;if(t.image?.width>0&&t.userData.directionAtlas){t.repeat.set(h.view===1?-.5:.5,.5);t.offset.set(h.view===1?1:h.view%2*.5,(1-Math.floor(h.view/2))*.5);}}
-      if(h.type==='jetski')h.group.rotation.y=h.mode==='cross'?-h.direction*Math.PI/2:0;
+      if(h.jetCard){
+        h.group.rotation.y=0;h.jetCard.quaternion.copy(g.camera.quaternion);
+        const view=h.mode==='cross'?(h.direction>0?0:1):2,t=h.jetCard.material.map;
+        t.repeat.set(1/3,1);t.offset.set(view/3,0);
+      }
       if(h.label){h.label.position.set(-h.x,y+2.6,h.z);h.label.visible=h.group.visible;}
       h.wake.forEach((foam,arm)=>{
         const active=h.activeAt!==null&&g.time-h.activeAt<9;foam.visible=h.group.visible&&active;

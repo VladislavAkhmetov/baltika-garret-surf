@@ -11,7 +11,7 @@ class SurfJump {
   }
   reset(){this.holding=this.requested=this.apexFired=false;this.charge=this.cooldown=this.airTime=this.lastHeight=0;this.takeoffZone='flat';this.jumps=this.cleanLandings=0;this.cancel();this.button?.classList.remove('airborne');}
   cancel(){this.holding=this.requested=false;this.charge=0;this.button?.classList.remove('preparing');this.button?.style.setProperty('--jump-charge','0deg');}
-  press(){if(this.game.state!=='playing'||this.holding||this.game.p.airborne||this.cooldown>0)return;this.holding=true;this.charge=0;}
+  press(){if(this.game.state!=='playing'||this.holding||this.game.p.airborne||this.game.p.fallen||this.game.p.recovering>0||this.cooldown>0)return;this.holding=true;this.charge=0;}
   release(){if(this.holding){this.requested=true;this.holding=false;}}
   step(dt,surface){
     const g=this.game,p=g.p;this.cooldown=Math.max(0,this.cooldown-dt);
@@ -35,10 +35,10 @@ class SurfJump {
       }
       if(p.jumpVelocity<0&&p.y<=surface.height){
         p.airborne=false;p.airY=0;p.y=surface.height;p.jumpVelocity=0;this.cooldown=.55;
-        const clean=THREE.MathUtils.clamp(1-Math.abs(p.pitch)*.85-Math.abs(p.lean-p.smoothLean)*.8,0,1);
+        const clean=THREE.MathUtils.clamp(1-Math.abs(p.pitch)*.85-Math.abs(p.lean-p.smoothLean)*.8-Math.abs(p.heading)*.22,0,1);
         g.handBeer.impact(clean);g.emit(18,.8);p.crouch=.85;
         if(clean>.72){this.cleanLandings++;g.awardTrick('МЯГКАЯ ПОСАДКА',140,true);}
-        else if(clean<.4){g.spill(.06,'Жёсткая посадка');p.speed*=.8;p.recovering=.9;}
+        else {g.spill(clean<.4?.06:.025,'Неудачная посадка');p.speed*=clean<.4?.8:.92;g.balance.disturb(.25+(1-clean)*.42,'ЖЁСТКАЯ ПОСАДКА');}
       }
     }else{p.y=surface.height;p.airY=0;}
     this.button.classList.toggle('preparing',this.holding);

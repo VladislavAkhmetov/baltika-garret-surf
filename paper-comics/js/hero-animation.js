@@ -58,7 +58,7 @@ class HeroAnimator {
   update(dt){
     const p=this.game.p;this.clock+=dt;
     if(p.airborne){this.beginTurn(0);this.apply('trim',2);return;}
-    if(p.recovering>0){this.beginTurn(0);this.apply('recovery',Math.min(7,Math.floor((1-p.recovering/.9)*8)));return;}
+    if(p.recovering>0||p.fallen){this.beginTurn(0);this.apply('recovery',Math.floor(this.clock*10)%8);return;}
     if(this.game.jump.holding&&this.game.jump.charge>.1){this.beginTurn(0);this.apply('trim',this.game.jump.charge>.6?2:1);return;}
     const direction=Math.abs(p.lean)>.18?Math.sign(p.lean):0;
     if(!this.turnDirection&&direction)this.beginTurn(direction);
