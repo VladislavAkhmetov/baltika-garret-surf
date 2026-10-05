@@ -56,8 +56,8 @@ class HeroAnimator {
     card.material.map=texture;this.game.player.pose=state;
     this.footAnchor.set((foot[0]/384-.5)*this.width,(.5-foot[1]/512)*this.height,0);
     this.stance.set((feet[1][0]-feet[0][0])/384*this.width,(feet[0][1]-feet[1][1])/512*this.height,0);
-    this.placeOnBoard();
     card.scale.set(1,1,1);
+    this.placeOnBoard();
     this.currentGrip={x:(grip[0]/384-.5)*this.width,y:(.5-grip[1]/512)*this.height};
     const fingers=this.fingerTextures[state];
     if(fingers){
@@ -93,11 +93,12 @@ class HeroAnimator {
   placeOnBoard(){
     const board=this.game.player.board,card=this.game.player.card;
     board.updateMatrix();this.deckAnchor.set(0,0,.018).applyMatrix4(board.matrix);
-    card.position.copy(this.deckAnchor).sub(this.footAnchor.clone().applyQuaternion(card.quaternion));
+    card.position.copy(this.deckAnchor).sub(this.footAnchor.clone().multiply(card.scale).applyQuaternion(card.quaternion));
   }
   update(dt){
     const p=this.game.p;this.clock+=dt;
     if(p.airborne){this.beginTurn(0);this.apply('trim',2);return;}
+    if(this.game.jump.landingPulse>.15){this.beginTurn(0);this.apply('trim',this.game.jump.landingAge<.17?2:1);return;}
     if(p.recovering>0||p.fallen){this.beginTurn(0);this.apply('recovery',Math.floor(this.clock*10)%8);return;}
     if(this.game.jump.holding&&this.game.jump.charge>.1){this.beginTurn(0);this.apply('trim',this.game.jump.charge>.6?2:1);return;}
     const direction=Math.abs(p.lean)>.18?Math.sign(p.lean):0;

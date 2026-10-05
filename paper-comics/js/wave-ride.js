@@ -10,22 +10,22 @@ class WaveRide {
     const g=this.game,p=g.p,s=g.wave.sample(p.x,p.z),w=s.wave;
     this.zone=s.zone;
     const direction=w?Math.atan((g.wave.crestX(w,p.z+1)-g.wave.crestX(w,p.z-1))/2/.38):0;
-    const alignment=Math.max(.2,1-Math.abs(p.heading-direction)/1.2);
+    const alignment=Math.max(.55,1-Math.abs(p.heading-direction)/1.5);
     const energy=s.face<0?0:s.face<.18?.72:s.face<.65?1:.5;
     this.quality=w&&s.face<.96?s.energy*energy*alignment:0;
-    const engaging=this.quality>.2&&p.recovering===0&&!p.airborne;
+    const engaging=this.quality>.12&&p.recovering===0&&!p.airborne;
     const waveId=w?.id??null;
     if(waveId!==this.activeId){this.charge*=.5;this.crestTime=0;this.departure=null;this.previousFace=null;this.activeId=waveId;}
     if(this.departure&&(g.time-this.departure.time>3||p.recovering>0))this.departure=null;
     this.charge=THREE.MathUtils.clamp(this.charge+dt*(engaging?2.3*this.quality:-1.35),0,1);
     this.caught=engaging&&this.charge>.24;
-    const pocket=Math.exp(-Math.pow((s.face-.42)/.28,2));
+    const pocket=Math.exp(-Math.pow((s.face-.34)/.28,2));
     const target=this.caught?(s.zone==='crest'?7:3+9*pocket)*this.charge*s.energy:0;
     this.boost+=(target-this.boost)*(1-Math.exp(-dt*(this.caught?3:1.8)));
     if(this.caught&&w){
       if(!this.capturedIds.has(w.id)){
         const transfer=this.lastId!==null&&this.lastId!==w.id&&g.time-this.lastCatchTime<4.8;
-        this.capturedIds.add(w.id);this.totalCaught++;this.lastId=w.id;g.awardTrick('ПОЙМАЛ ВОЛНУ',120);
+        this.capturedIds.add(w.id);this.totalCaught++;this.lastId=w.id;g.awardTrick('ПОЙМАЛ ВОЛНУ',120,this.totalCaught>1);
         if(transfer){this.transfers++;g.awardTrick('ПЕРЕХОД',220,true);if(p.speed>31&&p.balance<.35)g.comics.trigger('ВЖУХ!','С ОДНОЙ ВОЛНЫ НА ДРУГУЮ','transfer');}
       }
       this.lastCatchTime=g.time;

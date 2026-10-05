@@ -16,7 +16,7 @@ class SurfOnboarding {
   }
   get timeScale(){
     if(this.game.p.fallen||this.game.p.airborne)return 1;
-    if(this.game.balance.mode==='recovery')return this.completed.has('balance')?1:.75;
+    if(this.game.balance.mode==='recovery')return this.game.assist||this.completed.has('balance')?1:.75;
     return !this.completed.has('steer')&&this.age<4?.65:1;
   }
   cue(){
@@ -24,14 +24,12 @@ class SurfOnboarding {
     this.highlight='';
     if(p.fallen)return null;
     if(g.balance.mode==='recovery'&&!this.completed.has('balance')){
+      if(g.assist)return {id:'balance',title:'ОТПУСТИ ПОВОРОТ',line:'Доска сама выровняется.'};
       const roll=g.balance.roll;
       return {id:'balance',title:'ПОЙМАЙ БАЛАНС',line:Math.abs(p.pitch)>.35?(g.input.mode==='gyro'?'Выровняй телефон.':keys?'Отпусти ↑ ↓ / W S.':'Отпусти движение по воде.'):
         roll>.08?'Коротко влево. В центре — отпусти.':roll<-.08?'Коротко вправо. В центре — отпусти.':'Не поворачивай. Держи маркер в центре.'};
     }
     if(p.airborne&&!this.completed.has('landing'))return {id:'landing',title:'ПРИЗЕМЛИСЬ РОВНО',line:'Отпусти поворот и перенос веса.'};
-    if(g.jump.holding&&!this.completed.has('jump')){
-      this.highlight='jump';return {id:'release',title:'ОТПУСТИ — ПРЫГАЙ',line:keys?'Отпусти пробел.':'Отпусти кнопку ↑.'};
-    }
     if(!this.completed.has('steer')&&this.age<4){
       this.highlight=this.turnTried?'':'steer';
       return {id:'steer',title:this.turnTried?'ТЕПЕРЬ ОТПУСТИ':'ПОПРОБУЙ ПОВОРОТ',line:this.turnTried?'Короткое нажатие — плавная дуга.':g.input.mode==='gyro'?'Слегка наклони телефон вбок.':keys?'Коротко нажми ← → или A D.':'Коротко нажми стрелку внизу.'};
@@ -39,9 +37,9 @@ class SurfOnboarding {
     if(!this.completed.has('wave')&&p.z<260){
       const guide=g.waveRide.guidance();return {id:'wave',title:guide.label,line:'Лови склон рядом с белой пеной.'};
     }
-    if(!this.completed.has('jump')&&this.completed.has('wave')&&g.waveRide.caught&&this.jumpOfferTime<5&&p.z<250&&g.balance.mode==='stable'){
+    if(!this.completed.has('jump')&&this.completed.has('wave')&&this.jumpOfferTime<5&&p.z<250&&g.balance.mode==='stable'){
       this.jumpOffered=true;this.highlight='jump';
-      return {id:'jump',title:'ПОПРОБУЙ ПРЫЖОК',line:keys?'Держи пробел, затем отпусти.':'Держи ↑, затем отпусти. Прыжок необязателен.'};
+      return {id:'jump',title:'ПОПРОБУЙ ПРЫЖОК',line:keys?'Нажми пробел на гребне.':'Нажми ↑ на гребне. Прыжок необязателен.'};
     }
     return null;
   }

@@ -3,12 +3,12 @@ async function run(){
   const folder=path.resolve(__dirname,'../review/comics/chapter');
   const groups=[
     ['minimal-menus',['mobile-01-home','mobile-02-setup']],
-    ['onboarding',['mobile-05-onboarding','onboarding-jump','onboarding-release','onboarding-landing','onboarding-balance']],
-    ['menus',['mobile-01-home','mobile-02-setup','mobile-03-locked','mobile-04-story-1','mobile-04-story-2','mobile-04-story-3','mobile-04-story-4','mobile-05-onboarding']],
-    ['small-phone',['small-01-home','small-02-setup','small-03-locked','small-04-story-1','small-04-story-2','small-04-story-3','small-04-story-4','small-05-onboarding']],
+    ['onboarding',['mobile-05-onboarding','onboarding-jump','onboarding-tap-jump','onboarding-balance']],
+    ['menus',['mobile-01-home','mobile-02-setup','mobile-03-locked','mobile-04-story-1','mobile-04-story-2','mobile-05-onboarding']],
+    ['small-phone',['small-01-home','small-02-setup','small-03-locked','small-04-story-1','small-04-story-2','small-05-onboarding']],
     ['gameplay',['scene-crest','scene-shark','scene-jetski-cross','scene-jetski-other-side','scene-jetski-rear','scene-large-wave','scene-collection','scene-recovery','scene-fall','scene-finish']],
-    ['desktop',['desktop-01-home','desktop-02-setup','desktop-03-locked','desktop-04-story-1','desktop-04-story-2','desktop-04-story-3','desktop-04-story-4','desktop-05-onboarding']],
-    ['landscape',['landscape-01-home','landscape-02-setup','landscape-03-locked','landscape-04-story-1','landscape-04-story-2','landscape-04-story-3','landscape-04-story-4','landscape-05-onboarding']]
+    ['desktop',['desktop-01-home','desktop-02-setup','desktop-03-locked','desktop-04-story-1','desktop-04-story-2','desktop-05-onboarding']],
+    ['landscape',['landscape-01-home','landscape-02-setup','landscape-03-locked','landscape-04-story-1','landscape-04-story-2','landscape-05-onboarding']]
   ];
   const browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--no-sandbox']});
   try{

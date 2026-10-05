@@ -16,7 +16,7 @@ async function run(){
   const frames=[];
   for(const state of ['trim','left','right','recovery'])for(let frame=0;frame<8;frame++){
    const result=await page.evaluate((state,frame)=>{
-    const g=game,p=g.p,h=g.heroAnimator;p.z=105;p.x=g.wave.crestX(g.wave.waves[0],105)+3;p.y=g.wave.height(p.x,p.z);p.lean=state==='left'?-.65:state==='right'?.65:0;g.balance.roll=state==='recovery'?.35:0;
+    const g=game,p=g.p,h=g.heroAnimator;g.time=g.wave.waves[0].encounterTime;g.wave.time=g.time;p.z=100;p.x=g.wave.crestX(g.wave.waves[0],100)+3;p.y=g.wave.height(p.x,p.z);p.lean=state==='left'?-.65:state==='right'?.65:0;g.balance.roll=state==='recovery'?.35:0;
     h.apply(state,frame);g.updateCamera(1,true);g.wave.update(p.z,g.time,true);g.updateVisuals(0);g.renderer.render(g.scene,g.camera);g.scene.updateMatrixWorld(true);
     const board=g.player.board,card=g.player.card,mean=h.footAnchor.clone();card.localToWorld(mean);
     const deck=new THREE.Vector3(0,0,.018);board.localToWorld(deck);
@@ -34,45 +34,50 @@ async function run(){
   await sheet.screenshot({path:path.join(review,'poses-32.png'),fullPage:true});await sheet.close();await style.evaluate(e=>e.remove());
   const mechanics=await page.evaluate(()=>{
    const g=game,j=g.jump,dt=1/120,results={};g.animationReview=false;
-   const prepare=()=>{g.reset();g.wave.resetRamps(42);g.state='playing';g.onboarding.completed=new Set(['steer','wave','jump','landing','balance']);g.world.hazards.forEach(h=>h.done=true);g.rivals.forEach(r=>r.collided=true);g.comics.trigger=()=>false;};
+   const prepare=()=>{g.reset();g.wave.resetWaves(42);g.state='playing';g.onboarding.completed=new Set(['steer','wave','jump','landing','balance']);g.world.hazards.forEach(h=>h.done=true);g.rivals.forEach(r=>r.collided=true);g.comics.trigger=()=>false;};
    const key=(type,code)=>dispatchEvent(new KeyboardEvent(type,{code,bubbles:true,cancelable:true}));
-   const ride=(special,spin,bad=false)=>{
-    prepare();const r=g.wave.ramps[0],p=g.p;p.x=special?r.x:8;p.z=special?r.z-12:8;p.y=g.wave.height(p.x,p.z);p.speed=20;g.balance.immunity=5;g.impactCooldown=8;
-    key('keydown','Space');for(let i=0;i<60;i++)g.step(dt);key('keyup','Space');g.step(dt);
-    const launched={special:j.rampJump,velocity:p.jumpVelocity,z:p.z};for(let i=0;i<8;i++)g.step(dt);g.balance.immunity=0;
+   const ride=(waveIndex,spin,late=false,assisted=true)=>{
+    g.assist=assisted;prepare();const w=waveIndex==='high'?g.wave.waves.filter(w=>w.encounterTime<38).reduce((best,w)=>w.height>best.height?w:best):g.wave.waves[waveIndex??0],p=g.p;
+    g.time=waveIndex===null?0:w.encounterTime;g.wave.time=g.time;
+    p.z=waveIndex===null?8:(w.from+w.to)/2;p.x=waveIndex===null?8:g.wave.crestX(w,p.z)+.15;
+    p.y=g.wave.height(p.x,p.z);p.speed=27;g.balance.immunity=5;g.impactCooldown=8;
+    key('keydown','Space');g.step(dt);key('keyup','Space');
+    const launched={wave:j.takeoffWave,velocity:p.jumpVelocity,z:p.z};for(let i=0;i<9;i++)g.step(dt);g.balance.immunity=0;
+    if(late)while(p.airborne&&p.jumpVelocity>-5)g.step(dt);
     if(spin){key('keydown','Space');key('keyup','Space');}
-    let spun=false,awardInAir=0;
+    let spun=false,awardInAir=0,boostInAir=0;
     for(let i=0;i<400&&p.airborne;i++){
-     g.step(dt);if(Math.abs(p.spin)>.1)spun=true;if(p.airborne)awardInAir=j.tricks;
-     if(bad&&p.jumpVelocity<0){key('keydown','ArrowUp');g.input.pitch=1;}
+     g.step(dt);if(Math.abs(p.spin)>.1)spun=true;if(p.airborne){awardInAir=j.tricks;boostInAir=j.landingBoost;}
     }
-    key('keyup','ArrowUp');const score=g.score;for(let i=0;i<12;i++)g.step(dt);
-    return {...launched,height:j.lastHeight,airTime:j.airTime,spun,awardInAir,tricks:j.tricks,clean:j.cleanLandings,balance:g.balance.mode,duplicate:g.score-score,resetSpin:p.spin,airborne:p.airborne};
+    const score=g.score,landingBoost=j.landingBoost;for(let i=0;i<12;i++)g.step(dt);
+    return {...launched,height:j.lastHeight,airTime:j.airTime,spun,awardInAir,boostInAir,landingBoost,tricks:j.tricks,clean:j.cleanLandings,balance:g.balance.mode,duplicate:g.score-score,resetSpin:p.spin,airborne:p.airborne};
    };
-   results.ordinary=ride(false,false);results.ramp=ride(true,false);results.spin=ride(true,true);results.bad=ride(true,true,true);
-   prepare();const a=JSON.stringify(g.wave.ramps);g.wave.resetRamps(43);results.randomised=a!==JSON.stringify(g.wave.ramps);results.ramps=g.wave.ramps;
-   g.reset();results.reset={spin:g.p.spin,tricks:j.tricks,ramp:j.rampJump,started:j.spinStarted};g.state='paused';return results;
+   results.flat=ride(null,false);results.low=ride(0,false);results.high=ride('high',false);results.spin=ride('high',true);results.assistedLate=ride(null,true,true);results.bad=ride(null,true,true,false);g.assist=true;
+   prepare();const a=JSON.stringify(g.wave.waves);g.wave.resetWaves(43);results.randomised=a!==JSON.stringify(g.wave.waves);
+   g.reset();results.reset={spin:g.p.spin,tricks:j.tricks,started:j.spinStarted,boost:j.landingBoost};g.state='paused';return results;
   });console.log(JSON.stringify({mechanics},null,2));
   fs.writeFileSync(path.join(review,'mechanics.json'),JSON.stringify({mechanics,poses},null,2));
-  assert.equal(mechanics.ordinary.special,false);assert.equal(mechanics.ramp.special,true);
-  assert.ok(mechanics.ramp.height>mechanics.ordinary.height+3,'launch wave must create a substantially higher jump');assert.ok(mechanics.ramp.airTime>mechanics.ordinary.airTime+.4);
+  assert.equal(mechanics.flat.wave,null);assert.equal(mechanics.low.wave,0);assert.ok(mechanics.high.wave>0);assert.equal(mechanics.spin.wave,mechanics.high.wave);
+  assert.ok(mechanics.high.height>mechanics.flat.height+1.4,'a crest gives more lift than calm water');assert.ok(mechanics.high.velocity>mechanics.low.velocity,'taller waves give stronger takeoff');assert.ok(mechanics.high.airTime>mechanics.flat.airTime+.4);
   assert.equal(mechanics.spin.spun,true);assert.equal(mechanics.spin.tricks,1);assert.equal(mechanics.spin.awardInAir,0);assert.equal(mechanics.spin.duplicate,0);assert.equal(mechanics.spin.airborne,false);assert.equal(mechanics.spin.resetSpin,0);
-  assert.equal(mechanics.bad.tricks,0);assert.equal(mechanics.bad.clean,0);assert.equal(mechanics.bad.balance,'recovery');assert.equal(mechanics.randomised,true);assert.deepEqual(mechanics.reset,{spin:0,tricks:0,ramp:false,started:false});
+  assert.equal(mechanics.spin.boostInAir,0);assert.ok(mechanics.spin.landingBoost>0);
+  assert.equal(mechanics.assistedLate.spun,false,'ordinary mode rejects a rotation too late to finish');assert.equal(mechanics.assistedLate.clean,1);assert.equal(mechanics.assistedLate.balance,'stable');
+  assert.equal(mechanics.bad.spun,true,'hard mode allows a risky late rotation');assert.equal(mechanics.bad.tricks,0);assert.equal(mechanics.bad.clean,0);assert.equal(mechanics.bad.balance,'recovery');assert.equal(mechanics.randomised,true);assert.deepEqual(mechanics.reset,{spin:0,tricks:0,started:false,boost:0});
   for(const [name,width,height,mobile] of [['mobile',393,852,true],['small',360,640,true],['desktop',1240,900,false],['landscape',844,390,true]]){
    await page.setViewport({width,height,isMobile:mobile,hasTouch:mobile,deviceScaleFactor:1});
    await page.evaluate(()=>{
-    const g=game;g.reset();g.journey.hideAll();g.container.classList.add('playing');document.getElementById('result-screen').classList.add('hidden');g.wave.resetRamps(42);g.state='paused';g.onboarding.completed=new Set(['steer','wave','jump','landing','balance']);g.p.z=160;g.p.x=g.wave.ramps[0].x;g.p.y=g.wave.height(g.p.x,g.p.z);g.heroAnimator.apply('trim',0);g.updateCamera(1,true);g.wave.update(g.p.z,g.time,true);g.updateVisuals(0);g.updateHUD();g.renderer.render(g.scene,g.camera);
-   });await shot(name+'-ramp-ahead');
+    const g=game;g.reset();g.journey.hideAll();g.container.classList.add('playing');document.getElementById('result-screen').classList.add('hidden');g.wave.resetWaves(42);g.state='paused';g.onboarding.completed=new Set(['steer','wave','jump','landing','balance']);g.p.z=55;g.p.x=0;g.time=2.2;g.wave.time=g.time;g.p.y=g.wave.height(g.p.x,g.p.z);g.heroAnimator.apply('trim',0);g.updateCamera(1,true);g.wave.update(g.p.z,g.time,true);g.updateVisuals(0);g.updateHUD();g.renderer.render(g.scene,g.camera);
+   });await shot(name+'-wave-ahead');
    for(const [outcome,level] of [['win',.76],['lose',.20]]){
-    const layout=await page.evaluate(level=>{const g=game;g.mug.level=level;g.score=4200;g.finish();const card=document.querySelector('.result-card').getBoundingClientRect(),b=document.getElementById('replay-button').getBoundingClientRect();return {buttonFits:b.bottom<=card.bottom&&b.right<=card.right,scroll:document.querySelector('.result-card').scrollHeight>document.querySelector('.result-card').clientHeight+1,text:document.querySelector('.result-card').innerText};},level);
+    const layout=await page.evaluate(level=>{const g=game;g.state='paused';g.mug.level=level;g.score=4200;g.finish();const card=document.querySelector('.result-card').getBoundingClientRect(),b=document.getElementById('replay-button').getBoundingClientRect();return {buttonFits:b.bottom<=card.bottom&&b.right<=card.right,scroll:document.querySelector('.result-card').scrollHeight>document.querySelector('.result-card').clientHeight+1,text:document.querySelector('.result-card').innerText};},level);
     layouts.push({name,outcome,...layout});assert.ok(layout.buttonFits,name+' '+outcome+' result action');assert.equal(layout.scroll,false,name+' result scroll');assert.ok(!/Волн:|Спасений:|Твои манёвры:|БОНУСНЫЕ КРЫШКИ/.test(layout.text));await shot(name+'-result-'+outcome);
    }
   }
   // Capture actual pointer-driven takeoff and rotation, rather than a fabricated pose.
   await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true,deviceScaleFactor:1});
   await page.evaluate(()=>{
-   const g=game;g.reset();g.journey.hideAll();g.container.classList.add('playing');document.getElementById('result-screen').classList.add('hidden');g.wave.resetRamps(42);g.state='playing';g.onboarding.completed=new Set(['steer','wave','jump','landing','balance']);g.p.x=g.wave.ramps[0].x;g.p.z=g.wave.ramps[0].z-12;g.p.y=g.wave.height(g.p.x,g.p.z);g.balance.immunity=5;g.impactCooldown=8;
-   const b=document.getElementById('jump-button');b.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:1}));for(let i=0;i<60;i++)g.step(1/120);b.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:1}));for(let i=0;i<9;i++)g.step(1/120);g.state='paused';g.updateCamera(1,true);g.wave.update(g.p.z,g.time,true);g.updateVisuals(0);g.updateHUD();g.renderer.render(g.scene,g.camera);
+   const g=game;g.reset();g.journey.hideAll();g.container.classList.add('playing');document.getElementById('result-screen').classList.add('hidden');g.wave.resetWaves(42);g.state='playing';g.onboarding.completed=new Set(['steer','wave','jump','landing','balance']);const w=g.wave.waves.filter(w=>w.encounterTime<38).reduce((best,w)=>w.height>best.height?w:best);g.time=w.encounterTime;g.wave.time=g.time;g.p.z=(w.from+w.to)/2;g.p.x=g.wave.crestX(w,g.p.z)+.15;g.p.y=g.wave.height(g.p.x,g.p.z);g.balance.immunity=5;g.impactCooldown=8;
+   const b=document.getElementById('jump-button');b.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:1}));g.step(1/120);b.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:1}));for(let i=0;i<9;i++)g.step(1/120);g.state='paused';g.updateCamera(1,true);g.wave.update(g.p.z,g.time,true);g.updateVisuals(0);g.updateHUD();g.renderer.render(g.scene,g.camera);
   });await shot('mobile-takeoff');
   await page.evaluate(()=>{const g=game;g.state='playing';const b=document.getElementById('jump-button');b.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:1}));b.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:1}));for(let i=0;i<30;i++)g.step(1/120);g.state='paused';g.updateCamera(1,true);g.wave.update(g.p.z,g.time,true);g.updateVisuals(0);g.updateHUD();g.renderer.render(g.scene,g.camera);});await shot('mobile-spin');
   fs.writeFileSync(path.join(review,'verification.json'),JSON.stringify({poses,mechanics,layouts,errors},null,2));assert.deepEqual(errors,[]);console.log('Airwaves passed: 32 poses, keyboard/pointer jumps, 360 landings and 4 viewport layouts.');

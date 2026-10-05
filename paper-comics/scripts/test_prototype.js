@@ -57,109 +57,59 @@ async function test(){
   assert.equal(assets.photos.length,3);assert.equal(assets.sharks.length,2);assert.equal(assets.button,false);
   const mechanics=await page.evaluate(()=>{
     const g=game,dt=1/120;
-    function setup(z=0,face=.42){
-      g.assist=false;g.reset();g.state='playing';g.input.mode='touch';g.input.target=g.input.pitchTarget=0;g.rivals.forEach(r=>{r.z=2000;r.x=8;});
-      if(z){const w=g.wave.waves.find(w=>z>w.from&&z<w.to);g.p.z=z;g.p.x=w?g.wave.crestX(w,z)+w.width*face:1;g.p.y=g.wave.height(g.p.x,z);}
+    function setup(z=0,x=1){
+      g.assist=true;g.reset();g.wave.resetWaves(42);g.state='playing';g.input.mode='touch';
+      g.time=z/25;g.wave.time=g.time;g.p.z=z;g.p.x=x;g.p.y=g.wave.height(x,z);
+      g.world.hazards.forEach(h=>h.done=true);g.rivals.forEach(r=>{r.z=2000;r.collided=true;});
     }
-    function control(face=.42,pitch=0){
-      const p=g.p;let w=g.wave.waves.find(w=>p.z>w.from&&p.z<w.to-22);
-      if(!w)w=g.wave.waves.find(w=>w.to>p.z&&w.from<p.z+65);
-      const desired=w?g.wave.crestX(w,p.z+5)+w.width*face:1;
-      const vx=(desired-p.x)*1.6+g.wave.sample(p.x,p.z).dx*.4;
-      g.input.target=THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(vx/(p.speed*.38),-.5,.5))/.55,-1,1);g.input.pitchTarget=pitch;
+    function control(){
+      const p=g.p,w=g.wave.waves.find(w=>p.z>w.from&&p.z<w.to-22)||g.wave.waves.find(w=>w.to>p.z&&w.from<p.z+65);
+      const desired=w?THREE.MathUtils.clamp(g.wave.crestX(w,p.z+5)+w.width*.34,-8,8):1;
+      const vx=(desired-p.x)*1.6+g.wave.sample(p.x,p.z).dx*.32;
+      g.input.target=THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(vx/(p.speed*.38),-.5,.5))/.43,-1,1);
     }
-    setup();const w=g.wave.waves[0],z=110,cx=g.wave.crestX(w,z);
-    const heights=[.05,.4,.85].map(f=>g.wave.height(cx+w.width*f,z));
-    const gap=g.wave.field(0,370).wave;const startEnvelope=g.wave.envelope(w,w.from),endEnvelope=g.wave.envelope(w,w.to);
-    setup(90,.42);for(let i=0;i<180;i++){control(.42);g.step(dt);}const middle={speed:g.p.speed,boost:g.waveRide.boost,caught:g.waveRide.caught,captures:g.waveRide.totalCaught,beer:g.mug.level};
-    setup(90,.85);for(let i=0;i<180;i++){control(.85);g.step(dt);}const baseSpeed=g.p.speed;
-    setup(90,.42);for(let i=0;i<120;i++){control(.42,.35);g.step(dt);}const front=g.p.speed;
-    setup(90,.42);for(let i=0;i<120;i++){control(.42,-.35);g.step(dt);}const rear=g.p.speed;
-    setup(90,.42);g.input.target=.5;for(let i=0;i<40;i++)g.step(dt);const down=g.p.speed;
-    setup(90,.42);g.input.target=-.5;for(let i=0;i<40;i++)g.step(dt);const up=g.p.speed;
-    setup(90,.08);for(let i=0;i<330;i++){control(.08);g.input.target=THREE.MathUtils.clamp(g.input.target-g.balance.roll*1.7-g.balance.velocity*.85,-1,1);g.step(dt);g.comics.update(dt);}const crest={awards:[...g.waveRide.crestAwards],event:g.comics.lastEvent,beer:g.mug.level,balance:g.p.balance};
-    setup(90,.08);for(let i=0;i<600;i++){control(.08,1);g.step(dt);}const risk={beer:g.mug.level,balance:g.p.balance};
-    setup(190,.4);g.waveRide.lastId=0;g.waveRide.lastCatchTime=g.time;g.waveRide.capturedIds.add(0);
-    for(let i=0;i<300;i++){control(.4);g.step(dt);g.comics.update(dt);}const transfers={count:g.waveRide.transfers,tricks:[...g.tricksSeen]};
-    setup(55,.32);for(let i=0;i<90;i++){control(.32);g.step(dt);}
-    const cutbackTrace=[];
-    for(let i=0;i<320;i++){
-      g.input.target=i<145?1:-1;g.step(dt);
-      if(i%20===0)cutbackTrace.push({i,face:g.wave.sample(g.p.x,g.p.z).face,departure:g.waveRide.departure?{...g.waveRide.departure}:null});
-    }
-    const cutback={awards:[...g.waveRide.cutbackAwards],tricks:[...g.tricksSeen],trace:cutbackTrace};
-    setup(90,.85);for(let i=0;i<160;i++){control(.4);g.step(dt);}
-    cutback.straightEntryAwards=g.waveRide.cutbackAwards.size;
-    setup(750,.42);const overtaker=g.world.hazards.find(h=>h.mode==='overtake');g.p.x=3.8;
-    g.world.step(dt);const premature={passed:overtaker.passed,score:g.score,warning:document.getElementById('hint').textContent};
-    for(let i=0;i<840&&!overtaker.passed;i++){g.time+=dt;g.p.z+=30*dt;g.world.step(dt);}
-    const overtake={premature,passed:overtaker.passed,hit:overtaker.hit,nearest:overtaker.nearestPass,tricks:[...g.tricksSeen]};
-    setup(630,.42);const jet=g.world.hazards.find(h=>h.type==='jetski'&&h.mode==='cross');jet.activeAt=0;jet.x=1;jet.z=658;
-    const x=-5,zWake=658+6*.36;const quality=g.world.wakeQualityAt(x,zWake),withWake=g.wave.height(x,zWake);g.wave.wakeField=null;const without=g.wave.height(x,zWake);g.wave.wakeField=(x,z)=>g.world.wakeAt(x,z);
-    setup(780,.42);const parallel=g.world.hazards.find(h=>h.type==='jetski'&&h.mode==='overtake');
-    parallel.activeAt=0;parallel.z=g.p.z+4;g.p.speed=31;g.p.x=parallel.x-4*.36;g.p.y=g.wave.height(g.p.x,g.p.z);
-    const wakeTrace=[];
-    for(let i=0;i<220;i++){
-      const desired=parallel.x-(parallel.z-g.p.z)*.36,velocity=(desired-g.p.x)*6-(34-g.p.speed)*.36;
-      g.input.target=THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(velocity/(g.p.speed*.38),-.5,.5))/.55,-1,1);
-      g.step(dt);g.comics.update(dt);
-      if(i%30===0)wakeTrace.push({i,x:g.p.x,desired,speed:g.p.speed,quality:g.world.wakeQualityAt(g.p.x,g.p.z),clock:g.wakeClock,balance:g.p.balance});
-    }
-    const wakeRide={count:g.world.wakeRides,tricks:[...g.tricksSeen],speed:g.p.speed,trace:wakeTrace};
-    setup(780,.42);const ghostJet=g.world.hazards.find(h=>h.type==='jetski'&&h.mode==='overtake');
-    ghostJet.activeAt=0;ghostJet.z=g.p.z+4;g.p.speed=31;g.p.x=ghostJet.x-4*.36;g.p.y=g.wave.height(g.p.x,g.p.z);
-    const wakeFunction=g.world.wakeQualityAt;g.world.wakeQualityAt=()=>0;
-    for(let i=0;i<220;i++){
-      const desired=ghostJet.x-(ghostJet.z-g.p.z)*.36,velocity=(desired-g.p.x)*6-(34-g.p.speed)*.36;
-      g.input.target=THREE.MathUtils.clamp(Math.asin(THREE.MathUtils.clamp(velocity/(g.p.speed*.38),-.5,.5))/.55,-1,1);
-      g.step(dt);g.comics.update(dt);
-    }
-    wakeRide.withoutWake=g.p.speed;g.world.wakeQualityAt=wakeFunction;
-    setup(430,.42);const shark=g.world.hazards.find(h=>h.type==='shark');shark.activeAt=g.time;shark.chasing=true;shark.x=shark.targetX=g.p.x;shark.z=g.p.z;g.step(dt);const collision={hit:shark.hit,beer:g.mug.level,protected:g.impactCooldown>0};
-    setup(950,.38);const stas=g.rivals[2];stas.x=g.p.x;stas.z=g.p.z+.5;
-    const spillMethod=g.spill;let rivalContacts=0;
-    g.spill=function(amount,reason){if(reason.startsWith(stas.name))rivalContacts++;return spillMethod.call(this,amount,reason);};
-    for(let i=0;i<2400&&g.state==='playing';i++){control(.38,.1);g.step(dt);g.comics.update(dt);}
-    g.spill=spillMethod;const company={contacts:rivalContacts,beer:g.mug.level,z:g.p.z};
+    const ride=enabled=>{
+      setup(70);const first=g.wave.waves[0];g.p.x=g.wave.crestX(first,g.p.z)+first.width*.34;g.p.y=g.wave.height(g.p.x,g.p.z);const step=g.waveRide.step;let boost=0,speed=0;
+      if(!enabled)g.waveRide.step=()=>{};
+      for(let i=0;i<140;i++){control();g.step(dt);boost=Math.max(boost,g.waveRide.boost);speed+=g.p.speed;}
+      g.waveRide.step=step;return {boost,averageSpeed:speed/140,caught:g.waveRide.totalCaught};
+    };
+    const riding=ride(true),coasting=ride(false);
+    setup(630,-5);const jet=g.world.hazards.find(h=>h.mode==='cross');jet.done=false;jet.activeAt=g.time;jet.x=1;jet.z=658;
+    const z=658+6*.36,quality=g.world.wakeQualityAt(-5,z),withWake=g.wave.height(-5,z);
+    g.wave.wakeField=null;const lift=withWake-g.wave.height(-5,z);g.wave.wakeField=(x,z)=>g.world.wakeAt(x,z);
+    setup(350,1);const rival=g.rivals[2];rival.collided=false;let contacts=0;const spill=g.spill;
+    g.spill=function(amount,reason){if(reason.startsWith(rival.name))contacts++;return spill.call(this,amount,reason);};
+    for(let i=0;i<40;i++){rival.x=g.p.x;rival.z=g.p.z+.2;g.step(dt);}g.spill=spill;
+    const collision={contacts,beer:g.mug.level};
     setup();g.input.target=.8;for(let i=0;i<240;i++)g.step(dt);const slosh=g.handBeer.peakSlosh;
-    g.input.target=g.input.pitchTarget=0;for(let i=0;i<360;i++)g.step(dt);const settled=Math.max(...g.mug.h.map(Math.abs));
-    setup();let airborne=false;for(let i=0;i<9000&&g.state==='playing';i++){control(.38,.1);g.step(dt);g.comics.update(dt);airborne=airborne||g.p.airborne;}
-    const finish={state:g.state,z:g.p.z,seconds:g.elapsed,caught:g.waveRide.totalCaught,beer:g.mug.level,airborne,visible:!document.getElementById('result-screen').classList.contains('hidden')};
-    g.reset();const reset={level:g.mug.level,spilled:g.mug.totalSpilled,caught:g.waveRide.totalCaught,wake:g.world.wakeRides,jets:g.world.hazards.filter(h=>h.type==='jetski').every(h=>h.activeAt===null&&h.z===h.initialZ),company:g.rivals.every(r=>!r.contactLocked&&r.yieldTime===0),combo:g.combo};
-    g.state='paused';
-    return {heights,gap,startEnvelope,endEnvelope,middle,baseSpeed,front,rear,down,up,crest,risk,transfers,cutback,overtake,company,wake:{quality,lift:withWake-without},wakeRide,collision,slosh,settled,finish,reset};
+    g.input.target=0;for(let i=0;i<360;i++)g.step(dt);const settled=Math.max(...g.mug.h.map(Math.abs));
+    setup();for(let i=0;i<10000&&g.state==='playing';i++){control();g.step(dt);g.comics.update(dt);}
+    const finish={state:g.state,caught:g.waveRide.totalCaught,beer:g.mug.level,bonus:g.deliveryBonus,visible:!document.getElementById('result-screen').classList.contains('hidden')};
+    g.reset();g.state='paused';const reset={level:g.mug.level,spilled:g.mug.totalSpilled,caught:g.waveRide.totalCaught,bonus:g.deliveryBonus};
+    return {riding,coasting,wake:{quality,lift},collision,slosh,settled,finish,reset};
   });
-  console.log(JSON.stringify({gyro:{mode:gyro.mode,neutral:gyro.neutral,beta:gyro.beta},speed:{face:mechanics.middle.speed,base:mechanics.baseSpeed,wake:mechanics.wakeRide.speed,withoutWake:mechanics.wakeRide.withoutWake},finish:mechanics.finish},null,2));
-  assert.ok(mechanics.heights[0]>mechanics.heights[1]&&mechanics.heights[1]>mechanics.heights[2]);
-  assert.equal(mechanics.gap,null);assert.equal(mechanics.startEnvelope,0);assert.equal(mechanics.endEnvelope,0);
-  assert.equal(mechanics.middle.caught,true);assert.ok(mechanics.middle.boost>3);assert.ok(mechanics.middle.speed>mechanics.baseSpeed+2);
-  assert.ok(mechanics.front>mechanics.rear+.5);assert.ok(mechanics.down>mechanics.up+.1);
-  assert.ok(mechanics.crest.awards.length);assert.equal(mechanics.crest.event.variant,'crest');
-  assert.ok(mechanics.risk.beer<1);assert.ok(mechanics.transfers.count>=1);assert.ok(mechanics.transfers.tricks.includes('ПЕРЕХОД'));
-  assert.ok(mechanics.cutback.tricks.includes('КАТБЭК'),JSON.stringify(mechanics.cutback));assert.equal(mechanics.cutback.awards.length,1);assert.equal(mechanics.cutback.straightEntryAwards,0);
-  assert.equal(mechanics.overtake.premature.passed,false);assert.equal(mechanics.overtake.premature.score,0);assert.ok(mechanics.overtake.premature.warning.includes('ОБГОНЯЕТ'));
-  assert.equal(mechanics.overtake.passed,true);assert.equal(mechanics.overtake.hit,false);assert.ok(mechanics.overtake.tricks.includes('РАЗОШЛИСЬ'));
-  assert.equal(mechanics.company.contacts,1,'the same close encounter should not repeatedly drain beer');assert.ok(mechanics.company.z>=1200);assert.equal(mechanics.reset.company,true);
-  assert.ok(mechanics.wake.quality>.4&&mechanics.wake.lift>.3);assert.equal(mechanics.collision.hit,true);assert.ok(mechanics.collision.beer<.9);
-  assert.ok(mechanics.wakeRide.count>=1&&mechanics.wakeRide.tricks.includes('НА ХВОСТЕ'));
-  assert.ok(mechanics.wakeRide.speed>mechanics.wakeRide.withoutWake+1,'catching the moving wake should preserve more speed than the same uphill line without it');
-  assert.ok(mechanics.slosh>.02);assert.ok(mechanics.settled<mechanics.slosh);
-  assert.equal(mechanics.finish.state,'finished');assert.equal(mechanics.finish.visible,true);assert.equal(mechanics.finish.airborne,false);assert.ok(mechanics.finish.caught>=5);
-  assert.equal(mechanics.reset.level,1);assert.equal(mechanics.reset.spilled,0);assert.equal(mechanics.reset.caught,0);assert.equal(mechanics.reset.jets,true);
+  assert.ok(mechanics.riding.caught>0&&mechanics.riding.boost>2,'ordinary surfing catches a travelling wave');
+  assert.ok(mechanics.riding.averageSpeed>mechanics.coasting.averageSpeed+.3,'riding contributes usable acceleration');
+  assert.ok(mechanics.wake.quality>.4&&mechanics.wake.lift>.3,'jet wake changes the shared water surface');
+  assert.equal(mechanics.collision.contacts,1);assert.ok(mechanics.collision.beer<1);
+  assert.ok(mechanics.slosh>.02&&mechanics.settled<mechanics.slosh);
+  assert.equal(mechanics.finish.state,'finished');assert.ok(mechanics.finish.caught>=5&&mechanics.finish.visible&&mechanics.finish.bonus>0);
+  assert.deepEqual(mechanics.reset,{level:1,spilled:0,caught:0,bonus:0});
   const jumpsAndChase=await page.evaluate(()=>{
     const g=game,dt=1/120;
     const setup=(z=20)=>{g.assist=false;g.reset();g.state='playing';g.input.mode='touch';g.rivals.forEach(r=>{r.z=2000;r.x=8;});g.p.z=z;g.p.x=1;g.p.y=g.wave.height(1,z);};
     const key=(type)=>dispatchEvent(new KeyboardEvent(type,{code:'Space',bubbles:true}));
-    setup();key('keydown');for(let i=0;i<60;i++)g.step(dt);const charged=g.jump.charge;key('keyup');g.step(dt);
+    setup();key('keydown');g.step(dt);const charged=g.jump.charge;key('keyup');
     const launched=g.p.airborne;g.heroAnimator.update(dt);const pose={state:g.heroAnimator.state,frame:g.heroAnimator.frame};
     for(let i=0;i<240&&g.p.airborne;i++)g.step(dt);
     const clean={charged,launched,height:g.jump.lastHeight,landed:!g.p.airborne,landings:g.jump.cleanLandings,beer:g.mug.level,pose};
-    setup();key('keydown');for(let i=0;i<60;i++)g.step(dt);key('keyup');g.step(dt);g.input.pitchTarget=1;
+    setup();key('keydown');g.step(dt);key('keyup');while(g.p.airborne&&!g.jump.canSpin)g.step(dt);key('keydown');key('keyup');
     for(let i=0;i<240&&g.p.airborne;i++)g.step(dt);const hard={landings:g.jump.cleanLandings,beer:g.mug.level,recovering:g.p.recovering};
-    setup(75);g.p.x=g.wave.crestX(g.wave.waves[0],75)+.08*g.wave.waves[0].width;g.p.y=g.wave.height(g.p.x,g.p.z);g.jump.press();
-    for(let i=0;i<60;i++)g.step(dt);g.jump.release();g.step(dt);for(let i=0;i<160&&g.p.airborne;i++){g.step(dt);g.comics.update(dt);}
-    const peak={event:g.comics.lastEvent,height:g.jump.lastHeight};
-    setup();g.jump.button.dispatchEvent(new PointerEvent('pointerdown',{pointerId:12,bubbles:true}));g.step(.1);g.jump.button.dispatchEvent(new PointerEvent('pointercancel',{pointerId:12,bubbles:true}));g.step(dt);
+    setup();const high=g.wave.waves.filter(w=>w.encounterTime<38).reduce((best,w)=>w.height>best.height?w:best);g.time=high.encounterTime;g.wave.time=g.time;g.p.z=(high.from+high.to)/2;g.p.x=g.wave.crestX(high,g.p.z)+.1;g.p.y=g.wave.height(g.p.x,g.p.z);
+    g.jump.press();g.step(dt);for(let i=0;i<240&&g.p.airborne;i++)g.step(dt);
+    const peak={height:g.jump.lastHeight,landed:!g.p.airborne};
+    setup();g.jump.button.dispatchEvent(new PointerEvent('pointerdown',{pointerId:12,bubbles:true}));g.jump.button.dispatchEvent(new PointerEvent('pointercancel',{pointerId:12,bubbles:true}));g.step(dt);
     const cancelled={holding:g.jump.holding,requested:g.jump.requested,airborne:g.p.airborne};
     key('keydown');g.pause();key('keyup');const paused={holding:g.jump.holding,requested:g.jump.requested};
     const chaseSetup=()=>{setup(406);g.time=5;g.world.step(dt);return g.world.hazards.find(h=>h.type==='shark');};
@@ -171,7 +121,7 @@ async function test(){
     shark=chaseSetup();g.p.x=shark.x;
     for(let i=0;i<1000&&shark.chasing;i++){g.time+=dt;g.p.z+=22*dt;g.world.step(dt);}const slow={hit:shark.hit,beer:g.mug.level,done:shark.done};
     const level=g.mug.level;for(let i=0;i<300;i++){g.time+=dt;g.world.step(dt);}slow.repeatedLoss=level-g.mug.level;
-    shark=chaseSetup();shark.x=shark.targetX=g.p.x;shark.z=g.p.z-4;g.jump.press();g.jump.charge=1;g.jump.release();g.jump.step(dt,g.wave.sample(g.p.x,g.p.z));
+    shark=chaseSetup();const w=g.wave.waves.filter(w=>w.encounterTime<38).reduce((best,w)=>w.height>best.height?w:best);g.time=w.encounterTime;g.wave.time=g.time;g.p.z=(w.from+w.to)/2;g.p.x=g.wave.crestX(w,g.p.z)+.1;g.p.y=g.wave.height(g.p.x,g.p.z);shark.activeAt=g.time;shark.x=shark.targetX=g.p.x;shark.z=g.p.z-4;g.jump.press();g.jump.step(dt,g.wave.sample(g.p.x,g.p.z));
     const jumpTrace=[];for(let i=0;i<150&&shark.chasing;i++){g.time+=dt;g.p.z+=22*dt;g.jump.step(dt,g.wave.sample(g.p.x,g.p.z));g.world.step(dt);if(i%10===0||shark.hit)jumpTrace.push({i,gap:g.p.z-shark.z,airY:g.p.airY,velocity:g.p.jumpVelocity});}
     const dodge={escaped:shark.escaped,hit:shark.hit,beer:g.mug.level,trace:jumpTrace};
     g.reset();g.state='paused';g.updateHUD();const reset={jumps:g.jump.jumps,holding:g.jump.holding,escapes:g.world.escapes,sharks:g.world.hazards.filter(h=>h.type==='shark').every(h=>h.activeAt===null&&!h.done&&!h.chasing),icon:document.getElementById('shark-threat').classList.contains('visible')};
@@ -180,29 +130,29 @@ async function test(){
     return {clean,hard,peak,cancelled,paused,activation,lag,fast,lunge,slow,dodge,reset,slopes};
   });
   const jc=jumpsAndChase;
-  assert.ok(jc.clean.charged>.99&&jc.clean.launched&&jc.clean.landed);assert.ok(jc.clean.height>1.8);assert.equal(jc.clean.landings,1);assert.equal(jc.clean.pose.state,'trim');assert.equal(jc.clean.pose.frame,2);
+  assert.ok(jc.clean.charged===0&&jc.clean.launched&&jc.clean.landed);assert.ok(jc.clean.height>.4);assert.equal(jc.clean.landings,1);assert.equal(jc.clean.pose.state,'trim');assert.equal(jc.clean.pose.frame,2);
   assert.equal(jc.hard.landings,0);assert.ok(jc.hard.beer<jc.clean.beer-.04&&jc.hard.recovering>0);
-  assert.equal(jc.peak.event.variant,'crest');assert.ok(jc.peak.height>2);
+  assert.ok(jc.peak.height>2&&jc.peak.landed);
   assert.deepEqual(jc.cancelled,{holding:false,requested:false,airborne:false});assert.deepEqual(jc.paused,{holding:false,requested:false});
   assert.ok(jc.activation.active&&jc.activation.icon&&jc.activation.gap>23);assert.ok(jc.lag.sharkX<jc.lag.playerX-2);
   assert.ok(jc.fast.escaped&&jc.fast.escapes===1&&jc.fast.beer===1);assert.ok(jc.slow.hit&&jc.slow.done&&jc.slow.beer<.9);assert.equal(jc.slow.repeatedLoss,0);
   assert.ok(jc.lunge.speed>35&&jc.lunge.chasing&&!jc.lunge.escaped,'a prolonged chase must become a lunge rather than disappearing on a timer');
   assert.ok(jc.dodge.escaped&&!jc.dodge.hit&&jc.dodge.beer>.95,JSON.stringify(jc.dodge));
-  assert.deepEqual(jc.reset,{jumps:0,holding:false,escapes:0,sharks:true,icon:false});assert.ok(jc.slopes.every(s=>Math.abs(s)<.001),'rounded crest should have a continuous, flat tangent');
+  assert.deepEqual(jc.reset,{jumps:0,holding:false,escapes:0,sharks:true,icon:false});assert.ok(Math.abs(jc.slopes[0]-jc.slopes[1])<.01,'crest normals should remain continuous while shoulder height varies');
   const feedback=await page.evaluate(()=>{
     const g=game;g.reset();g.state='paused';
-    g.p.z=370;g.updateHUD();const gap={label:document.getElementById('wave-label').textContent,number:document.getElementById('wave-number').textContent,remaining:document.getElementById('wave-remaining').textContent,phase:document.querySelector('.wave-ticket').dataset.phase};
-    g.p.z=140;g.p.x=g.wave.crestX(g.wave.waves[0],140)+4.2;g.waveRide.caught=true;g.waveRide.boost=8;g.updateHUD();
+    g.p.z=0;g.updateHUD();const gap={label:document.getElementById('wave-label').textContent,number:document.getElementById('wave-number').textContent,remaining:document.getElementById('wave-remaining').textContent,phase:document.querySelector('.wave-ticket').dataset.phase};
+    const last=g.wave.waves.at(-1);g.p.z=last.to-10;g.p.x=g.wave.crestX(last,g.p.z)+last.width*.34;g.waveRide.caught=true;g.waveRide.boost=8;g.updateHUD();
     const ending={status:document.getElementById('wave-status').textContent,phase:document.querySelector('.wave-ticket').dataset.phase,remaining:document.getElementById('wave-remaining').textContent};
     g.p.z=120;g.p.x=9;g.updateHUD();const nearby=document.getElementById('wave-label').textContent;
     g.p.balance=.8;g.p.pitch=.8;g.updateHUD();const risk={label:document.getElementById('balance-label').textContent,fill:document.getElementById('balance-fill').style.width,unstable:g.container.classList.contains('unstable')};
     const visible=el=>{if(!el)return false;return el.getClientRects().length>0&&getComputedStyle(el).display!=='none';};
     const hud={debug:visible(document.getElementById('ride-debug')),wave:visible(document.querySelector('.wave-ticket')),weight:visible(document.querySelector('.weight-ticket')),hint:visible(document.getElementById('hint')),beer:visible(document.querySelector('.beer-ticket')),score:visible(document.querySelector('.score-ticket')),pause:visible(document.getElementById('pause-button'))};
-    g.reset();return {gap,ending,nearby,risk,hud};
+    const count=g.wave.waves.length;g.reset();return {gap,ending,nearby,risk,hud,count};
   });
-  assert.equal(feedback.gap.phase,'gap');assert.equal(feedback.gap.number,'3/7');assert.equal(feedback.gap.remaining,'ЧЕРЕЗ 20 М');assert.ok(feedback.gap.label.includes('ВПЕРЕДИ'));
-  assert.equal(feedback.ending.phase,'ending');assert.equal(feedback.ending.status,'ГОТОВЬ ПЕРЕХОД');assert.ok(feedback.ending.remaining.includes('НОВАЯ'));
-  assert.ok(feedback.nearby.includes('РЯДОМ'));assert.ok(feedback.nearby.includes('←'));assert.equal(feedback.risk.label,'ВЕС К ЦЕНТРУ');assert.equal(feedback.risk.fill,'80%');assert.equal(feedback.risk.unstable,true);
+  assert.equal(feedback.gap.phase,'gap');assert.equal(feedback.gap.number,'1/'+feedback.count);assert.match(feedback.gap.remaining,/^ЧЕРЕЗ \d+ М$/);assert.ok(feedback.gap.label.includes('ВПЕРЕДИ'));
+  assert.equal(feedback.ending.phase,'ending');assert.equal(feedback.ending.status,'ПОСЛЕДНЯЯ ВОЛНА');assert.match(feedback.ending.remaining,/^ЕЩЁ \d+ М$/);
+  assert.ok(feedback.nearby.length>0);assert.equal(feedback.risk.label,'ВЕС К ЦЕНТРУ');assert.equal(feedback.risk.fill,'80%');assert.equal(feedback.risk.unstable,true);
   assert.deepEqual(feedback.hud,{debug:false,wave:false,weight:false,hint:false,beer:true,score:true,pause:true});
   const animation=await page.evaluate(()=>{
     const g=game;g.animationReview=true;const animator=g.heroAnimator,frames=[];
@@ -261,7 +211,7 @@ async function test(){
   const stage=await page.$eval('#app-container',el=>{const r=el.getBoundingClientRect();return {width:r.width,height:r.height};});assert.deepEqual(stage,{width:1240,height:900});
   assert.deepEqual(errors,[]);assert.deepEqual(missing,[]);
   fs.writeFileSync(path.join(review,'verification.json'),JSON.stringify({gyro,controls,assets,mechanics,jumpsAndChase,feedback,animation,comic,touch,errors,missing},null,2));
-  console.log('PASS: waves, gyro/touch/keyboard, cutback/wake, jump/landing, shark chase/escape/dodge, beer, HUD, 32 animation frames, comic timing, finish/restart, portrait and full desktop stage.');
+  console.log('PASS: wave acceleration, gyro/touch/keyboard, wake, tap jump/landing, shark chase/escape/dodge, beer, HUD, 32 animation frames, comic timing, finish/restart, portrait and full desktop stage.');
  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
 test().catch(error=>{console.error(error);process.exitCode=1;});

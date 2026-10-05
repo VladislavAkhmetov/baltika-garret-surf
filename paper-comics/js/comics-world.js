@@ -159,19 +159,19 @@ class ComicsWorld {
   update(){
     const g=this.game,p=g.p,n=90,positions=this.beach.geometry.attributes.position;
     for(let i=0;i<=n;i++){
-      const z=p.z-28+i/n*240,edge=11.3+Math.sin(z*.045)*.65;
+      const z=p.z-28+i/n*240,edge=19.3+Math.sin(z*.045)*.65;
       positions.setXYZ(i*2,-edge,g.wave.height(edge,z)+.1,z);
       positions.setXYZ(i*2+1,-38,2.1,z);
     }
     positions.needsUpdate=true;
     const shore=this.shore.geometry.attributes.position;
     for(let i=0;i<=80;i++){
-      const z=p.z-26+i/80*238,x=11.25+Math.sin(z*.045)*.65;
+      const z=p.z-26+i/80*238,x=19.25+Math.sin(z*.045)*.65;
       for(let side=0;side<2;side++)shore.setXYZ(i*2+side,-x+(side-.5)*.72,g.wave.height(x,z)+.15,z+(g.wave.hash(i)-.5)*.7);
     }
     shore.needsUpdate=true;
-    this.palms.forEach(({group,offset},i)=>{const z=p.z-20+((offset-p.z*.5)%230+230)%230;group.position.set(-19-i%2*4,1.2,z);group.rotation.z=Math.sin(Math.floor(g.time*12)*.13+i)*.018;});
-    this.umbrellas.forEach(({group,offset},i)=>{const z=p.z-20+((offset-p.z*.5)%230+230)%230;group.position.set(-15-i%2*3,1,z);});
+    this.palms.forEach(({group,offset},i)=>{const z=p.z-20+((offset-p.z*.5)%230+230)%230;group.position.set(-27-i%2*4,1.2,z);group.rotation.z=Math.sin(Math.floor(g.time*12)*.13+i)*.018;});
+    this.umbrellas.forEach(({group,offset},i)=>{const z=p.z-20+((offset-p.z*.5)%230+230)%230;group.position.set(-23-i%2*3,1,z);});
     this.hazards.forEach(h=>{
       const diving=h.type==='shark'&&h.endAt!==null?Math.min(1,(g.time-h.endAt)/.65):0;
       const y=g.wave.height(h.x,h.z);h.group.position.set(-h.x,y+.18-diving*2,h.z);h.group.visible=Math.abs(h.z-p.z)<160&&(h.type!=='shark'||h.activeAt!==null&&diving<1);

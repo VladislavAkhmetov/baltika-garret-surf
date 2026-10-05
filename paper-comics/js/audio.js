@@ -10,6 +10,7 @@ class SurfAudio {
   constructor() {
     this.ctx = null;
     this.isMuted = false;
+    try { this.isMuted = localStorage.getItem('garret-paper-muted') === 'true'; } catch (_) {}
     this.bgmPlaying = false;
     this.masterGain = null;
     this.sfxGain = null;
@@ -105,12 +106,15 @@ class SurfAudio {
 
   toggleMute() {
     this.isMuted = !this.isMuted;
+    try { localStorage.setItem('garret-paper-muted', String(this.isMuted)); } catch (_) {}
     if (this.masterGain && this.ctx) {
       this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.85, this.ctx.currentTime);
     }
     if (this.bgmAudio) {
       this.bgmAudio.muted = this.isMuted;
     }
+    // A race can start muted before the music element has ever been created.
+    if (!this.isMuted && this.bgmPlaying) this.startBGM();
     return this.isMuted;
   }
 
@@ -220,6 +224,7 @@ class SurfAudio {
     if (!this.bgmAudio) {
       this.bgmAudio = new Audio(this.basePath + 'bgm_surf_rock.mp3');
       this.bgmAudio.loop = true;
+      this.bgmAudio.muted = this.isMuted;
       this.bgmAudio.volume = 0.45;
       
       try {
@@ -406,15 +411,15 @@ class SurfAudio {
     });
   }
 
-  playJump() {
+  playJump(strength = .5) {
     if (!this.ctx || this.isMuted) return;
-    this.playSound('surf_jump', { volume: 0.82, rate: 1.0 + Math.random() * 0.08 });
+    this.playSound('surf_jump', { volume: .70+strength*.22, rate: 1.10-strength*.18 });
   }
 
-  playLanding(clean = true) {
+  playLanding(clean = true, strength = .5) {
     if (!this.ctx || this.isMuted) return;
     const sound = clean ? 'landing_clean' : 'landing_hard';
-    this.playSound(sound, { volume: clean ? 0.75 : 0.88, rate: 0.95 + Math.random() * 0.1 });
+    this.playSound(sound, { volume: clean ? .70+strength*.24 : .88, rate: 1.05-strength*.18 });
   }
 
   playWipeout(strength = 1.0) {

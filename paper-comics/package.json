@@ -6,7 +6,11 @@
     "test:playthrough": "node scripts/check-playthrough.cjs",
     "test:novice": "node scripts/test_novice.cjs",
     "test:wager": "node scripts/test_wager.cjs",
-    "test:airwaves": "node scripts/test_airwaves.cjs"
+    "test:airwaves": "node scripts/test_airwaves.cjs",
+    "test:ride-ui": "node scripts/test_ride-ui.cjs",
+    "test:sea-visuals": "node scripts/test_sea-visuals.cjs",
+    "test:water-motion": "node scripts/test_water-motion.cjs",
+    "test:arcade-jump": "node scripts/test_arcade-jump.cjs"
   },
   "dependencies": {
     "puppeteer-core": "^24.43.1"

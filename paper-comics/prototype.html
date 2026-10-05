@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="css/onboarding.css">
   <link rel="stylesheet" href="css/companion.css">
   <link rel="stylesheet" href="css/ride-ui.css">
+  <link rel="stylesheet" href="css/story-comic.css">
 </head>
 <body>
   <main id="app-container" aria-label="Игра Ни капли" tabindex="-1">
@@ -20,9 +21,10 @@
     <div class="print-grain" aria-hidden="true"></div>
     <header class="hud" id="hud">
       <div class="beer-ticket paper"><canvas id="beer-canvas" width="104" height="144"></canvas><div><span class="ticket-label">ДОВЕЗИ</span><strong id="beer-value">100<span>%</span></strong><div class="beer-track"><i id="beer-fill"></i></div></div></div>
-      <div class="collection-ticket paper"><span>ВОЛНЫ</span><div class="wave-caps"><i class="wave-cap"><img src="assets/sprites/cap_fish.png" alt="Крышка первой волны"></i><i class="wave-cap"><img src="assets/sprites/cap_palm.png" alt="Крышка второй волны"></i><i class="wave-cap sun-cap" aria-label="Крышка третьей волны">☀</i></div><small id="collection-value">0 / 3</small></div><div class="score-ticket"><span>СЧЁТ</span><strong id="score-value">000000</strong></div>
+      <div class="collection-ticket paper"><div class="wave-caps"><i class="wave-cap"><img src="assets/sprites/cap_fish.png" alt="Крышка первой волны"></i><i class="wave-cap"><img src="assets/sprites/cap_palm.png" alt="Крышка второй волны"></i><i class="wave-cap sun-cap" aria-label="Крышка третьей волны">☀</i></div><small id="collection-value">0 / 3</small></div><div class="score-ticket"><span>СЧЁТ</span><strong id="score-value">000000</strong></div>
       <button id="pause-button" class="small-button paper" aria-label="Пауза">Ⅱ</button>
     </header>
+    <button id="sound-button" class="sound-button paper" type="button" aria-label="Отключить звук" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="sound-waves" d="M16 8c2 2 2 6 0 8m3-11c4 4 4 10 0 14"/><path class="sound-off" d="m17 9 5 6m0-6-5 6"/></svg></button>
     <div id="ride-debug" class="hidden" aria-hidden="true">
       <div class="caps-ticket paper"><img id="cap-icon" alt="Крышка"><span id="caps-value">0</span><span class="ticket-label">КРЫШЕК</span></div>
       <span id="input-label" class="input-label paper">НАКЛОН ТЕЛЕФОНА</span>
@@ -44,7 +46,7 @@
     <div id="shark-threat" aria-hidden="true"><i class="fin-icon"></i><b></b></div>
     <div id="balance-cue" class="balance-cue paper hidden" role="status"><strong>ДЕРЖИ ГРЕБЕНЬ</strong><div class="balance-rail"><i class="balance-safe"></i><i class="balance-needle"></i></div><small>ПО ЦЕНТРУ</small><div class="catch-track"><i class="catch-fill"></i></div></div>
     <div id="wipeout-screen" class="wipeout-screen hidden" role="status"><span>БУЛЬК!</span><strong>ДОСКА ЖДЁТ.</strong><p>−18% пива · комбо сброшено<br>Возвращаемся на спокойную воду</p></div>
-    <div class="steer-controls"><button id="steer-left" class="paper" aria-label="Повернуть влево">←</button><button id="steer-right" class="paper" aria-label="Повернуть вправо">→</button></div><button id="jump-button" aria-label="Прыжок: удержать и отпустить" title="Прыжок · пробел"><b id="jump-glyph">↑</b></button>
+    <div class="steer-controls"><button id="steer-left" class="paper" aria-label="Повернуть влево">←</button><button id="steer-right" class="paper" aria-label="Повернуть вправо">→</button></div><button id="jump-button" aria-label="Прыжок: нажать один раз" title="Прыжок · пробел"><b id="jump-glyph">↑</b></button>
     <div id="bottom-hud" class="bottom-hud">
       <div class="speed-ticket"><strong id="speed-value">26</strong><span>М/С</span><div id="speed-meter"></div></div>
       <div class="route-ticket" aria-label="Путь до бара" role="progressbar" aria-valuemin="0" aria-valuemax="1200" aria-valuenow="0"><div class="route-track"><i id="route-fill"></i></div></div>
@@ -77,10 +79,13 @@
       </div>
       <footer class="selection-footer"><button id="setup-next" class="yellow-button" data-primary>ПРОДОЛЖИТЬ</button></footer>
     </section>
-    <section id="story-screen" class="screen journey story-screen hidden" aria-label="Начало истории" data-page="0">
-      <header class="journey-header"><button id="story-prev" class="back-button paper" aria-label="Предыдущая сцена">←</button><span id="story-tag" class="paper"></span><button id="story-skip" class="skip-button paper">ПРОПУСТИТЬ</button></header>
-      <div class="story-panels"><div class="story-main-panel"><div class="story-art"></div><h2 id="story-title"></h2><span class="story-word" id="story-word"></span></div><div class="story-close-panel"><div class="story-close-art"></div><canvas id="story-companion" class="story-companion" role="img" aria-label="Клешня в панике вскидывает клешни" hidden></canvas><p class="paper" id="story-aside"></p><div class="story-speedlines"></div></div></div>
-      <div class="story-bottom"><div class="story-dialogue paper" aria-live="polite"><strong id="story-speaker"></strong><p id="story-line"></p></div><p id="story-caption" class="story-caption"></p><nav class="story-nav"><div class="story-dots" aria-label="Сцена истории"><i class="story-dot"></i><i class="story-dot"></i><i class="story-dot"></i><i class="story-dot"></i></div><button id="story-next" class="yellow-button" data-primary>ДАЛЬШЕ →</button></nav></div>
+    <section id="story-screen" class="screen journey story-screen hidden" aria-label="Комикс: начало истории" data-page="0">
+      <header class="comic-toolbar"><button id="story-prev" aria-label="Вернуться к выбору">←</button><button id="story-skip">Пропустить</button></header>
+      <div class="comic-book">
+        <div id="comic-page" class="comic-page" data-comic-page="0" role="group" aria-label="Пари и незваный штурман"></div>
+        <div id="comic-loading" class="comic-loading" role="status"><span>РИСУЕМ ВОЛНУ…</span><button id="comic-retry" class="yellow-button" hidden>ПОВТОРИТЬ</button></div>
+      </div>
+      <nav class="comic-nav" aria-label="Страницы комикса"><button id="story-next" class="yellow-button" data-primary>ДАЛЬШЕ →</button></nav>
       <p id="story-error" class="story-error paper hidden" role="alert"></p>
     </section>
     <section id="pause-screen" class="screen hidden">

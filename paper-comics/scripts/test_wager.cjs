@@ -21,16 +21,23 @@ async function run(){
       await page.goto(base,{waitUntil:'networkidle0'});await page.waitForFunction(()=>window.game);
       await page.evaluate(async()=>{await game.companion.ready;});
       await page.click('#start-button');await page.click('#setup-next');
-      for(let i=0;i<4;i++){
+      const pages=await page.evaluate(()=>game.journey.story.length);assert.equal(pages,2);
+      for(let i=0;i<pages;i++){
+        await page.waitForFunction(()=>document.getElementById('comic-loading').hidden);
+        await page.evaluate(async()=>{await document.fonts.ready;await Promise.all(document.getAnimations().map(a=>a.finished.catch(()=>{})));});
         const layout=await page.evaluate(()=>{
-          const panel=document.querySelector('.story-main-panel').getBoundingClientRect(),title=document.getElementById('story-title');
-          const range=document.createRange();range.selectNodeContents(title);const text=range.getBoundingClientRect();
           const button=document.getElementById('story-next').getBoundingClientRect(),stage=game.container.getBoundingClientRect();
-          const dialogue=document.querySelector('.story-dialogue').getBoundingClientRect();
-          return {page:game.journey.page,titleFits:text.right<=panel.right+2,buttonFits:button.bottom<=stage.bottom+1&&button.right<=stage.right+1,dialogueFits:dialogue.bottom<button.top,tag:document.getElementById('story-tag').textContent};
-        });layouts.push({name,...layout});assert.equal(layout.page,i);assert.ok(layout.titleFits,name+' title '+i);assert.ok(layout.buttonFits,name+' button '+i);assert.ok(layout.dialogueFits,name+' dialogue '+i);
-        assert.ok(['ПАРИ','БЕЗУМНЫЙ','СУДЬЯ','КУБОК'].some(word=>layout.tag.includes(word)));
-        await shot(name+'-story-'+(i+1));await page.click('#story-next');
+          const panels=[...document.querySelectorAll('.comic-panel')].map(panel=>{
+            const image=panel.querySelector('img'),bubble=panel.querySelector('.comic-bubble'),r=panel.getBoundingClientRect(),b=bubble.getBoundingClientRect();
+            const range=document.createRange();range.selectNodeContents(bubble);const text=range.getBoundingClientRect();
+            return {image:image.complete&&image.naturalWidth>500,visible:r.width>=120&&r.height>=120,font:parseFloat(getComputedStyle(bubble).fontSize),bubbleFits:b.left>=r.left-2&&b.right<=r.right+2&&b.top>=r.top-2&&b.bottom<=r.bottom+2,textFits:text.width<b.width&&text.height<b.height,line:bubble.textContent};
+          });
+          return {page:game.journey.page,panels,buttonFits:button.bottom<=stage.bottom+1&&button.right<=stage.right+1,oldCaptions:document.querySelectorAll('.story-dialogue,.story-caption,#story-tag').length};
+        });layouts.push({name,...layout});assert.equal(layout.page,i);assert.ok(layout.buttonFits,name+' button '+i);assert.equal(layout.oldCaptions,0);assert.equal(layout.panels.length,3);
+        layout.panels.forEach((panel,j)=>{assert.ok(panel.image,name+' actual image '+i+'/'+j);assert.ok(panel.visible,name+' frame visible '+i+'/'+j);assert.ok(panel.font>=20,name+' readable bubble '+i+'/'+j);assert.ok(panel.bubbleFits&&panel.textFits,name+' bubble fits '+i+'/'+j);});
+        await shot(name+'-story-'+(i+1));
+        if(i===1){await page.click('#story-prev');assert.equal(await page.evaluate(()=>game.journey.page),0);await page.click('#story-next');await page.waitForFunction(()=>document.getElementById('comic-loading').hidden);}
+        await page.click('#story-next');
       }
       await page.waitForFunction(()=>game.state==='playing');
       await page.evaluate(()=>{
@@ -48,7 +55,7 @@ async function run(){
       await page.evaluate(()=>{const g=game;g.p.airborne=false;g.p.airY=0;g.p.y=g.wave.height(g.p.x,g.p.z);g.p.lean=.65;g.p.heading=.2;g.balance.roll=.3;g.updateVisuals(0);g.renderer.render(g.scene,g.camera);});
       assert.ok(Math.abs(await page.evaluate(()=>game.companion.card.rotation.z))>.01);await shot(name+'-tail-turn');
       for(const [outcome,level] of [['victory',.30],['defeat',.299]]){
-        await page.evaluate(level=>{game.mug.level=level;game.waveRide.totalCaught=0;game.finish();},level);
+        await page.evaluate(level=>{game.state='paused';game.mug.level=level;game.waveRide.totalCaught=0;game.finish();},level);
         assert.equal(await page.$eval('#result-screen',el=>el.dataset.outcome),outcome);
         assert.equal(await page.$eval('#result-beer',el=>el.textContent),outcome==='victory'?'30%':'29%');
         const result=await page.evaluate(()=>{const c=document.querySelector('.result-card').getBoundingClientRect(),b=document.getElementById('replay-button').getBoundingClientRect();return {fits:b.top>=c.top&&b.bottom<=c.bottom,line:document.getElementById('result-crab-line').textContent,canvas:document.getElementById('result-crab').width};});
@@ -62,15 +69,32 @@ async function run(){
       const shark=g.companion.heard.has('shark'),priority=document.getElementById('crab-callout').dataset.event;
       const repeated=g.companion.react('shark',true);
       g.time+=4;g.world.endChase(h,true);const escape=g.companion.heard.has('escape');
-      g.time+=4;g.awardTrick('КАРВИНГ',100);const trick=g.companion.heard.has('trick');
+      g.time+=8;g.awardTrick('КАРВИНГ',100);const trick=g.companion.heard.has('trick');
       g.time+=4;g.companion.step();const expired=!document.getElementById('crab-callout').classList.contains('visible');
       g.reset();const reset=g.companion.heard.size===0&&g.companion.pose==='rest';
       return {spill,shark,priority,repeated,escape,trick,expired,reset};
     });assert.deepEqual(events,{spill:true,shark:true,priority:'shark',repeated:false,escape:true,trick:true,expired:true,reset:true});
+    // An unavailable illustration must show a retry, never an empty blue panel.
+    await page.setCacheEnabled(false);await page.setRequestInterception(true);
+    let failComic=true;
+    const intercept=request=>(failComic&&request.url().endsWith('comic-crab-v4.png')?request.abort():request.continue()).catch(()=>{});
+    page.on('request',intercept);
+    await page.goto(base,{waitUntil:'networkidle0'});await page.waitForFunction(()=>window.game);
+    await page.click('#start-button');await page.click('#setup-next');
+    await page.waitForFunction(()=>!document.getElementById('comic-retry').hidden);
+    assert.equal(await page.$eval('#comic-loading span',el=>el.textContent),'КАДР НЕ ЗАГРУЗИЛСЯ');
+    failComic=false;await page.click('#comic-retry');await page.waitForFunction(()=>document.getElementById('comic-loading').hidden);
+    assert.equal(await page.$$eval('.comic-panel img',images=>images.length===3&&images.every(image=>image.complete&&image.naturalWidth>500)),true);
+    await page.evaluate(()=>document.activeElement.blur());
+    await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>game.journey.page),1);
+    await page.keyboard.press('ArrowLeft');assert.equal(await page.evaluate(()=>game.journey.page),0);
+    await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>game.journey.screen),'setup');
+    await page.click('#setup-next');await page.click('#story-skip');await page.waitForFunction(()=>game.state==='playing');
+    page.off('request',intercept);await page.setRequestInterception(false);
     await page.goto(base+'/prototype.html',{waitUntil:'networkidle0'});await page.waitForFunction(()=>window.game);await page.evaluate(async()=>{await game.start(false);});assert.equal(await page.evaluate(()=>game.state),'playing');
     assert.deepEqual(errors,[]);assert.deepEqual(missing,[]);
-    fs.writeFileSync(path.join(review,'verification.json'),JSON.stringify({layouts,events,errors,missing},null,2));
-    console.log('PASS: wager comic in four viewports, tail attachment, jump/turn poses, 30% win boundary, result CTA, event priorities/cooldowns, reset and prototype entry.');
+    fs.writeFileSync(path.join(review,'verification.json'),JSON.stringify({layouts,events,imageRetry:true,keyboardNavigation:true,skip:true,errors,missing},null,2));
+    console.log('PASS: two-page comic with decoded artwork and readable in-panel dialogue in four viewports, image retry, keyboard/back/skip navigation, tail attachment, jump/turn poses, 30% win boundary, result CTA, event priorities/cooldowns, reset and prototype entry.');
   }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
 run().catch(e=>{console.error(e);process.exitCode=1;});

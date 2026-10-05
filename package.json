@@ -6,7 +6,11 @@
     "test:playthrough": "node paper-comics/scripts/check-playthrough.cjs",
     "test:novice": "node paper-comics/scripts/test_novice.cjs",
     "test:wager": "node paper-comics/scripts/test_wager.cjs",
-    "test:airwaves": "node paper-comics/scripts/test_airwaves.cjs"
+    "test:airwaves": "node paper-comics/scripts/test_airwaves.cjs",
+    "test:ride-ui": "node paper-comics/scripts/test_ride-ui.cjs",
+    "test:sea-visuals": "node paper-comics/scripts/test_sea-visuals.cjs",
+    "test:water-motion": "node paper-comics/scripts/test_water-motion.cjs",
+    "test:arcade-jump": "node paper-comics/scripts/test_arcade-jump.cjs"
   },
   "dependencies": {
     "puppeteer-core": "^24.43.1"

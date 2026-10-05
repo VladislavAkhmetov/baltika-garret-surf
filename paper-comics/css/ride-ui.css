@@ -1,6 +1,13 @@
 /* Read the action at a glance; button symbols replace permanent key legends. */
 .beer-ticket .ticket-label,.score-ticket>span{display:none!important}
+.score-ticket{width:100%;max-width:175px}.score-ticket strong{white-space:nowrap}
 .collection-ticket>span{font-size:24px}.collection-ticket{padding-top:10px}
+.collection-ticket{min-height:68px;display:flex;align-items:center;justify-content:center}.collection-ticket .wave-caps{margin:0}
+.sound-button{position:absolute;z-index:12;right:14px;top:max(14px,env(safe-area-inset-top));width:44px;height:44px;display:grid;place-items:center;background-size:100% 100%;transform:rotate(3deg);padding:10px}
+.sound-button svg{width:26px;height:26px;overflow:visible;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sound-button .sound-off{display:none}.sound-button[aria-pressed="true"] .sound-waves{display:none}.sound-button[aria-pressed="true"] .sound-off{display:block}
+#app-container.playing .sound-button{right:76px;top:79px}
+#app-container:has(#story-screen:not(.hidden)) .sound-button{left:66px;right:auto;top:7px;width:40px;height:40px}
 .bottom-hud{left:32%;right:28%;bottom:30px}
 .route-ticket{padding:0;background:none;filter:none;transform:none}
 .route-track{height:5px;margin:0;background:#fff2d166;border:1px solid #214a5450}
@@ -21,6 +28,8 @@
 .result-card .menu-link{display:block;margin:15px auto 0;font:17px Rubik,sans-serif;padding:8px}
 .result-card .yellow-button{font-size:22px;min-height:56px}
 @media(max-width:650px){
+ .collection-ticket{min-height:64px}
+ #app-container.playing .sound-button{right:53px;top:79px}
  .collection-ticket>span{font-size:20px}.collection-ticket{padding:10px 8px}
  .ride-coach{max-width:83%;padding:15px 22px;left:50%}
  .ride-coach strong{font-size:17px}.ride-coach span{font-size:16px}
@@ -31,6 +40,7 @@
  .result-summary{margin:18px 0}.result-companion canvas{width:84px;height:76px}
 }
 @media(orientation:landscape) and (max-height:520px){
+ #app-container.playing .sound-button{right:67px;top:64px;width:40px;height:40px}
  .ride-coach{max-width:370px;padding:12px 22px}.ride-coach strong{font-size:17px}.ride-coach span{font-size:16px}
  .result-card{width:min(690px,90%);padding:18px 30px 18px 170px}
  .result-card h2{font-size:25px;margin:0 0 7px}.result-beer{font-size:59px}.result-card #result-comment{font-size:19px;margin:6px 0}

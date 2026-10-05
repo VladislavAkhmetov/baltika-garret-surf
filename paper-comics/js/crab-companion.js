@@ -9,16 +9,17 @@ class CrabCompanion {
       defeat:{rect:[826,608,652,400]}
     };
     this.lines={
-      spill:['Ой, плеснуло! Мой панцирь в пене!','Аккуратнее с виражами!'],
-      shark:['А-А-А! Зубы сзади! Греби сильнее!'],
-      escape:['Ха! Мы для неё слишком быстрые!'],
-      dodge:['Восемь ног — и все на месте!'],
-      trick:['Неплохо для двуногого!']
+      spill:['Эй! Панцирь в пене!','Полегче с виражами!'],
+      shark:['Зубы сзади!'],
+      escape:['Не догонишь!'],
+      dodge:['Все ноги на месте!'],
+      trick:['Неплохо, двуногий!']
     };
     this.card=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({transparent:true,alphaTest:.18,depthWrite:false,side:THREE.DoubleSide}));
     this.card.renderOrder=4;this.card.visible=false;game.player.group.add(this.card);
     this.tail=new THREE.Vector3(.30,-1.78,.075);this.anchor=new THREE.Vector3();
     this.boardUp=new THREE.Vector3();this.cameraUp=new THREE.Vector3();this.cameraRight=new THREE.Vector3();
+    this.speechPoint=new THREE.Vector3();this.callout=document.getElementById('crab-callout');
     const loader=new THREE.TextureLoader();
     const crabReady=new Promise((resolve,reject)=>loader.load('assets/comics/crab-kleshnya-sheet-v1.png',texture=>{
       texture.minFilter=texture.magFilter=THREE.LinearFilter;texture.generateMipmaps=false;
@@ -28,7 +29,7 @@ class CrabCompanion {
         crop.repeat.set(w/this.image.width,h/this.image.height);
         crop.offset.set(x/this.image.width,1-(y+h)/this.image.height);crop.needsUpdate=true;this.textures[name]=crop;
       }
-      this.setPose('rest');this.drawStory(game.journey?.page??0);resolve();
+      this.setPose('rest');resolve();
     },undefined,()=>reject(Error('Не удалось загрузить Клешню'))));
     const boardReady=new Promise((resolve,reject)=>loader.load('assets/comics/surfboard-paper-v1.png',texture=>{
       // The deck's silhouette occupies a narrow strip in the portrait source.
@@ -38,7 +39,7 @@ class CrabCompanion {
       for(const child of [...board.children]){board.remove(child);child.material?.dispose();}
       board.geometry.dispose();board.material.dispose();
       board.geometry=new THREE.PlaneGeometry(1.52,4.8);
-      board.material=new THREE.MeshBasicMaterial({map:texture,transparent:true,alphaTest:.25,side:THREE.DoubleSide});
+      board.material=new THREE.MeshBasicMaterial({map:texture,transparent:true,alphaTest:.25,depthWrite:false,side:THREE.DoubleSide});
       board.scale.set(1,1,1);board.renderOrder=1;this.boardTexture=texture;resolve();
     },undefined,()=>reject(Error('Не удалось загрузить доску'))));
     this.ready=Promise.all([crabReady,boardReady]);
@@ -61,12 +62,14 @@ class CrabCompanion {
     const urgent=event==='shark',priority=urgent?3:event==='spill'?2:1;
     const cooldown=event==='spill'?7:event==='trick'?9:4;
     if(now-(this.lastEvents[event]??-100)<cooldown)return false;
-    if(!force&&!urgent&&(now<this.bubbleUntil&&priority<this.priority||now-this.lastSpoken<3&&priority<=this.priority))return false;
+    const gap=event==='escape'?3:8;
+    if(!force&&!urgent&&(now<this.bubbleUntil&&priority<this.priority||now-this.lastSpoken<gap&&priority<=this.priority))return false;
     const index=this.lineIndex[event]??0;this.lineIndex[event]=index+1;
-    const el=document.getElementById('crab-callout');if(!el)return false;
+    const el=this.callout;if(!el)return false;
     el.querySelector('span').textContent=lines[index%lines.length];el.dataset.event=event;el.classList.add('visible');
-    this.lastSpoken=now;this.lastEvents[event]=now;this.priority=priority;this.bubbleUntil=now+3.4;this.heard.add(event);
+    this.lastSpoken=now;this.lastEvents[event]=now;this.priority=priority;this.bubbleUntil=now+(urgent?2.8:2.3);this.heard.add(event);
     if(urgent||event==='trick'||event==='escape')this.raisedUntil=now+1.5;
+    this.positionSpeech();
     return true;
   }
   step(){if(this.game.time>=this.bubbleUntil)document.getElementById('crab-callout')?.classList.remove('visible');}
@@ -85,15 +88,27 @@ class CrabCompanion {
     const bank=Math.atan2(this.boardUp.dot(this.cameraUp),Math.abs(this.boardUp.dot(this.cameraRight)));
     this.card.rotateZ(bank);
     this.card.visible=g.player.group.visible;
+    this.positionSpeech();
+  }
+  positionSpeech(){
+    const el=this.callout;if(!el?.classList.contains('visible'))return;
+    const g=this.game;
+    this.card.getWorldPosition(this.speechPoint);this.speechPoint.project(g.camera);
+    const point=this.speechPoint,offscreen=!this.card.visible||g.p.fallen||g.comics.active||point.z<-1||point.z>1||Math.abs(point.x)>.96||Math.abs(point.y)>.96;
+    el.classList.toggle('offscreen',!!offscreen);if(offscreen)return;
+    const width=g.container.clientWidth,height=g.container.clientHeight;
+    const x=(point.x+1)*width/2,y=(1-point.y)*height/2;
+    const bw=el.offsetWidth,bh=el.offsetHeight,gap=23,margin=9;
+    const side=x-bw-gap>=margin?'left':'right';
+    const left=THREE.MathUtils.clamp(side==='left'?x-bw-gap:x+gap,margin,width-bw-margin);
+    const top=THREE.MathUtils.clamp(y-bh/2,Math.min(140,height*.3),height-(height<520?89:98)-bh);
+    el.dataset.side=side;el.style.left=left+'px';el.style.top=top+'px';
+    el.style.setProperty('--speech-tail-y',THREE.MathUtils.clamp(y-top,14,bh-14)+'px');
   }
   draw(canvas,name){
     if(!canvas||!this.image)return;
     const [x,y,w,h]=this.frames[name].rect;
     canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(this.image,x,y,w,h,0,0,w,h);
-  }
-  drawStory(page){
-    const canvas=document.getElementById('story-companion');
-    if(canvas){canvas.hidden=page!==1;this.draw(canvas,'raised');}
   }
   showResult(success){
     this.draw(document.getElementById('result-crab'),success?'victory':'defeat');

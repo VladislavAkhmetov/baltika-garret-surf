@@ -1,12 +1,10 @@
 /* Paper navigator, cinematic close-up and the wager's two outcomes. */
-.story-screen[data-page="1"] .story-close-art{background-image:none;background-color:#f2bb40}
-.story-companion{position:absolute;left:3%;top:12%;width:94%;height:58%;object-fit:contain;transform:rotate(-7deg);z-index:1}
-.story-screen[data-page="2"] .story-main-panel h2{font-size:clamp(20px,3.1cqw,43px)}
-.story-dialogue p{font-size:clamp(20px,2.3cqw,29px);line-height:1.25}
-.crab-callout{position:absolute;z-index:6;left:4%;top:40%;width:min(320px,70%);padding:19px 24px;pointer-events:none;visibility:hidden;opacity:0;transform:translateY(8px) rotate(-3deg);transition:opacity .16s,transform .16s;color:var(--ink)}
-.crab-callout.visible{visibility:visible;opacity:1;transform:translateY(0) rotate(-3deg)}
-.crab-callout strong{display:block;font:700 10px Rubik,sans-serif;letter-spacing:.6px;margin-bottom:6px;color:#a93d21}
-.crab-callout span{display:block;font:700 25px/1.05 Caveat,cursive}
+.crab-callout{position:absolute;z-index:6;left:0;top:0;width:max-content;max-width:168px;padding:10px 14px;pointer-events:none;visibility:hidden;opacity:0;transform:translateY(4px);transition:opacity .16s,transform .16s;color:var(--ink);background:#fff5dc;border:2px solid var(--ink);border-radius:46% 42% 43% 38%;clip-path:none;filter:drop-shadow(1px 2px 0 #123d4933)}
+.crab-callout.visible{visibility:visible;opacity:1;transform:translateY(0)}
+.crab-callout::after{content:"";position:absolute;right:-13px;top:calc(var(--speech-tail-y,50%) - 7px);width:19px;height:13px;background:#fff5dc;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:skewX(34deg) rotate(-22deg)}
+.crab-callout[data-side="right"]::after{right:auto;left:-13px;border-right:0;border-left:2px solid var(--ink);transform:skewX(-34deg) rotate(22deg)}
+.crab-callout span{position:relative;z-index:1;display:block;font:700 23px/1.05 Caveat,cursive;text-align:center}
+.crab-callout.offscreen{visibility:hidden;opacity:0}
 #app-container:not(.playing) .crab-callout,.fallen .crab-callout{visibility:hidden}
 #result-screen{padding:15px}
 .result-card{max-height:calc(100dvh - 30px);overflow:auto;overscroll-behavior:contain}
@@ -18,13 +16,7 @@
 .result-companion strong{display:block;font:700 10px Rubik,sans-serif;color:#a93d21;margin-bottom:6px}
 .result-companion span{font:700 25px/1.05 Caveat,cursive}
 @media(max-width:650px){
- .story-dialogue p{font-size:18px;line-height:1.22}
- .story-screen .journey-header>span{font-size:15px}
- .story-screen[data-page="2"] .story-main-panel h2{font-size:20px}
- .story-screen[data-page="1"] .story-close-panel{width:43%;height:54%}
- .story-screen[data-page="1"] .story-close-panel p{font-size:18px}
- .story-companion{top:4%;height:54%}
- .crab-callout{left:10px;top:40%;width:min(270px,69%);padding:16px 21px}
+ .crab-callout{max-width:154px;padding:9px 12px}
  .balance-cue{left:12px;bottom:109px;width:175px;padding:12px 19px;transform:rotate(-3deg)}
  .crab-callout span{font-size:22px}
  .result-card{padding:24px 24px}
@@ -35,21 +27,13 @@
  .result-companion span{font-size:22px}
 }
 @media(max-width:650px) and (max-height:710px){
- .story-dialogue p{font-size:16px}
- .story-caption{font-size:16px}
- .story-screen .journey-header>span{font-size:13px}
- .story-dialogue{min-height:0;padding-top:16px;padding-bottom:17px}
- .story-screen[data-page="1"] .story-close-panel p{font-size:16px}
  .result-card{padding:19px 24px}
  .result-card h2{font-size:25px;margin:8px 0}
  .result-companion canvas{width:76px;height:69px}
  .result-companion span{font-size:20px}
 }
 @media(orientation:landscape) and (max-height:520px){
- .story-dialogue p{font-size:16px}
- .story-screen[data-page="2"] .story-main-panel h2{font-size:18px}
- .story-screen[data-page="1"] .story-close-panel p{font-size:17px}
- .crab-callout{left:17px;top:42%;width:250px;padding:13px 20px}
+ .crab-callout{max-width:154px;padding:9px 12px}
  .balance-cue{left:50%;bottom:69px;width:220px;padding:11px 18px;transform:translateX(-50%) rotate(-2deg)}
  .crab-callout span{font-size:20px}
  .result-card{position:relative;max-width:680px;padding:15px 32px 15px 162px}

@@ -25,12 +25,17 @@ class HandBeer {
     this.liquid.addSpillListener((side,amount)=>this.emit(side,amount));
     this.reset();
   }
-  reset(){this.roll=0;this.rollVelocity=0;this.drops=[];this.printFrame=-1;this.peakSlosh=0;this.draw();}
+  reset(){this.roll=0;this.rollVelocity=0;this.drops=[];this.spillBudget=0;this.printFrame=-1;this.peakSlosh=0;this.draw();}
   emit(side,amount){
+    // The liquid reports tiny overflows every physics tick. Accumulate volume
+    // instead of turning each one into a full burst of amber drops.
+    this.spillBudget+=Math.max(0,amount)*160;
+    const count=Math.min(12,Math.floor(this.spillBudget));if(!count)return;
+    this.spillBudget-=count;
     const sign=side||Math.sign(this.roll)||1;
-    for(let i=0;i<Math.min(12,3+Math.ceil(amount*90));i++)this.drops.push({x:sign<0?122:258,y:91,vx:sign*(45+Math.random()*100),vy:-55-Math.random()*130,life:.65+Math.random()*.25,r:3+Math.random()*5});
+    for(let i=0;i<count;i++)this.drops.push({x:sign<0?122:258,y:91,vx:sign*(45+Math.random()*100),vy:-55-Math.random()*130,life:.65+Math.random()*.25,r:3+Math.random()*5});
     if(this.drops.length>42)this.drops.splice(0,this.drops.length-42);
-    if(this.game.state==='playing'&&this.game.p)this.game.emitBeer(sign,Math.min(10,3+Math.ceil(amount*100)));
+    if(this.game.state==='playing'&&this.game.p)this.game.emitBeer(sign,Math.min(10,count));
   }
   step(dt,turnAcceleration,wake,jerk){
     const g=this.game,p=g.p,assist=1-p.crouch*.45-Math.max(0,-p.pitch)*.18;

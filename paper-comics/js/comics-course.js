@@ -1,5 +1,6 @@
 window.COMICS_COURSE = {
   length:1200,
+  waveCount:21,
   waves:[
     {id:0,from:35,to:165,start:-4.4,end:-3.2,arc:2.2,height:2.6,width:10},
     {id:1,from:205,to:335,start:-1.7,end:-4.4,arc:-2.1,height:3.2,width:10.5},

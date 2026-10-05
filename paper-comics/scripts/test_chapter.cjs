@@ -30,7 +30,7 @@ async function run(){
       await page.click('#start-button');await check(name+'-02-setup');
       await page.click('[data-cycle="hero"][data-direction="1"]');assert.equal(await page.$eval('#setup-next',el=>el.disabled),true);await check(name+'-03-locked');await page.click('[data-cycle="hero"][data-direction="-1"]');
       await page.click('[data-cycle="location"][data-direction="1"]');assert.equal(await page.$eval('#setup-next',el=>el.disabled),true);await page.click('[data-cycle="location"][data-direction="-1"]');assert.equal(await page.$eval('#setup-next',el=>el.disabled),false);await page.click('#setup-next');
-      for(let i=0;i<4;i++){assert.equal(await page.$eval('#story-screen',el=>Number(el.dataset.page)),i);await check(name+'-04-story-'+(i+1));await page.click('#story-next');}
+      for(let i=0;i<2;i++){await page.waitForFunction(()=>document.getElementById('comic-loading').hidden);assert.equal(await page.$eval('#story-screen',el=>Number(el.dataset.page)),i);await check(name+'-04-story-'+(i+1));await page.click('#story-next');}
       await page.waitForFunction(()=>game.state==='playing');assert.equal(await page.$('#ready-screen'),null);
       await page.evaluate(()=>{game.state='paused';game.renderDirty=true;});await shot(name+'-05-onboarding');
       const cue=await page.evaluate(()=>{
@@ -53,37 +53,36 @@ async function run(){
       dispatchEvent(new KeyboardEvent('keydown',{code:'ArrowRight',bubbles:true}));for(let i=0;i<45;i++)g.step(1/120);g.updateHUD();const releasePrompt=document.getElementById('coach-title').textContent;
       dispatchEvent(new KeyboardEvent('keyup',{code:'ArrowRight',bubbles:true}));for(let i=0;i<80;i++)g.step(1/120);
       const completed=g.onboarding.completed.has('steer'),normalScale=g.onboarding.timeScale;
-      const w=g.wave.waves[0];g.p.z=90;g.p.x=g.wave.crestX(w,90)+w.width*.42;g.p.y=g.wave.height(g.p.x,90);
-      for(let i=0;i<80;i++)g.step(1/120);g.updateHUD();const feedbackHidden=document.getElementById('ride-coach').classList.contains('hidden');
+      g.wave.resetWaves(42);const w=g.wave.waves[0];g.time=w.encounterTime;g.wave.time=g.time;g.p.z=(w.from+w.to)/2;g.p.x=g.wave.crestX(w,g.p.z)+w.width*.34;g.p.y=g.wave.height(g.p.x,g.p.z);
+      for(let i=0;i<80;i++)g.step(1/120);g.updateHUD();const feedbackHidden=document.getElementById('ride-coach').classList.contains('hidden'),feedbackLesson=document.getElementById('ride-coach').dataset.lesson;
       for(let i=0;i<160;i++)g.step(1/120);g.updateHUD();g.updateCamera(1,true);g.updateVisuals(0);g.wave.update(g.p.z,g.time,true);g.renderer.render(g.scene,g.camera);g.state='paused';
-      return {scale,releasePrompt,completed,normalScale,feedbackHidden,waves:g.waveRide.totalCaught,lesson:document.getElementById('ride-coach').dataset.lesson};
-    });assert.ok(steering.scale<1);assert.equal(steering.releasePrompt,'ТЕПЕРЬ ОТПУСТИ');assert.ok(steering.completed&&steering.feedbackHidden);assert.equal(steering.normalScale,1);assert.ok(steering.waves>0);assert.equal(steering.lesson,'jump');await shot('onboarding-jump');
-    const release=await page.evaluate(()=>{const g=game;g.state='playing';g.jump.press();for(let i=0;i<45;i++)g.step(1/120);g.updateHUD();g.state='paused';return document.getElementById('ride-coach').dataset.lesson;});assert.equal(release,'release');await shot('onboarding-release');
-    const landing=await page.evaluate(()=>{const g=game;g.state='playing';g.jump.release();g.step(1/120);g.updateHUD();g.updateVisuals(0);g.renderer.render(g.scene,g.camera);g.state='paused';return {lesson:document.getElementById('ride-coach').dataset.lesson,jumped:g.onboarding.completed.has('jump')};});assert.equal(landing.lesson,'landing');assert.ok(landing.jumped);await shot('onboarding-landing');
+      return {scale,releasePrompt,completed,normalScale,feedbackHidden,feedbackLesson,waves:g.waveRide.totalCaught,lesson:document.getElementById('ride-coach').dataset.lesson};
+    });assert.ok(steering.scale<1);assert.equal(steering.releasePrompt,'ТЕПЕРЬ ОТПУСТИ');assert.ok(steering.completed&&(steering.feedbackHidden||steering.feedbackLesson==='jump'),'wave feedback yields to the optional jump lesson: '+JSON.stringify(steering));assert.equal(steering.normalScale,1);assert.ok(steering.waves>0);assert.equal(steering.lesson,'jump');await shot('onboarding-jump');
+    const landing=await page.evaluate(()=>{const g=game;g.state='playing';g.jump.press();g.step(1/120);g.updateHUD();g.updateVisuals(0);g.renderer.render(g.scene,g.camera);g.state='paused';return {lesson:document.getElementById('ride-coach').dataset.lesson,jumped:g.onboarding.completed.has('jump'),airborne:g.p.airborne,holding:g.jump.holding};});assert.equal(landing.lesson,'landing');assert.ok(landing.jumped&&landing.airborne&&!landing.holding);await shot('onboarding-tap-jump');
     const balanceLesson=await page.evaluate(()=>{
       const g=game;g.state='playing';while(g.p.airborne)g.step(1/120);const landed=g.onboarding.completed.has('landing');
       g.p.z=350;g.p.x=8;g.p.y=g.wave.height(8,350);g.balance.immunity=0;g.balance.disturb(.55,'ЖЁСТКАЯ ПОСАДКА',1);g.updateHUD();g.updateCamera(1,true);g.updateVisuals(0);g.wave.update(g.p.z,g.time,true);g.renderer.render(g.scene,g.camera);g.state='paused';
       return {landed,lesson:document.getElementById('ride-coach').dataset.lesson,line:document.getElementById('coach-line').textContent,scale:g.onboarding.timeScale};
-    });assert.ok(balanceLesson.landed);assert.equal(balanceLesson.lesson,'balance');assert.match(balanceLesson.line,/влево/);assert.ok(balanceLesson.scale<1);await shot('onboarding-balance');
+    });assert.ok(balanceLesson.landed);assert.equal(balanceLesson.lesson,'balance');assert.match(balanceLesson.line,/сама выровняется/);assert.equal(balanceLesson.scale,1);await shot('onboarding-balance');
     const learned=await page.evaluate(()=>{
       const g=game;g.state='playing';g.input.mode='touch';
       for(let i=0;i<400;i++){g.input.target=THREE.MathUtils.clamp(-g.balance.roll*1.7-g.balance.velocity*.85,-1,1);g.step(1/120);g.comics.update(1/120);}
       const saved=g.balance.saves>0,completed=g.onboarding.completed.has('balance'),normalScale=g.onboarding.timeScale;
       g.reset();g.state='paused';return {saved,completed,normalScale,remembered:['steer','wave','jump','landing','balance'].every(id=>g.onboarding.completed.has(id)),highlighted:document.querySelectorAll('.learn-control').length};
     });assert.ok(learned.saved&&learned.completed&&learned.remembered);assert.equal(learned.normalScale,1);assert.equal(learned.highlighted,0);
-    const onboarding={steering,release,landing,balanceLesson,learned};
+    const onboarding={steering,landing,balanceLesson,learned};
     const mechanics=await page.evaluate(()=>{
       const g=game,dt=1/120;
       function setup(z=350){g.assist=false;g.reset();g.state='playing';g.input.mode='touch';g.p.z=z;g.p.x=8;g.p.y=g.wave.height(8,z);g.rivals.forEach(r=>r.z=2000);}
       function tick(n,control){for(let i=0;i<n;i++){if(control)control();g.step(dt);g.comics.update(dt);}}
       // Same crest with no correction and with continuous countersteering.
-      const pin=()=>{const w=g.wave.waves[0];g.p.x=g.wave.crestX(w,g.p.z)+w.width*.07;};
+      const pin=()=>{const w=g.wave.waves[0];g.p.z=(w.from+w.to)/2;g.p.x=g.wave.crestX(w,g.p.z)+w.width*.07;};
       setup(70);let peak=0;tick(360,()=>{pin();peak=Math.max(peak,g.p.balance);});
       const idle={falls:g.balance.falls,peak,z:g.p.z};
       setup(70);tick(360,()=>{pin();g.input.target=THREE.MathUtils.clamp(-g.balance.roll*1.7-g.balance.velocity*.85,-1,1);});
       const corrected={falls:g.balance.falls,balance:g.p.balance,z:g.p.z};
       // A bad landing must enter active recovery, even on flat water.
-      setup(350);g.jump.press();tick(60);g.jump.release();tick(1);g.input.pitchTarget=1;
+      setup(350);g.jump.press();tick(1);while(g.p.airborne&&!g.jump.canSpin)tick(1);g.jump.press();
       while(g.p.airborne)tick(1);
       const hard={mode:g.balance.mode,roll:g.balance.roll,recovering:g.p.recovering,clean:g.jump.cleanLandings};
       g.input.pitchTarget=0;
@@ -110,8 +109,8 @@ async function run(){
     const scenes=[['crest',100],['shark',425],['jetski-cross',645],['jetski-other-side',645],['jetski-rear',790],['large-wave',990],['collection',1110]];
     for(const [name,z] of scenes){
       await page.evaluate(({name,z})=>{
-        const g=game;g.reset();g.state='playing';g.journey.hideAll();document.getElementById('pause-screen').classList.add('hidden');g.container.classList.add('playing');g.p.z=z;
-        const w=g.wave.waves.find(w=>z>w.from&&z<w.to);g.p.x=w?g.wave.crestX(w,z)+w.width*(name==='crest'?.07:.4):1;g.p.y=g.wave.height(g.p.x,z);
+        const g=game;g.reset();g.state='playing';g.journey.hideAll();document.getElementById('pause-screen').classList.add('hidden');g.container.classList.add('playing');g.p.z=z;g.time=z/25;g.wave.time=g.time;
+        const w=g.wave.waves.find(w=>z>w.from&&z<w.to);g.p.x=w?THREE.MathUtils.clamp(g.wave.crestX(w,z)+w.width*(name==='crest'?.07:.4),-8,8):1;g.p.y=g.wave.height(g.p.x,z);
         g.world.step(.008);g.world.hazards.filter(h=>h.type==='jetski').forEach(h=>{const cross=name==='jetski-cross'||name==='jetski-other-side',selected=cross?h.mode==='cross':name==='jetski-rear'?h.mode==='overtake':false;h.activeAt=selected?g.time:null;h.direction=name==='jetski-other-side'?-1:1;h.z=selected?z+13:z+300;h.x=cross?g.p.x+3:g.p.x-3;});
         if(name==='crest'){g.balance.roll=.4;g.p.balance=.4;}
         if(name==='collection'){g.waveRide.totalCaught=3;g.score=123456;g.mug.level=.82;}
@@ -125,7 +124,8 @@ async function run(){
     await page.evaluate(()=>game.finish());await page.click('#result-screen [data-setup]');assert.equal(await page.evaluate(()=>game.journey.screen),'setup');
     await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
     await page.evaluate(()=>{game.journey.home();game.journey.page=1;game.journey.open('story');});
-    const reduced=await page.$eval('.story-art',el=>getComputedStyle(el).animationName);assert.equal(reduced,'none');
+    await page.waitForFunction(()=>document.getElementById('comic-loading').hidden);
+    const reduced=await page.$eval('.comic-panel img',el=>getComputedStyle(el).animationName);assert.equal(reduced,'none');
     await shot('reduced-motion-story');await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'no-preference'}]);
     assert.deepEqual(errors,[]);assert.deepEqual(missing,[]);
     fs.writeFileSync(path.join(review,'verification.json'),JSON.stringify({mechanics,onboarding,layouts,errors,missing},null,2));
