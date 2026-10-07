@@ -12,7 +12,7 @@ async function run(){
     browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
     const page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));
     await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true,deviceScaleFactor:1});
-    await page.goto(base,{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.game);
+    await page.goto(base+'/?seed=42',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.game);
     await page.evaluate(async()=>{
       await game.start(false);game.input.mode='touch';
       window.runReview={frames:0,events:[],spills:[],samples:[]};
@@ -54,7 +54,7 @@ async function run(){
     await page.screenshot({path:path.join(review,'07-finish.png')});
     const result=await page.evaluate(()=>({state:game.state,z:game.p.z,seconds:game.elapsed,beer:game.mug.level,caught:game.waveRide.totalCaught,falls:game.balance.falls,saves:game.balance.saves,tricks:[...game.tricksSeen],jumps:game.jump.jumps,landings:game.jump.cleanLandings,escapes:game.world.escapes,sharks:game.world.hazards.filter(h=>h.type==='shark').map(h=>({hit:h.hit,escaped:h.escaped,done:h.done})),caps:game.collected,...runReview}));
     assert.equal(result.state,'finished');assert.ok(result.caught>=5);assert.ok(result.beer>=.3);assert.ok(result.frames>100);assert.deepEqual(errors,[]);
-    assert.ok(result.jumps>=1&&result.landings>=1);assert.ok(result.sharks.every(h=>h.done),'both finite shark encounters should resolve');
+    assert.ok(result.jumps>=1&&result.landings>=1,'jump and clean landing '+JSON.stringify({jumps:result.jumps,landings:result.landings,falls:result.falls,spills:result.spills}));assert.ok(result.sharks.every(h=>h.done),'both finite shark encounters should resolve');
     // Restart through the UI, so the route, props and result overlay reset together.
     await page.click('#replay-button');await page.waitForFunction(()=>game.state==='playing'&&game.p.z<10);
     const restart=await page.evaluate(()=>({beer:game.mug.level,caught:game.waveRide.totalCaught,resultHidden:document.getElementById('result-screen').classList.contains('hidden')}));

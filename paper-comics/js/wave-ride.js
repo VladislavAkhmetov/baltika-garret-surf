@@ -5,34 +5,41 @@ class WaveRide {
     this.charge=this.boost=this.quality=0;this.caught=false;this.zone='flat';this.totalCaught=0;this.transfers=0;
     this.capturedIds=new Set();this.crestAwards=new Set();this.cutbackAwards=new Set();this.lastId=null;this.lastCatchTime=-100;
     this.crestTime=0;this.departure=null;this.activeId=null;this.previousFace=null;
+    this.catchPulse=0;this.soundClock=0;
   }
   step(dt){
     const g=this.game,p=g.p,s=g.wave.sample(p.x,p.z),w=s.wave;
+    if(g.flowTest){g.flowTest.stepRide(dt,s);return;}
     this.zone=s.zone;
     const direction=w?Math.atan((g.wave.crestX(w,p.z+1)-g.wave.crestX(w,p.z-1))/2/.38):0;
-    const alignment=Math.max(.55,1-Math.abs(p.heading-direction)/1.5);
-    const energy=s.face<0?0:s.face<.18?.72:s.face<.65?1:.5;
-    this.quality=w&&s.face<.96?s.energy*energy*alignment:0;
+    this.catchPulse=Math.max(0,this.catchPulse-dt*1.8);this.soundClock=Math.max(0,this.soundClock-dt);
+    const alignment=THREE.MathUtils.clamp(1-Math.abs(p.heading-direction)*.65,.25,1);
+    const energy=s.face<0?0:s.zone==='crest'?.72:Math.exp(-Math.pow((s.face-.34)/.37,2));
+    this.quality=w&&s.face<.78?s.energy*energy*alignment:0;
     const engaging=this.quality>.12&&p.recovering===0&&!p.airborne;
     const waveId=w?.id??null;
     if(waveId!==this.activeId){this.charge*=.5;this.crestTime=0;this.departure=null;this.previousFace=null;this.activeId=waveId;}
     if(this.departure&&(g.time-this.departure.time>3||p.recovering>0))this.departure=null;
-    this.charge=THREE.MathUtils.clamp(this.charge+dt*(engaging?2.3*this.quality:-1.35),0,1);
-    this.caught=engaging&&this.charge>.24;
-    const pocket=Math.exp(-Math.pow((s.face-.34)/.28,2));
-    const target=this.caught?(s.zone==='crest'?7:3+9*pocket)*this.charge*s.energy:0;
-    this.boost+=(target-this.boost)*(1-Math.exp(-dt*(this.caught?3:1.8)));
+    this.charge=THREE.MathUtils.clamp(this.charge+dt*(engaging?3.2*this.quality:-1.5),0,1);
+    this.caught=engaging&&this.charge>.32;
+    const descending=this.previousFace!==null?Math.max(0,(s.face-this.previousFace)/dt):0;
+    const pump=this.caught?Math.min(3.4,descending*6):0;
+    const target=this.caught?(7.5+this.quality*5.5)*this.charge*Math.min(1,s.energy*1.5)+pump:0;
+    this.boost+=(target-this.boost)*(1-Math.exp(-dt*(this.caught?5:1.2)));
     if(this.caught&&w){
       if(!this.capturedIds.has(w.id)){
         const transfer=this.lastId!==null&&this.lastId!==w.id&&g.time-this.lastCatchTime<4.8;
         this.capturedIds.add(w.id);this.totalCaught++;this.lastId=w.id;g.awardTrick('ПОЙМАЛ ВОЛНУ',120,this.totalCaught>1);
-        if(transfer){this.transfers++;g.awardTrick('ПЕРЕХОД',220,true);if(p.speed>31&&p.balance<.35)g.comics.trigger('ВЖУХ!','С ОДНОЙ ВОЛНЫ НА ДРУГУЮ','transfer');}
+        p.speed=Math.min(g.assist?38:42,p.speed+2.4+this.quality*1.8);this.catchPulse=1;
+        g.ribbon?.catchWave();g.juice.punch(3.8);g.juice.buzz(18);g.emit(18,1.15,true);g.audio?.playCarve(.95);this.soundClock=.9;
+        if(transfer){this.transfers++;g.awardTrick('ПЕРЕХОД',220,true);}
       }
       this.lastCatchTime=g.time;
       this.crestTime=s.zone==='crest'&&p.balance<.5?this.crestTime+dt:Math.max(0,this.crestTime-dt*2);
       if(this.crestTime>1.15&&!this.crestAwards.has(w.id)){
-        this.crestAwards.add(w.id);g.awardTrick('НА ГРЕБНЕ',250,true);g.comics.trigger('УАУ!','ВЫШЕ ВСЕХ. ПИВО НА МЕСТЕ.','crest');
+        this.crestAwards.add(w.id);g.awardTrick('НА ГРЕБНЕ',250,true);
       }
+      if(Math.abs(p.lean)>.24&&this.soundClock===0){g.audio?.playCarve(Math.min(1.1,.4+this.quality));this.soundClock=.9;}
     }
     // A shoulder turn briefly loses the pocket's acceleration. Keep the
     // departure outside the caught state, then require contact on the return.

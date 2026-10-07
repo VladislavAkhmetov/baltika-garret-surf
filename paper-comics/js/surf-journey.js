@@ -62,7 +62,7 @@ class SurfJourney {
     if(name==='story')this.renderStory();if(name==='setup')this.renderSelection();
     (document.querySelector('#'+name+'-screen [data-primary]')||document.querySelector('#'+name+'-screen button'))?.focus({preventScroll:true});
   }
-  home(){this.game.audio.stopBGM();this.game.reset();['pause-screen','result-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));this.open('start');}
+  home(){this.game.audio.stopBGM();this.game.reset();this.game.renderMenuMeta();['pause-screen','result-screen','share-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));this.open('start');}
   loadComicImage(id){
     if(this.comicImages.has(id))return this.comicImages.get(id);
     const image=new Image();image.decoding='async';
@@ -99,7 +99,7 @@ class SurfJourney {
   }
   advance(){if(this.launching)return;if(this.launchFailed||this.page===this.story.length-1)this.launch();else{this.page++;this.renderStory();}}
   async launch(){
-    if(this.launching)return;this.launching=true;this.launchFailed=false;
+    if(this.launching)return;this.launching=true;this.launchFailed=false;this.game.meta.markStorySeen();
     document.getElementById('story-error').classList.add('hidden');
     const buttons=['story-next','story-skip','story-prev'].map(id=>document.getElementById(id));buttons.forEach(b=>b.disabled=true);
     document.getElementById('story-screen').setAttribute('aria-busy','true');buttons[0].textContent='НА ВОДУ…';

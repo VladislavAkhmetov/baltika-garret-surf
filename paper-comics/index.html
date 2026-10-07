@@ -13,14 +13,19 @@
   <link rel="stylesheet" href="css/companion.css">
   <link rel="stylesheet" href="css/ride-ui.css">
   <link rel="stylesheet" href="css/story-comic.css">
+  <link rel="stylesheet" href="css/arcade.css">
+  <link rel="stylesheet" href="css/arcade-art.css">
+  <link rel="stylesheet" href="css/flow-test.css">
 </head>
 <body>
   <main id="app-container" aria-label="Игра Ни капли" tabindex="-1">
     <div class="sky" aria-hidden="true"><div class="sun-halo"></div><div class="sun"></div><div class="cloud cloud-one"></div><div class="cloud cloud-two"></div></div>
     <canvas id="surf-canvas" aria-label="Бумажная волна и сёрферы"></canvas>
     <div class="print-grain" aria-hidden="true"></div>
+    <div id="speed-lines" class="speed-lines" aria-hidden="true"></div>
+    <div id="sfx-layer" class="sfx-layer" aria-hidden="true"></div>
     <header class="hud" id="hud">
-      <div class="beer-ticket paper"><canvas id="beer-canvas" width="104" height="144"></canvas><div><span class="ticket-label">ДОВЕЗИ</span><strong id="beer-value">100<span>%</span></strong><div class="beer-track"><i id="beer-fill"></i></div></div></div>
+      <div class="beer-ticket paper"><canvas id="beer-canvas" width="104" height="144"></canvas><div><span class="ticket-label">ДОВЕЗИ</span><strong id="beer-value">100<span>%</span></strong><div class="beer-track"><i id="beer-fill"></i></div></div><b id="beer-mult" class="beer-mult" data-level="3" title="Множитель очков от пива">×3</b></div>
       <div class="collection-ticket paper"><div class="wave-caps"><i class="wave-cap"><img src="assets/sprites/cap_fish.png" alt="Крышка первой волны"></i><i class="wave-cap"><img src="assets/sprites/cap_palm.png" alt="Крышка второй волны"></i><i class="wave-cap sun-cap" aria-label="Крышка третьей волны">☀</i></div><small id="collection-value">0 / 3</small></div><div class="score-ticket"><span>СЧЁТ</span><strong id="score-value">000000</strong></div>
       <button id="pause-button" class="small-button paper" aria-label="Пауза">Ⅱ</button>
     </header>
@@ -33,7 +38,12 @@
     <div class="weight-ticket paper"><span id="weight-label">ВЕС ПО ЦЕНТРУ</span><div class="weight-axis"><span>ХВОСТ</span><i id="weight-dot"></i><span>НОС</span></div><div class="balance-readout"><span>РИСК СРЫВА</span><b id="balance-label">НИЗКИЙ</b></div><div class="balance-track"><i id="balance-fill"></i></div></div>
     </div>
 
-    <div id="moment" class="moment" aria-live="polite"><strong></strong><span></span></div>
+    <div id="moment" class="moment" aria-live="polite" aria-atomic="true"><b class="moment-points"></b><strong></strong><span></span><em class="moment-mult"></em></div>
+    <div id="arcade-chain" class="arcade-chain" aria-hidden="true">
+      <div class="chase-row" data-level="0"><span class="chase-label">ПЕНА</span><div class="chase-track"><i class="chase-fill"></i><i class="chase-zone zone-mid"></i><i class="chase-zone zone-max"></i></div><b class="chase-distance"></b><b class="chase-mult">×1</b><small class="chase-status"></small></div>
+      <div class="chain-row"><span class="chain-items"></span><strong class="chain-value"><span class="chain-points">0</span> × <span class="chain-count">1</span></strong><div class="chain-timer"><i></i></div></div>
+    </div>
+    <div id="chain-toast" class="chain-toast" role="status"><strong></strong><span></span></div>
     <aside id="crab-callout" class="crab-callout paper" aria-live="polite" aria-atomic="true"><span></span></aside>
     <div id="comic-frame" class="comic-frame" aria-hidden="true">
       <div class="comic-scene"><canvas id="comic-snapshot"></canvas></div>
@@ -46,7 +56,7 @@
     <div id="shark-threat" aria-hidden="true"><i class="fin-icon"></i><b></b></div>
     <div id="balance-cue" class="balance-cue paper hidden" role="status"><strong>ДЕРЖИ ГРЕБЕНЬ</strong><div class="balance-rail"><i class="balance-safe"></i><i class="balance-needle"></i></div><small>ПО ЦЕНТРУ</small><div class="catch-track"><i class="catch-fill"></i></div></div>
     <div id="wipeout-screen" class="wipeout-screen hidden" role="status"><span>БУЛЬК!</span><strong>ДОСКА ЖДЁТ.</strong><p>−18% пива · комбо сброшено<br>Возвращаемся на спокойную воду</p></div>
-    <div class="steer-controls"><button id="steer-left" class="paper" aria-label="Повернуть влево">←</button><button id="steer-right" class="paper" aria-label="Повернуть вправо">→</button></div><button id="jump-button" aria-label="Прыжок: нажать один раз" title="Прыжок · пробел"><b id="jump-glyph">↑</b></button>
+    <div class="steer-controls"><button id="steer-left" class="paper" aria-label="Повернуть влево">‹</button><button id="steer-right" class="paper" aria-label="Повернуть вправо">›</button></div><button id="jump-button" aria-label="Прыжок: нажать один раз" title="Прыжок · пробел"><svg class="jump-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="20" cy="10" r="3"/><path d="m19 16-6 10 8 3-5 9m5-9 8 7m-10-20 9 5 5-5M9 39c10 3 23-1 27-10m-2 1 3-8 4 6"/></svg><b id="jump-glyph">↑</b><small class="jump-action"></small></button>
     <div id="bottom-hud" class="bottom-hud">
       <div class="speed-ticket"><strong id="speed-value">26</strong><span>М/С</span><div id="speed-meter"></div></div>
       <div class="route-ticket" aria-label="Путь до бара" role="progressbar" aria-valuemin="0" aria-valuemax="1200" aria-valuenow="0"><div class="route-track"><i id="route-fill"></i></div></div>
@@ -58,6 +68,8 @@
       <h2 class="menu-title"><span>НИ</span> <span>КАПЛИ!</span></h2>
       <img class="menu-hero" src="assets/comics/hero-crest-close.png" alt="">
       <button id="start-button" class="yellow-button menu-play" data-primary>ИГРАТЬ</button>
+      <button id="quick-button" class="text-button menu-quick hidden">БЫСТРЫЙ ЗАЕЗД ↗</button>
+      <p id="daily-label" class="menu-daily"></p>
     </section>
     <section id="setup-screen" class="screen journey menu-screen selection-screen hidden" aria-label="Выбор персонажа и локации">
       <button class="menu-back" data-journey-back="start" aria-label="Вернуться в меню">←</button>
@@ -89,10 +101,13 @@
       <p id="story-error" class="story-error paper hidden" role="alert"></p>
     </section>
     <section id="pause-screen" class="screen hidden">
-      <div class="pause-card paper"><span class="eyebrow">МИНУТКА НА БЕРЕГУ</span><h2>ВЫДОХНИ.</h2><p id="pause-help" class="pause-help">Вбок — курс по склону.<br>Вперёд / назад — вес на доске.</p><p class="pause-balance-help">На гребне и после жёсткой посадки выруливай против завала. Маркер в центре — баланс пойман.</p><button id="resume-button" class="yellow-button">ОБРАТНО НА ВОЛНУ ↗</button><button id="center-button" class="text-button" aria-label="Запомнить нейтральное положение телефона">◎ Запомнить нейтраль</button><button id="assist-toggle" class="text-button" aria-pressed="false">Сложность: обычная</button><button id="reset-button" class="text-button">Начать заново</button><button class="text-button menu-link" data-home>В главное меню</button></div>
+      <div class="pause-card paper"><span class="eyebrow">МИНУТКА НА БЕРЕГУ</span><h2>ВЫДОХНИ.</h2><p id="pause-help" class="pause-help">Вбок — курс по склону.<br>Вперёд / назад — вес на доске.</p><p class="pause-balance-help">На гребне и после жёсткой посадки выруливай против завала. Маркер в центре — баланс пойман.</p><button id="resume-button" class="yellow-button">ОБРАТНО НА ВОЛНУ ↗</button><ul id="pause-missions" class="mission-list pause-missions" aria-label="Задания"></ul><button id="center-button" class="text-button" aria-label="Запомнить нейтральное положение телефона">◎ Запомнить нейтраль</button><button id="camera-toggle" class="text-button" aria-pressed="true">Камера: живая</button><button id="assist-toggle" class="text-button" aria-pressed="false">Сложность: обычная</button><button id="reset-button" class="text-button">Начать заново</button><button class="text-button menu-link" data-home>В главное меню</button></div>
     </section>
     <section id="result-screen" class="screen hidden">
-      <div class="result-card paper"><h2 id="result-title">ДОВЁЗ!</h2><strong class="result-beer" id="result-beer">100%</strong><p id="result-comment"></p><div class="result-companion"><canvas id="result-crab" role="img" aria-label="Клешня на финише"></canvas><p><span id="result-crab-line"></span></p></div><div class="result-summary"><span>СЧЁТ</span><strong id="result-score">0</strong></div><button id="replay-button" class="yellow-button">ЕЩЁ РАЗ</button><button class="text-button menu-link" data-setup>ВЫБОР</button></div>
+      <div class="result-card paper"><h2 id="result-title">ДОВЁЗ!</h2><strong class="result-beer" id="result-beer">100%</strong><p id="result-comment"></p><div class="result-companion"><canvas id="result-crab" role="img" aria-label="Клешня на финише"></canvas><p><span id="result-crab-line"></span></p></div><div class="result-summary"><span>СЧЁТ</span><strong id="result-score">0</strong></div><p id="result-record" class="result-record"></p><div class="result-goals"><ul id="result-missions" class="mission-list" aria-label="Задания"></ul><b id="result-stars" class="result-stars">★ 0</b></div><button id="replay-button" class="yellow-button">ЕЩЁ РАЗ</button><div class="result-share"><button id="comic-button" class="text-button">КОМИКС ЗАЕЗДА</button><button id="challenge-button" class="text-button">ВЫЗОВ ДРУГУ</button><button class="text-button menu-link" data-setup>ВЫБОР</button></div></div>
+    </section>
+    <section id="share-screen" class="screen share-screen hidden" aria-label="Комикс заезда">
+      <div class="share-card paper"><img id="share-image" alt="Комикс твоего заезда: лучшие моменты и счёт"><p id="share-status" class="share-status" role="status"></p><div class="share-actions"><button id="share-button" class="yellow-button">ПОДЕЛИТЬСЯ</button><button id="share-download" class="text-button">Скачать</button><button id="share-close" class="text-button">Закрыть</button></div></div>
     </section>
     <div id="error-screen" class="error-screen hidden" role="alert">Для игры нужен браузер с WebGL. Попробуй открыть её в Chrome, Edge или Safari.</div>
   </main>
@@ -102,6 +117,8 @@
   <script src="js/mug.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/comics-course.js"></script>
+  <script src="js/wave-ribbon.js"></script>
+  <script src="js/flow-test.js"></script>
   <script src="js/paper-wave.js"></script>
   <script src="js/wave-ride.js"></script>
   <script src="js/hero-animation.js"></script>
@@ -112,7 +129,13 @@
   <script src="js/surf-balance.js"></script>
   <script src="js/surf-onboarding.js"></script>
   <script src="js/surf-journey.js"></script>
+  <script src="js/arcade-chase.js"></script>
+  <script src="js/arcade-score.js"></script>
+  <script src="js/arcade-juice.js"></script>
+  <script src="js/arcade-meta.js"></script>
+  <script src="js/run-comic.js"></script>
+  <script src="js/arcade-route.js"></script>
+  <script src="js/speed-blur.js"></script>
   <script src="js/paper-prototype.js"></script>
 </body>
 </html>
-

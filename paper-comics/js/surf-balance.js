@@ -18,12 +18,14 @@ class SurfBalance {
   fall() {
     if(this.mode==='fall')return;
     const g=this.game,p=g.p;
-    this.mode='fall';this.fallTime=1.25;this.falls++;this.reason='НЕ УДЕРЖАЛ БАЛАНС';
+    const cause=this.mode==='recovery'&&this.reason?this.reason:'ДОСКА ЗАВАЛИЛАСЬ';
+    this.mode='fall';this.fallTime=1.25;this.falls++;this.reason=cause;
     p.fallen=true;p.airborne=false;p.airY=0;p.jumpVelocity=0;p.recovering=0;
     g.jump.cancel();g.jump.clearSpin();g.comics.reset();g.waveRide.caught=false;g.waveRide.charge=g.waveRide.boost=0;
     if(g.audio)g.audio.playWipeout();
-    g.spill(.18,'Падение · возвращаемся на воду');g.emit(36,1.5);
-    document.getElementById('wipeout-screen').classList.remove('hidden');
+    g.runComic.capture('fall','БУЛЬК!',cause,85);g.juice.hitstop(.1);g.juice.buzz([40,30,80]);
+    g.spill(.18,cause+' → ПАДЕНИЕ');g.emit(36,1.5);
+    const screen=document.getElementById('wipeout-screen');screen.querySelector('strong').textContent=cause;screen.classList.remove('hidden');
     g.container.classList.add('fallen');
   }
   stepFall(dt) {
@@ -66,14 +68,14 @@ class SurfBalance {
     }
     if(this.mode==='recovery'){
       this.recoveryAge+=dt;p.recovering=.9;
-      const centered=Math.abs(this.roll)<(g.assist?.18:.14)&&Math.abs(this.velocity)<.32&&Math.abs(p.pitch)<.35;
+      const centered=Math.abs(this.roll)<(g.assist?.18:.14)&&Math.abs(this.velocity)<.32;
       this.settle=centered?this.settle+dt:0;
       if(this.settle>.42){
-        this.mode='stable';p.recovering=0;this.saves++;this.settle=this.recoveryAge=0;this.immunity=g.assist?1.3:.7;
+        this.mode='stable';p.recovering=0;this.reason='';this.saves++;this.settle=this.recoveryAge=0;this.immunity=g.assist?1.3:.7;
         g.awardTrick('ВЫРУЛИЛ',130,true);if(!g.assist)g.comics.trigger('ФУХ!','БАЛАНС ПОЙМАН. КРУЖКА С НАМИ.','save',2);
-      }else if(this.recoveryAge>(g.assist?5:3.4))this.fall();
+      }
     }else p.recovering=0;
-    // A visible red warning gives time to react before the board tips over.
+    // Falling follows the visible board roll, never a hidden recovery countdown.
     this.overload=p.balance>=1.05&&this.immunity===0?this.overload+dt:Math.max(0,this.overload-dt*2);
     if(this.mode!=='fall'&&this.overload>(g.assist?.45:.12))this.fall();
   }
@@ -85,8 +87,9 @@ class SurfBalance {
     el.classList.toggle('catching',this.mode==='recovery');
     el.querySelector('strong').textContent=this.mode==='recovery'?(g.assist?'ОТПУСТИ ПОВОРОТ':'ПОЙМАЙ БАЛАНС'):'ДЕРЖИ ГРЕБЕНЬ';
     const control=g.assist?'ОТПУСТИ':this.roll>.08?'←':this.roll<-.08?'→':'ОТПУСТИ';
-    el.querySelector('small').textContent=Math.abs(p.pitch)>.35?'ОТПУСТИ ↑ ↓':control;
+    el.querySelector('small').textContent=!g.assist&&Math.abs(p.pitch)>.35?'ОТПУСТИ ↑ ↓':control;
     el.querySelector('.balance-needle').style.left=(50+THREE.MathUtils.clamp(this.roll,-1,1)*43)+'%';
+    el.style.setProperty('--needle-top',(7+Math.pow(THREE.MathUtils.clamp(this.roll,-1,1),2)*22)+'px');
     el.querySelector('.catch-fill').style.width=(this.settle/.42*100)+'%';
     el.setAttribute('aria-label',(this.mode==='recovery'?'Поймай баланс. ':'Гребень. ')+control);
   }

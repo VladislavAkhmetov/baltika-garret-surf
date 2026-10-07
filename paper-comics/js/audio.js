@@ -282,11 +282,12 @@ class SurfAudio {
     });
   }
 
-  updateWave(speed = 1, isInsideBarrel = false) {
+  updateWave(speed = 1, isInsideBarrel = false, foamPressure = 0) {
     if (!this.waveFilter || !this.waveGain || !this.ctx) return;
     const t = this.ctx.currentTime;
-    const targetFreq = isInsideBarrel ? 1350 : (380 + speed * 300);
-    const targetGain = isInsideBarrel ? 0.55 : (0.22 + speed * 0.16);
+    const pressure = Math.max(0, Math.min(1, foamPressure));
+    const targetFreq = isInsideBarrel ? 1350 : (380 + speed * 300 - pressure * 180);
+    const targetGain = isInsideBarrel ? 0.55 : (0.22 + speed * 0.16 + pressure * .24);
     
     this.waveFilter.frequency.setTargetAtTime(targetFreq, t, 0.12);
     this.waveGain.gain.setTargetAtTime(targetGain, t, 0.12);

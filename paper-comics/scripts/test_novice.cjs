@@ -11,7 +11,9 @@ async function run(){
    function key(code,on){dispatchEvent(new KeyboardEvent(on?'keydown':'keyup',{code,bubbles:true}));}
    for(const assisted of [true,false]){
     g.assist=assisted;g.reset();g.state='playing';g.input.mode='keys';
-    const spills=[],spill=g.spill.bind(g);g.spill=(amount,reason)=>{spills.push({z:Math.round(g.p.z),amount,reason});return spill(amount,reason);};
+    const spills=[],falls=[],spill=g.spill.bind(g),fall=g.balance.fall.bind(g.balance);
+    g.spill=(amount,reason)=>{spills.push({z:Math.round(g.p.z),amount,reason});return spill(amount,reason);};
+    g.balance.fall=()=>{const entry={z:Math.round(g.p.z),source:g.balance.reason,risk:g.p.balance,age:g.balance.recoveryAge};fall();entry.caption=document.querySelector('#wipeout-screen strong').textContent;falls.push(entry);};
     let nextReaction=0,releaseAt=0,turn=null;const samples=[];
     for(let frame=0;frame<18000&&g.state==='playing';frame++){
      if(g.time>=releaseAt&&turn){key(turn,false);turn=null;}
@@ -35,15 +37,16 @@ async function run(){
      }
      g.step(dt);g.comics.update(dt);
     }
-    if(turn)key(turn,false);g.spill=spill;
+    if(turn)key(turn,false);g.spill=spill;g.balance.fall=fall;
     g.updateVisuals(0);g.updateHUD();g.renderer.render(g.scene,g.camera);
-    results.push({assisted,state:g.state,seconds:g.elapsed,beer:g.mug.level,waves:g.waveRide.totalCaught,falls:g.balance.falls,saves:g.balance.saves,spills,samples});
+    results.push({assisted,state:g.state,seconds:g.elapsed,beer:g.mug.level,waves:g.waveRide.totalCaught,falls:g.balance.falls,fallCauses:falls,saves:g.balance.saves,spills,samples});
    }
    return results;
   });
   console.log(JSON.stringify(report,null,2));
   const dir=path.resolve(__dirname,'../review/comics/novice');fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'report.json'),JSON.stringify({report,errors},null,2));
   assert.deepEqual(errors,[]);assert.equal(report[0].state,'finished');assert.ok(report[0].waves>=3,'first ride can collect three waves with coarse keyboard input');assert.ok(report[0].beer>=.3,'first ride reaches the story goal with coarse keyboard input');
+  for(const ride of report)for(const fall of ride.fallCauses){assert.ok(fall.risk>=1.05,'every fall follows visible board instability');assert.equal(fall.caption,fall.source||'ДОСКА ЗАВАЛИЛАСЬ','fall screen retains the initiating cause');}
   console.log('PASS: novice keyboard pulses, delayed corrections, complete routes in both modes.');
  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
 }

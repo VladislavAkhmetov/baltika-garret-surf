@@ -94,14 +94,23 @@ class CrabCompanion {
     const el=this.callout;if(!el?.classList.contains('visible'))return;
     const g=this.game;
     this.card.getWorldPosition(this.speechPoint);this.speechPoint.project(g.camera);
-    const point=this.speechPoint,offscreen=!this.card.visible||g.p.fallen||g.comics.active||point.z<-1||point.z>1||Math.abs(point.x)>.96||Math.abs(point.y)>.96;
+    const point=this.speechPoint,offscreen=!this.card.visible||g.p.fallen||g.comics.active||(g.chase?.active&&g.chase.gap<2.5)||point.z<-1||point.z>1||Math.abs(point.x)>.96||Math.abs(point.y)>.96;
     el.classList.toggle('offscreen',!!offscreen);if(offscreen)return;
     const width=g.container.clientWidth,height=g.container.clientHeight;
     const x=(point.x+1)*width/2,y=(1-point.y)*height/2;
     const bw=el.offsetWidth,bh=el.offsetHeight,gap=23,margin=9;
     const side=x-bw-gap>=margin?'left':'right';
     const left=THREE.MathUtils.clamp(side==='left'?x-bw-gap:x+gap,margin,width-bw-margin);
-    const top=THREE.MathUtils.clamp(y-bh/2,Math.min(140,height*.3),height-(height<520?89:98)-bh);
+    const stage=g.container.getBoundingClientRect(),chain=document.getElementById('arcade-chain');
+    const chainActive=chain?.classList.contains('has-chain')||chain?.classList.contains('chasing'),chainRect=chainActive?chain.getBoundingClientRect():null;
+    const lowerChain=chainRect&&chainRect.top-stage.top>height*.45;
+    let upperBottom=chainRect&&!lowerChain?chainRect.bottom-stage.top+12:0;
+    for(const id of ['moment','chain-toast','ride-coach']){
+      const cue=document.getElementById(id);if(cue&&!cue.classList.contains('hidden')&&(id==='ride-coach'||cue.classList.contains('visible'))&&getComputedStyle(cue).visibility!=='hidden')upperBottom=Math.max(upperBottom,cue.getBoundingClientRect().bottom-stage.top+8);
+    }
+    const minTop=Math.max(Math.min(140,height*.3),upperBottom),maxTop=Math.min(lowerChain?chainRect.top-stage.top-12:height,height-(height<520?89:98))-bh;
+    if(minTop>maxTop){el.classList.add('offscreen');return;}
+    const top=THREE.MathUtils.clamp(y-bh/2,minTop,maxTop);
     el.dataset.side=side;el.style.left=left+'px';el.style.top=top+'px';
     el.style.setProperty('--speech-tail-y',THREE.MathUtils.clamp(y-top,14,bh-14)+'px');
   }

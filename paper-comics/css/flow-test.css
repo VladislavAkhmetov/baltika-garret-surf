@@ -1,0 +1,36 @@
+/* All experiment styling is scoped; the full game keeps its current layout. */
+.flow-test .hud,.flow-test #ride-coach,.flow-test #arcade-chain,.flow-test #chain-toast,.flow-test #moment,.flow-test #hint,.flow-test #crab-callout,.flow-test #daily-label,.flow-test #quick-button,.flow-test .touch-guide,.flow-test .result-card,.flow-test #pause-missions,.flow-test #assist-toggle,.flow-test .pause-balance-help{display:none!important}
+.flow-test .sun,.ribbon-ride .sun{width:24%;left:65%;top:8%}.flow-test .sun-halo,.ribbon-ride .sun-halo{width:37%;left:59%;top:3%;opacity:.5}.flow-test .cloud-one,.ribbon-ride .cloud-one{top:17%}.flow-test .cloud-two,.ribbon-ride .cloud-two{top:10%}
+.flow-test .sky{background:linear-gradient(#3b95b0,#afd0c5 28%,#f1d7a8 55%)}
+.flow-test #sound-button{top:74px!important;right:18px!important;width:38px;height:38px}
+.flow-intro .menu-title{left:10%;top:15%;font-size:clamp(48px,7.2vw,92px);line-height:1;letter-spacing:-.045em}
+.flow-intro .menu-hero{right:2%;bottom:9%;height:78%;max-width:48%;opacity:.94}
+.flow-intro .menu-play{left:10%;bottom:13%;width:37%;max-width:330px;font-size:19px;min-height:58px;transform:rotate(-1deg)!important}
+.flow-intro-copy{position:absolute;top:43%;left:10%;width:45%;max-width:440px}
+.flow-eyebrow{font:700 11px/1.5 Rubik,sans-serif;letter-spacing:1.8px}
+.flow-intro-copy p{font:500 18px/1.5 Rubik,sans-serif;margin:12px 0 20px}
+.flow-intro-copy .flow-help{font:400 12px/1.6 Rubik,sans-serif;margin-top:16px}
+.flow-options{border:0;padding:0;margin:0}.flow-options legend{font:500 12px Rubik,sans-serif;margin-bottom:8px}.flow-options label{display:inline-flex;gap:7px;align-items:center;margin-right:16px;min-height:44px;font:500 14px Rubik,sans-serif;cursor:pointer}.flow-options input{width:18px;height:18px;accent-color:#165964}
+.flow-toolbar{position:absolute;z-index:7;top:max(18px,env(safe-area-inset-top));left:20px;right:18px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;color:#fff0ce;text-shadow:0 2px 3px #103f58}
+.flow-section small{display:block;font:500 10px Rubik,sans-serif;letter-spacing:2px;margin-bottom:6px}.flow-section strong{font:18px 'Russo One',sans-serif}
+.flow-actions{display:flex;gap:7px;align-items:center}.flow-actions button{min-height:42px;background:#123c49d9;color:#fff2d1;border:1px solid #d0e6d060;padding:8px 12px;border-radius:5px;font:500 12px Rubik,sans-serif;touch-action:manipulation}.flow-actions button[aria-pressed=true]{background:#f2df9c;color:#173a43;border-color:#f2df9c}.flow-actions button:focus-visible{outline:3px solid #fff2d1;outline-offset:3px}
+.flow-cue{position:absolute;left:50%;bottom:100px;transform:translateX(-50%);z-index:6;max-width:90%;width:max-content;text-align:center;color:#fff6d9;font:18px 'Russo One',sans-serif;text-shadow:0 2px 5px #123b4c;pointer-events:none;transition:color .15s}
+.flow-cue.is-catch{color:#ffdd80}
+.flow-test:not(.playing) .flow-toolbar,.flow-test:not(.playing) .flow-cue,.flow-test:has(#pause-screen:not(.hidden)) .flow-toolbar,.flow-test:has(#pause-screen:not(.hidden)) .flow-cue{display:none}
+.flow-test .bottom-hud{bottom:28px;left:calc(50% - 135px);right:calc(50% - 135px);gap:12px}.flow-test .speed-ticket{display:block!important;width:42px}.flow-test .speed-ticket strong{font-size:25px}.flow-test .speed-ticket span{font-size:8px}.flow-test .route-ticket{padding:0}.flow-test .route-track{background:#deead559}
+.flow-result{width:min(440px,94%);padding:34px 28px;text-align:center;color:#193b44}.flow-result h2{font:32px 'Russo One',sans-serif;margin:12px 0}.flow-result>p{font:14px/1.5 Rubik,sans-serif;margin:10px 0 18px}.flow-stats{display:grid;grid-template-columns:1fr 1fr;gap:22px 12px;margin:26px 0}.flow-stats strong{display:block;font:32px 'Russo One',sans-serif}.flow-stats span{display:block;font:11px/1.4 Rubik,sans-serif;margin-top:5px}.flow-result .yellow-button{font-size:17px}.flow-compare-button{width:100%;min-height:48px;background:transparent;color:#185b67;font:700 13px Rubik,sans-serif;margin-top:9px}.flow-result a{display:inline-block;color:#46666a;font:12px Rubik,sans-serif;padding:14px}
+@media(max-width:650px){
+ .flow-intro .menu-title{top:10%;left:8%;right:auto;text-align:left;font-size:53px}.flow-intro .menu-hero{height:31%;right:-5%;bottom:42%;max-width:43%;opacity:.88}
+ .flow-intro-copy{top:36%;left:8%;width:65%}.flow-intro-copy p{font-size:15px;margin:12px 0}.flow-intro-copy .flow-help{font-size:11px;width:130%;margin-top:16px}.flow-eyebrow{font-size:9px;letter-spacing:1px}
+ .flow-options label{font-size:13px;margin-right:9px}.flow-intro .menu-play{bottom:12%;left:8%;width:84%;max-width:none;font-size:18px}
+ .flow-toolbar{left:13px;right:12px;top:14px;gap:4px}.flow-section strong{font-size:13px}.flow-section small{font-size:8px;letter-spacing:1px}.flow-actions{gap:4px}.flow-actions button{padding:7px 9px;font-size:11px;min-height:44px}.flow-actions #flow-pause{padding:7px 12px}
+ .flow-cue{font-size:14px;bottom:107px}.flow-test .bottom-hud{left:calc(50% - 55px);right:calc(50% - 55px);bottom:33px}.flow-test .speed-ticket{width:35px}.flow-test .speed-ticket strong{font-size:22px}.flow-result{padding:28px 22px}
+}
+@media(max-width:370px){.flow-section strong{font-size:11px}.flow-actions button{font-size:10px;padding:7px}.flow-intro .menu-title{font-size:46px}.flow-intro-copy{top:33%}.flow-intro .menu-play{bottom:8%}}
+@media(orientation:landscape) and (max-height:520px){
+ .flow-intro .menu-title{top:12%;left:8%;font-size:43px}.flow-intro .menu-hero{height:91%;bottom:1%;right:5%;max-width:36%}.flow-intro-copy{top:40%;left:8%;width:52%;max-width:none}.flow-intro-copy>p:not(.flow-help){display:none}.flow-intro-copy .flow-help{font-size:10px;margin:4px 0}.flow-options label{min-height:35px}.flow-intro .menu-play{bottom:7%;left:8%;width:42%;min-height:44px;font-size:15px}.flow-eyebrow{font-size:9px}.flow-cue{bottom:65px;font-size:14px}.flow-result{width:min(620px,95%);padding:18px 26px}.flow-result h2{font-size:24px;margin:6px}.flow-stats{grid-template-columns:repeat(4,1fr);margin:12px 0;gap:12px}.flow-stats strong{font-size:25px}.flow-result>p{margin:6px 0 10px;font-size:12px}.flow-result .yellow-button{min-height:40px;padding:9px}.flow-compare-button{min-height:34px;margin-top:3px}.flow-result a{padding:6px}
+}
+@media(prefers-reduced-motion:reduce){.flow-cue{transition:none}}
+.ribbon-ride .pause-card{padding-bottom:48px}
+@media(max-width:650px){.ribbon-ride .pause-card{padding-bottom:42px}}
+@media(orientation:landscape) and (max-height:520px){.ribbon-ride .pause-card{padding-bottom:28px}}

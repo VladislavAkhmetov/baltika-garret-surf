@@ -1,0 +1,120 @@
+/* Clear water in the play area; glass controls and occasional paper accents. */
+#app-container{--ride-left:22px;--chain-top:122px;--message-top:122px;--ride-width:330px}
+#app-container:has(#arcade-chain.has-chain){--message-top:200px}
+#app-container.debug-mode:has(#arcade-chain.chasing){--message-top:226px}
+.sky{filter:blur(calc(var(--speed-blur,0) * 2.5px));transform:scale(1.015)}
+.speed-lines{opacity:calc(var(--lines,0) * .34);background:repeating-conic-gradient(from var(--lines-turn,0deg) at 50% 57%,#fff6df99 0deg .25deg,transparent .25deg 14deg);-webkit-mask:radial-gradient(ellipse 62% 55% at 50% 57%,transparent 65%,#000 100%);mask:radial-gradient(ellipse 62% 55% at 50% 57%,transparent 65%,#000 100%)}
+
+#arcade-chain{top:var(--chain-top);left:var(--ride-left)!important;right:auto!important;bottom:auto!important;width:min(var(--ride-width),calc(100% - 124px));transform:none!important;gap:3px;transition:opacity .15s}
+.chase-row{grid-template-columns:auto minmax(12px,1fr) auto auto;padding:4px 10px;background:#0d3d4b70;background-image:none;border:1px solid #dcfff72c;border-radius:7px;clip-path:none;filter:none;color:#ecfff9;gap:4px 7px}
+.arcade-chain.chasing .chase-row{display:none}
+.debug-mode .arcade-chain.chasing .chase-row{display:grid}
+.chase-label{font-size:12px;letter-spacing:0}
+.chase-label::before{content:'≋';display:inline-block;margin-right:4px;font-size:18px;vertical-align:-2px;color:#b5f6e8}
+.chase-track{height:5px;border:0;border-radius:2px;background:#effff826;overflow:visible}
+.chase-fill{background:linear-gradient(90deg,#91ddcb 0 52%,#ffd264 52% 79%,#f2a57e 79%);border-radius:2px}
+.chase-zone{width:1px;top:-2px;bottom:-2px;background:#ecfff980}
+.chase-mult{font-size:20px;min-width:38px;color:#ecfff9;text-shadow:none}
+.chase-row[data-level="2"] .chase-mult{animation:none;color:#ffd264}
+.chase-distance{font:400 16px/1.15 'Russo One',sans-serif;white-space:nowrap;color:#f3fff9}
+.chase-status{grid-column:1/-1;font:600 12px/1.2 Rubik,sans-serif;color:#c8eee4;min-height:15px}
+.chase-row[data-risk="close"]{border-color:#ffd26475}.chase-row[data-risk="critical"]{border-color:#ff997db3;background:#702f386b;box-shadow:0 0 10px #ef704f30}
+.chase-row[data-risk="critical"] .chase-distance,.chase-row[data-risk="critical"] .chase-status{color:#ffe0b9}
+.chain-row{padding:5px 11px 8px;background:#0d3d4b70;background-image:none;border:1px solid #dcfff72c;border-radius:7px;clip-path:none;filter:none;text-align:left;color:#f0fff9}
+.chain-items{display:none}
+.chain-value{font-size:25px;line-height:1.2;letter-spacing:-.7px}
+.chain-count{color:#ffd264;background:none;padding:0;transform:none}
+.chain-timer{left:11px;right:11px;bottom:3px;height:2px;background:#edfff825}
+.chain-timer i,.arcade-chain.held .chain-timer i{background:#a7ecdc}
+
+#moment,#chain-toast,#ride-coach{top:var(--message-top);left:var(--ride-left);right:auto;bottom:auto;transform:none;max-width:min(440px,calc(100% - 28px));width:max-content;text-align:left;z-index:6}
+#moment{transition:opacity .15s;isolation:isolate;display:flex;align-items:center;flex-wrap:wrap;column-gap:10px;row-gap:2px;padding:5px 0}
+#moment.visible{transform:none;animation:ride-note .22s ease-out both}
+#moment strong,#moment.reward strong{display:block;margin:0;padding:0;background:none;clip-path:none;filter:none;box-shadow:none;transform:none;font:400 22px/1.2 'Russo One',Impact,sans-serif!important;white-space:normal;max-width:100%;color:#f0fff9;text-shadow:0 2px 4px #062c40b3;text-wrap:balance}
+#moment .moment-points,#moment .moment-mult{display:none}
+#moment.reward .moment-points{display:block;font:400 31px/1 'Russo One',Impact,sans-serif;letter-spacing:-1px;color:#ffd264;-webkit-text-stroke:0;text-shadow:0 2px 4px #062c40b3;margin:0}
+#moment .moment-mult{display:none!important}
+#moment span{display:none!important}
+#moment.reward::before{content:none}
+#moment.big-reward{padding:8px 13px;background:#f4e9cd url('../assets/comics/paper-panel-v2.png') center/100% 100%;clip-path:var(--paper-edge)}
+#moment.big-reward strong{color:#17444c;text-shadow:none;font-size:22px!important}
+#moment.big-reward .moment-points{color:#b45530;text-shadow:none;font-size:31px}
+#moment.bad strong{color:#ffcfb4;background:none}
+.wipeout-screen>strong{max-width:90%;text-align:center;line-height:1.25}
+.fallen #sfx-layer,.fallen #moment,.fallen #chain-toast,.fallen #ride-coach{display:none}
+#moment:has(~#chain-toast.visible){visibility:hidden}
+@keyframes ride-note{from{opacity:0;translate:0 -6px}to{opacity:1;translate:0 0}}
+#chain-toast.visible{animation:ride-note .22s ease-out both}
+#chain-toast strong{display:block;font-size:18px;letter-spacing:0;padding:0;background:none;color:#f0fff9;clip-path:none;filter:none;text-shadow:0 2px 4px #062c40b3}
+#chain-toast span{display:block;margin:3px 0 0;font-size:32px;letter-spacing:-1px;color:#ffd264;-webkit-text-stroke:0;text-shadow:0 2px 4px #062c40b3}
+#chain-toast.bad strong,#chain-toast.bad span{background:none;color:#ffcfb4}
+#ride-coach{max-width:min(var(--ride-width),calc(100% - 124px));background:#0d3d4b6b;background-image:none;border-left:2px solid #bcf3e5;border-radius:0 6px 6px 0;filter:none;clip-path:none;padding:8px 12px;color:#f0fff9}
+#app-container:has(#arcade-chain.has-chain) #ride-coach,#app-container.debug-mode:has(#arcade-chain.chasing) #ride-coach{max-width:min(440px,calc(100% - 28px))}
+#ride-coach strong{font-size:18px;line-height:1.22}
+#ride-coach span{font:500 16px/1.3 Rubik,sans-serif;margin-top:4px;color:#effff0}
+.sfx-word{font-size:28px;font-style:italic;letter-spacing:-1px;-webkit-text-stroke:1px #f4e9cd;paint-order:stroke fill;text-shadow:1px 2px 0 #103f5880}
+.sfx-word.trick{font-size:30px}.sfx-word.pocket{font-size:27px}
+
+.steer-controls{left:14px;bottom:max(18px,calc(env(safe-area-inset-bottom) + 12px));gap:9px}
+.steer-controls button,#jump-button{background:#0d526721;background-image:none;border:2px solid #ebfff2aa;border-radius:50%;box-shadow:inset 0 0 16px #c3fff00a,0 1px 4px #0b364a40;filter:none;clip-path:none;transform:none;opacity:.9;color:#f2fff8;padding:0}
+.steer-controls button,.steer-controls button:last-child{width:58px;height:58px;font:400 49px/.9 Arial,sans-serif;transform:none;padding-bottom:5px}
+.steer-controls button.pressed{background:#bcffe429;border-color:#edfff4;background-blend-mode:normal}
+#jump-button{width:66px;height:66px;right:16px;bottom:max(18px,calc(env(safe-area-inset-bottom) + 12px));font-size:34px;display:grid;place-items:center}
+#jump-button::before{display:none}
+#jump-button .jump-icon{width:47px;height:47px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+#jump-button .jump-icon circle{fill:currentColor;stroke:none}
+#jump-button #jump-glyph{font:inherit;display:none}
+#jump-button.spin-ready #jump-glyph,#jump-button.spinning #jump-glyph{display:block}
+#jump-button.spin-ready .jump-icon,#jump-button.spinning .jump-icon{display:none}
+#jump-button.spin-ready{background:#b8fff029;color:#edfff4;border-color:#acffe5;filter:drop-shadow(0 0 4px #99ffdf55)}
+#jump-button.special-ready{background:#ffd26421;color:#ffe2a0;border-color:#ffe2a0;filter:drop-shadow(0 0 5px #ffd26466);outline:0}
+#jump-button .jump-action{display:none;font:400 14px/1 'Russo One',sans-serif;letter-spacing:0;color:inherit}
+#jump-button.spin-ready,#jump-button.spinning,#jump-button.landing{display:flex;flex-direction:column;justify-content:center;gap:1px}
+#jump-button.spin-ready #jump-glyph,#jump-button.spinning #jump-glyph,#jump-button.landing #jump-glyph{display:block;font-size:29px;line-height:1}
+#jump-button.spin-ready .jump-action,#jump-button.spinning .jump-action,#jump-button.landing .jump-action{display:block}
+#jump-button.landing .jump-icon{display:none}
+.steer-controls button.learn-control,#jump-button.learn-control{background:#d5fff52b;outline:2px solid #edfff4;outline-offset:3px;filter:none;scale:1}
+#balance-cue{left:50%;bottom:92px;width:min(260px,64%);padding:0;transform:translateX(-50%);background:none;background-image:none;filter:none;color:#ecfff9;text-shadow:0 1px 3px #103f58}
+#balance-cue strong{font-size:16px}
+#balance-cue small{font-size:17px;line-height:1.1;display:block}
+.balance-rail{height:51px;margin:4px 0 2px;background:url('../assets/sprites/balance-arc.svg') center/100% 100% no-repeat;border:0}
+.balance-safe{display:none}
+.balance-needle{top:var(--needle-top,10px);width:15px;height:21px;clip-path:polygon(0 0,100% 0,50% 100%);background:#f3fff9;border:0;transform:translateX(-50%);filter:drop-shadow(0 1px 2px #123d4980)}
+.catch-track{height:2px;width:52%;margin:5px auto 0;background:#edfff826}
+.catch-fill{background:#a7ffdd}
+
+@media(max-width:650px){
+ #app-container{--ride-left:12px;--chain-top:87px;--message-top:89px;--ride-width:274px}
+ #app-container:has(#arcade-chain.has-chain){--message-top:164px}
+ #app-container.debug-mode:has(#arcade-chain.chasing){--message-top:194px}
+ #moment strong,#moment.reward strong{font-size:19px!important}
+ #moment.reward .moment-points{font-size:29px}
+ #moment.big-reward{padding:7px 11px}
+ #ride-coach strong{font-size:17px}
+ .chain-value{font-size:24px}
+ #balance-cue{bottom:88px;width:220px;max-width:64%}
+ .balance-rail{height:43px}
+ .steer-controls button,.steer-controls button:last-child{width:54px;height:54px;font-size:46px}
+ .steer-controls{gap:7px}
+ #jump-button{width:62px;height:62px;right:14px}
+ #jump-button .jump-icon{width:43px;height:43px}
+}
+@media(orientation:landscape) and (max-height:520px){
+ #app-container{--ride-left:15px;--chain-top:81px;--message-top:84px;--ride-width:245px}
+ #app-container:has(#arcade-chain.has-chain){--message-top:154px}
+ #app-container.debug-mode:has(#arcade-chain.chasing){--message-top:180px}
+ #moment,#chain-toast,#ride-coach{max-width:min(350px,42%)}
+ #moment strong,#moment.reward strong{font-size:18px!important}
+ #moment.reward .moment-points{font-size:27px}
+ #ride-coach strong{font-size:17px}
+ #ride-coach span{font-size:15px}
+ .chain-value{font-size:22px}.chase-mult{font-size:18px}
+ .chain-row{padding:4px 10px 7px}.chase-row{padding:3px 10px}
+ #balance-cue{bottom:78px;width:240px;max-width:37%}
+ .balance-rail{height:43px}.steer-controls{bottom:15px}
+ #jump-button{bottom:15px;width:60px;height:60px}
+}
+@media(prefers-reduced-motion:reduce){
+ .sky{filter:none;transform:none}
+ #moment.visible,#chain-toast.visible{animation:none}
+}

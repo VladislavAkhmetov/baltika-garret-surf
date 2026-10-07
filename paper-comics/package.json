@@ -10,7 +10,14 @@
     "test:ride-ui": "node scripts/test_ride-ui.cjs",
     "test:sea-visuals": "node scripts/test_sea-visuals.cjs",
     "test:water-motion": "node scripts/test_water-motion.cjs",
-    "test:arcade-jump": "node scripts/test_arcade-jump.cjs"
+    "test:arcade-jump": "node scripts/test_arcade-jump.cjs",
+    "test:track-action": "node scripts/test_track-action.cjs",
+    "test:arcade": "node scripts/test_arcade.cjs",
+    "test:arcade-art": "node scripts/test_arcade-art.cjs",
+    "test:danger-cues": "node scripts/test_danger-cues.cjs",
+    "test:flow": "node scripts/test_flow.cjs",
+    "test:ribbon": "node scripts/test_ribbon.cjs",
+    "test:maneuvers": "node scripts/test_maneuvers.cjs"
   },
   "dependencies": {
     "puppeteer-core": "^24.43.1"

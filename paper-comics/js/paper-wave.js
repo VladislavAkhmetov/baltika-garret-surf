@@ -4,8 +4,9 @@ class PaperWave {
     this.scene = scene;
     this._time = 0;
     // Route landmarks shape a denser wave train, rather than seven isolated walls.
-    this.waves = Array.from({length:COMICS_COURSE.waveCount},(_,id)=>({id}));
+    this.waves = Array.from({length:window.FLOW_TEST_MODE?3:COMICS_COURSE.waveCount},(_,id)=>({id}));
     this.wakeField = null;
+    this.peelFront = null;
     this.lastPrintFrame = -1;
     const loader=new THREE.TextureLoader();
     let resolveWater,rejectWater;
@@ -132,6 +133,8 @@ class PaperWave {
             float bubbles=waterNoise(foamWorld*8.3+5.0);
             float density=smoothstep(.10,.72,vWaterFoam);
             float cells=smoothstep(.20,.67,clumps+bubbles*.20);
+            // Dense whitewater on the chasing lip keeps a solid frothy core with broken edges.
+            cells=mix(cells,.85+bubbles*.15,smoothstep(.95,1.4,vWaterFoam));
             float foam=density*cells;
             vec3 foamColor=mix(vec3(.68,.83,.80),vec3(.98,.98,.88),.55+bubbles*.45);
             water=mix(water,foamColor,foam);
@@ -151,6 +154,7 @@ class PaperWave {
   }
 
   resetWaves(seed=Math.random()*10000){
+    if(window.FLOW_TEST_MODE){FlowTest.configureWaves(this);return;}
     this.seed=seed;
     this.waves.forEach((w,i)=>{
       const variation=this.hash(seed+i*37+21),progress=i/(this.waves.length-1);
@@ -173,6 +177,9 @@ class PaperWave {
       w.velocityX=.55+this.hash(seed+i*19+7)*.18;
       w.velocityZ=-w.velocityX/w.crestSlope;
       w.breakRate=.026+this.hash(seed+i*31+17)*.009;
+      // Every wave owns its breaking front from level time zero. Player speed cannot move it.
+      w.peelSpeed=28.2+w.size*1.4;
+      w.peelOriginZ=centerZ-14;w.peelOriginTime=centerZ/30;
     });
     this.time=0;this.lastPrintFrame=-1;
   }
@@ -186,6 +193,7 @@ class PaperWave {
     return Math.pow(Math.sin(Math.PI*t),1.45)*peak;
   }
   crestX(w,z,time=this.time){
+    if(w.flowShape)return FlowTest.crestX(w,z,time);
     const age=time-w.encounterTime,from=w.anchorFrom+w.velocityZ*age;
     const t=THREE.MathUtils.clamp((z-from)/(w.anchorTo-w.anchorFrom),0,1);
     const centerDistance=z-from-(w.anchorTo-w.anchorFrom)/2;
@@ -193,10 +201,14 @@ class PaperWave {
       +w.bow*(1-Math.exp(-centerDistance*centerDistance/576));
   }
   breaking(w,z,time=this.time){
+    if(!w.flowShape)return this.smooth((this.frontAt(w,time).z+10-z)/10);
     const t=(z-w.anchorFrom-w.velocityZ*(time-w.encounterTime))/(w.anchorTo-w.anchorFrom);
     // The breaking section peels along the crest, leaving an open shoulder ahead.
     const peel=.55+(time-w.encounterTime)*w.breakRate;
     return this.smooth((peel-t+.18)/.28);
+  }
+  frontAt(w,time=this.time){
+    return {id:w.id,z:w.peelOriginZ+(time-w.peelOriginTime)*w.peelSpeed,speed:w.peelSpeed};
   }
   shoulder(w,x,time=this.time){
     const center=w.centerX+w.velocityX*(time-w.encounterTime);
@@ -285,7 +297,9 @@ class PaperWave {
       const breakAmount=f.wave?this.breaking(f.wave,z):0;
       const crestFoam=f.energy*Math.exp(-Math.pow((f.face-.04)/.07,2))*(.42+breakAmount*.48);
       const wash=f.energy*breakAmount*.48*Math.exp(-Math.pow((f.face-.24)/.15,2));
-      foam.setX(i,Math.max(crestFoam,wash));
+      // Pursuing whitewater is a band behind the front; it thins out towards the camera.
+      const front=this.peelFront,whitewater=front&&f.wave?.id===front.id&&f.face>-.15&&f.face<.92?f.energy*this.smooth((front.z+1.5-z)/5)*(1-this.smooth((front.z-5-z)/9))*(.45+.3*this.smooth(1-f.face)):0;
+      foam.setX(i,Math.max(crestFoam,wash,whitewater));
     }
     pos.needsUpdate = foam.needsUpdate = true;
     this.sea.geometry.computeVertexNormals();

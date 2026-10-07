@@ -1,4 +1,6 @@
 /* Read the action at a glance; button symbols replace permanent key legends. */
+#app-container button,#app-container button *{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+#jump-button,.steer-controls button{touch-action:none}
 .beer-ticket .ticket-label,.score-ticket>span{display:none!important}
 .score-ticket{width:100%;max-width:175px}.score-ticket strong{white-space:nowrap}
 .collection-ticket>span{font-size:24px}.collection-ticket{padding-top:10px}
@@ -15,18 +17,32 @@
 #jump-button{width:68px;height:68px;padding:0;font-size:38px;display:flex;align-items:center;justify-content:center}
 #jump-button b{font:inherit;line-height:1}
 #jump-button.spin-ready{background-color:#ffe198;filter:drop-shadow(0 0 9px #ffcc55);color:#123d49;opacity:1}
+#jump-button.special-ready{background-color:#ffd05b;filter:drop-shadow(0 0 13px #ffb839);outline:2px solid #fff2cd;outline-offset:3px}
 #jump-button.spinning{opacity:1}
 #jump-button.spinning b{transform:rotate(-18deg)}
+#shark-threat{background:transparent}
+#shark-threat[data-phase="windup"],#shark-threat[data-phase="lunge"]{background:transparent;opacity:1}
+#shark-threat[data-phase="windup"] .fin-icon,#shark-threat[data-phase="lunge"] .fin-icon{background:#e66540}
+#shark-threat[data-phase="windup"] b,#shark-threat[data-phase="lunge"] b{background:#fff2d1}
 .ride-coach strong{font-size:19px}.ride-coach span{font-size:17px;line-height:1.25}
 .balance-cue small{font-size:25px}.balance-cue strong{font-size:17px}
-.result-card{width:min(500px,90%);padding:30px 35px}
-.result-card h2{font-size:30px;margin:8px 0 16px}.result-beer{font-size:82px;line-height:1}
-.result-card #result-comment{font:22px/1.2 Rubik,sans-serif;margin:12px 0}
-.result-companion{margin:18px 0;gap:16px}.result-companion span{font-size:26px}
-.result-summary{display:flex;justify-content:center;align-items:center;gap:18px;margin:20px 0 24px}
-.result-summary>span{font:16px 'Russo One',sans-serif}.result-summary>strong{font:34px 'Russo One',sans-serif}
-.result-card .menu-link{display:block;margin:15px auto 0;font:17px Rubik,sans-serif;padding:8px}
-.result-card .yellow-button{font-size:22px;min-height:56px}
+#pause-screen,#result-screen{background:#0c2d3dd9;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+#app-container:has(#pause-screen:not(.hidden)) #ride-coach,#app-container:has(#pause-screen:not(.hidden)) #arcade-chain,#app-container:has(#pause-screen:not(.hidden)) #moment,#app-container:has(#pause-screen:not(.hidden)) #chain-toast,#app-container:has(#pause-screen:not(.hidden)) #hint,#app-container:has(#pause-screen:not(.hidden)) .bottom-hud,#app-container:has(#result-screen:not(.hidden)) #ride-coach,#app-container:has(#result-screen:not(.hidden)) #arcade-chain,#app-container:has(#result-screen:not(.hidden)) #moment,#app-container:has(#result-screen:not(.hidden)) #chain-toast,#app-container:has(#result-screen:not(.hidden)) #hint,#app-container:has(#result-screen:not(.hidden)) .bottom-hud,#app-container:has(#result-screen:not(.hidden)) .hud{opacity:0!important;pointer-events:none!important;visibility:hidden!important}
+.pause-card,.result-card{filter:drop-shadow(2px 5px 8px #143b4b50)}
+.pause-card{width:min(390px,92%);padding:46px 22px 34px;text-align:center;transform:rotate(-2deg)}
+.pause-card .eyebrow{margin-top:2px;letter-spacing:2px}
+.pause-card h2{font-size:30px;margin:4px 0 8px}
+.pause-card .pause-help{font-size:11.5px;line-height:1.4;margin:0 0 6px}
+.pause-card .pause-balance-help{font-size:10.5px;line-height:1.35;margin:0 0 8px;color:#52615c}
+.pause-card .yellow-button{font-size:17px;min-height:46px;margin:0 0 6px}
+.pause-card .text-button{font-family:Rubik,sans-serif;font-size:11.5px;padding:3px 6px;margin:1px 2px;display:inline-block;color:#234b54}
+.result-card{width:min(440px,92%);padding:48px 24px 38px}
+.result-card h2{font-size:25px;margin:2px 0 6px;line-height:1.1}.result-beer{font-size:56px;line-height:1;margin:0 0 2px}
+.result-card #result-comment{font:15px/1.2 Rubik,sans-serif;margin:4px 0 6px}
+.result-companion{margin:6px 0;gap:12px}.result-companion span{font-size:19px}.result-companion canvas{width:64px;height:56px}
+.result-summary{display:flex;justify-content:center;align-items:center;gap:14px;margin:6px 0 8px}
+.result-summary>span{font:14px 'Russo One',sans-serif}.result-summary>strong{font:27px 'Russo One',sans-serif}
+.result-card .yellow-button{font-size:18px;min-height:46px;padding:11px 10px;margin:0 0 4px}
 @media(max-width:650px){
  .collection-ticket{min-height:64px}
  #app-container.playing .sound-button{right:53px;top:79px}
@@ -35,15 +51,25 @@
  .ride-coach strong{font-size:17px}.ride-coach span{font-size:16px}
  .steer-controls button{font-size:32px;width:51px;height:59px}
  #jump-button{width:66px;height:64px;font-size:37px;right:12px;bottom:16px}
- .result-card{padding:25px 28px}.result-card h2{font-size:27px}.result-beer{font-size:76px}
- .result-card #result-comment{font-size:21px}.result-companion span{font-size:24px}
- .result-summary{margin:18px 0}.result-companion canvas{width:84px;height:76px}
+ .pause-card{padding:38px 18px 24px}
+ .pause-card h2{font-size:24px;margin:1px 0 3px}
+ .pause-card .pause-help{font-size:9.5px;line-height:1.2;margin:0 0 3px}
+ .pause-card .pause-balance-help{font-size:9px;line-height:1.15;margin:0 0 3px}
+ .pause-card .yellow-button{min-height:38px;font-size:15px;margin:0 0 3px}
+ .pause-card .pause-missions{margin:2px auto}
+ .pause-card .pause-missions li{padding:1px 0 1px 18px;font-size:11px}
+ .pause-card .text-button{font-size:10.5px;padding:1px 4px;margin:0 2px}
+ .result-card{padding:44px 20px 34px}.result-card h2{font-size:23px}.result-beer{font-size:52px}
+ .result-card #result-comment{font-size:14px}.result-companion span{font-size:18px}
+ .result-summary{margin:6px 0}.result-companion canvas{width:60px;height:52px}
 }
 @media(orientation:landscape) and (max-height:520px){
  #app-container.playing .sound-button{right:67px;top:64px;width:40px;height:40px}
  .ride-coach{max-width:370px;padding:12px 22px}.ride-coach strong{font-size:17px}.ride-coach span{font-size:16px}
+ .pause-card{width:min(660px,92%);padding:22px 26px 18px}
+ .pause-card h2{font-size:26px;margin:4px 0 6px}
  .result-card{width:min(690px,90%);padding:18px 30px 18px 170px}
- .result-card h2{font-size:25px;margin:0 0 7px}.result-beer{font-size:59px}.result-card #result-comment{font-size:19px;margin:6px 0}
- .result-companion{left:22px;top:43px;width:128px;margin:0}.result-companion span{font-size:22px}
- .result-summary{margin:10px 0;gap:16px}.result-summary>strong{font-size:28px}.result-card .menu-link{margin:5px auto 0;padding:4px;font-size:16px}
+ .result-card h2{font-size:25px;margin:0 0 7px}.result-beer{font-size:56px}.result-card #result-comment{font-size:17px;margin:4px 0}
+ .result-companion{left:22px;top:43px;width:128px;margin:0}.result-companion span{font-size:20px}
+ .result-summary{margin:8px 0;gap:14px}.result-summary>strong{font-size:26px}
 }

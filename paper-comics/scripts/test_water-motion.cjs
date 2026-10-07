@@ -73,16 +73,17 @@ async function run(){
       const beforeFreeze=g.camera.position.clone(),scale=g.comics.timeScale;g.comics.timeScale=0;
       for(let i=0;i<30;i++)g.updateCamera(1/60);
       const freezeDrift=beforeFreeze.distanceTo(g.camera.position);g.comics.timeScale=scale;
-      const deliveredBefore=g.score;g.mug.level=.8;g.finish();const delivered=g.score-deliveredBefore;g.finish();
+      g.chain.bank();const deliveredBefore=g.score;g.mug.level=.8;g.finish();const delivered=g.score-deliveredBefore;g.finish();
       const duplicated=g.score-deliveredBefore-delivered;
       g.state='paused';return {angular,verticalSpeed,verticalAcceleration,forwardAcceleration,freezeDrift,maxFov,minTop,maxBottom,maxX,jumped,spin,jumps:g.jump.jumps,landings:g.jump.cleanLandings,tricks:g.jump.tricks,delivered,duplicated,trace};
     });
-    assert.ok(ride.angular<1e-6,'steering and jumps preserve camera orientation');
-    assert.ok(ride.verticalSpeed<=2.60001&&ride.maxFov===0,'camera ascent is bounded and FOV stays fixed');
+    fs.writeFileSync(path.join(review,'report.json'),JSON.stringify({motion,ride,errors},null,2));
+    assert.ok(ride.angular<=.062,'steering adds only a gentle camera roll (<=3.5 degrees)');
+    assert.ok(ride.verticalSpeed<=2.60001&&ride.maxFov<=12,'camera ascent is bounded and the speed FOV stays within 58-70 degrees');
     assert.ok(ride.verticalAcceleration<26.1&&ride.forwardAcceleration<130,'landing and collision change camera velocity gradually');
     assert.equal(ride.freezeDrift,0,'comic freeze cannot make the camera creep towards the surfer');
-    assert.ok(ride.jumped&&ride.spin&&ride.landings===1&&ride.tricks===1,'tap jump and optional trick work during an actual moving-wave ride');
-    assert.ok(ride.minTop>=0&&ride.maxBottom<=1.03&&ride.maxX<1.05,'surfer remains framed during steering and a high jump');
+    assert.ok(ride.jumped&&ride.spin&&ride.landings>=1&&ride.tricks>=1,'tap jump and optional trick work during an actual moving-wave ride, with additional ramp landings allowed');
+    assert.ok(ride.minTop>=0&&ride.maxBottom<=1.03&&ride.maxX<1.05,'surfer remains framed during steering and a high jump: '+JSON.stringify([ride.minTop,ride.maxBottom,ride.maxX]));
     assert.equal(ride.delivered,960);assert.equal(ride.duplicated,0,'delivery reward is applied only once');
     // Render successive real simulation frames with the same damped camera.
     await page.evaluate(()=>{
