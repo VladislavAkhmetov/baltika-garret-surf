@@ -78,7 +78,7 @@ async function test(){
     setup(630,-5);const jet=g.world.hazards.find(h=>h.mode==='cross');jet.done=false;jet.activeAt=g.time;jet.x=1;jet.z=658;
     const z=658+6*.36,quality=g.world.wakeQualityAt(-5,z),withWake=g.wave.height(-5,z);
     g.wave.wakeField=null;const lift=withWake-g.wave.height(-5,z);g.wave.wakeField=(x,z)=>g.world.wakeAt(x,z);
-    setup(350,1);const rival=g.rivals[2];rival.collided=false;let contacts=0;const spill=g.spill;
+    setup(350,1);const rival=g.rivals[1];rival.collided=false;let contacts=0;const spill=g.spill;
     g.spill=function(amount,reason){if(reason.startsWith(rival.name))contacts++;return spill.call(this,amount,reason);};
     for(let i=0;i<40;i++){rival.x=g.p.x;rival.z=g.p.z+.2;g.step(dt);}g.spill=spill;
     const collision={contacts,beer:g.mug.level};
@@ -104,7 +104,7 @@ async function test(){
     const launched=g.p.airborne;g.heroAnimator.update(dt);const pose={state:g.heroAnimator.state,frame:g.heroAnimator.frame};
     for(let i=0;i<240&&g.p.airborne;i++)g.step(dt);
     const clean={charged,launched,height:g.jump.lastHeight,landed:!g.p.airborne,landings:g.jump.cleanLandings,beer:g.mug.level,pose};
-    setup();key('keydown');g.step(dt);key('keyup');while(g.p.airborne&&!g.jump.canSpin)g.step(dt);key('keydown');key('keyup');
+    setup(350);key('keydown');g.step(dt);key('keyup');while(g.p.airborne&&!g.jump.canSpin)g.step(dt);key('keydown');key('keyup');
     for(let i=0;i<240&&g.p.airborne;i++)g.step(dt);const hard={landings:g.jump.cleanLandings,beer:g.mug.level,recovering:g.p.recovering};
     setup();const high=g.wave.waves.filter(w=>w.encounterTime<38).reduce((best,w)=>w.height>best.height?w:best);g.time=high.encounterTime;g.wave.time=g.time;g.p.z=(high.from+high.to)/2;g.p.x=g.wave.crestX(high,g.p.z)+.1;g.p.y=g.wave.height(g.p.x,g.p.z);
     g.jump.press();g.step(dt);for(let i=0;i<240&&g.p.airborne;i++)g.step(dt);
@@ -141,7 +141,7 @@ async function test(){
   assert.deepEqual(jc.reset,{jumps:0,holding:false,escapes:0,sharks:true,icon:false});assert.ok(Math.abs(jc.slopes[0]-jc.slopes[1])<.01,'crest normals should remain continuous while shoulder height varies');
   const feedback=await page.evaluate(()=>{
     const g=game;g.reset();g.state='paused';
-    g.p.z=0;g.updateHUD();const gap={label:document.getElementById('wave-label').textContent,number:document.getElementById('wave-number').textContent,remaining:document.getElementById('wave-remaining').textContent,phase:document.querySelector('.wave-ticket').dataset.phase};
+    g.p.z=-80;g.updateHUD();const gap={label:document.getElementById('wave-label').textContent,number:document.getElementById('wave-number').textContent,remaining:document.getElementById('wave-remaining').textContent,phase:document.querySelector('.wave-ticket').dataset.phase};
     const last=g.wave.waves.at(-1);g.p.z=last.to-10;g.p.x=g.wave.crestX(last,g.p.z)+last.width*.34;g.waveRide.caught=true;g.waveRide.boost=8;g.updateHUD();
     const ending={status:document.getElementById('wave-status').textContent,phase:document.querySelector('.wave-ticket').dataset.phase,remaining:document.getElementById('wave-remaining').textContent};
     g.p.z=120;g.p.x=9;g.updateHUD();const nearby=document.getElementById('wave-label').textContent;

@@ -248,6 +248,7 @@ class SurfAudio {
 
   stopBGM() {
     this.bgmPlaying = false;
+    this.stopRivalMusic();
     if (this.bgmAudio) {
       this.bgmAudio.pause();
     }
@@ -302,6 +303,30 @@ class SurfAudio {
       this.nextSeagullTime = 7 + Math.random() * 10;
       this.playSeagull();
     }
+  }
+
+  updateRivalMusic(dt,distance,pan){
+    if(!this.ctx||this.isMuted||!this.bgmPlaying||distance>=42){this.stopRivalMusic();return;}
+    if(!this.rivalMusicGain){
+      this.rivalMusicGain=this.ctx.createGain();this.rivalMusicGain.gain.value=0;
+      this.rivalMusicPan=this.ctx.createStereoPanner();this.rivalMusicGain.connect(this.rivalMusicPan);this.rivalMusicPan.connect(this.masterGain);
+    }
+    const t=this.ctx.currentTime,volume=.17*(1-distance/42)**2;
+    this.rivalMusicGain.gain.setTargetAtTime(volume,t,.08);this.rivalMusicPan.pan.setTargetAtTime(Math.max(-1,Math.min(1,pan)),t,.08);
+    this.rivalMusicClock=(this.rivalMusicClock||0)-dt;
+    if(this.rivalMusicClock>0)return;
+    this.rivalMusicClock=.24;this.rivalMusicBeat=(this.rivalMusicBeat||0)+1;
+    // Original short syncopated beach riff, heard only near Diego's speaker.
+    const notes=[220,0,261.63,329.63,293.66,0,261.63,196],frequency=notes[this.rivalMusicBeat%notes.length];
+    if(!frequency)return;
+    const osc=this.ctx.createOscillator(),envelope=this.ctx.createGain();osc.type='triangle';osc.frequency.value=frequency;
+    envelope.gain.setValueAtTime(.001,t);envelope.gain.exponentialRampToValueAtTime(.8,t+.012);envelope.gain.exponentialRampToValueAtTime(.001,t+.18);
+    osc.connect(envelope);envelope.connect(this.rivalMusicGain);osc.start(t);osc.stop(t+.19);
+    osc.onended=()=>{osc.disconnect();envelope.disconnect();};
+  }
+  stopRivalMusic(){
+    if(this.rivalMusicGain&&this.ctx){this.rivalMusicGain.gain.cancelScheduledValues(this.ctx.currentTime);this.rivalMusicGain.gain.setValueAtTime(0,this.ctx.currentTime);}
+    this.rivalMusicClock=0;
   }
 
   playSeagull(variant = null) {

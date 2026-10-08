@@ -1,5 +1,6 @@
 /* A fixed, isolated three-wave playground. The ribbon is visual only. */
 window.FLOW_TEST_MODE=new URLSearchParams(location.search).get('flowtest')==='1';
+window.DRIVE_TEST_MODE=window.FLOW_TEST_MODE&&new URLSearchParams(location.search).get('drive')==='1';
 
 class FlowTest {
   static configureWaves(wave){

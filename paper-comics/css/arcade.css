@@ -16,6 +16,8 @@
 #app-container.playing .arcade-chain.has-chain,#app-container.playing .arcade-chain.chasing{opacity:1}
 .chase-row{display:none;grid-template-columns:auto 1fr auto;align-items:center;gap:7px;padding:5px 9px;background:#123d4cd9;color:#fff2d1;clip-path:var(--paper-edge)}
 .arcade-chain.chasing .chase-row{display:grid}
+.pursuit-cue{display:none;font:500 10px/1.4 Rubik,sans-serif;color:var(--yellow);max-width:260px}
+.arcade-chain.pursuing .pursuit-cue{display:block}
 .chase-label{font:400 12px 'Russo One',sans-serif;letter-spacing:.5px}
 .chase-track{position:relative;height:11px;background:#0b2a35;border:2px solid #f4e9cd}
 .chase-fill{position:absolute;inset:0;background:linear-gradient(90deg,#8fe3d6,#ffc43d 60%,#eb643c);transform-origin:left;transform:scaleX(0)}
@@ -93,3 +95,9 @@
  .pause-missions{display:none}
 }
 @media(prefers-reduced-motion:reduce){.speed-lines{display:none}.sfx-word.visible{animation-duration:.6s}.chase-row[data-level="2"] .chase-mult{animation:none}}
+.collection-ticket[hidden],.caps-ticket[hidden]{display:none!important}
+.ribbon-ride .hud{grid-template-columns:190px minmax(0,1fr) 48px}
+.ribbon-ride .score-ticket{grid-column:2;justify-self:end}
+.ribbon-ride .small-button{grid-column:3}
+@media(max-width:600px){.ribbon-ride .hud{grid-template-columns:110px minmax(0,1fr) 36px}.ribbon-ride .score-ticket{max-width:105px}}
+@media(orientation:landscape) and (max-height:520px){.ribbon-ride .hud{grid-template-columns:130px minmax(0,1fr) 40px}}

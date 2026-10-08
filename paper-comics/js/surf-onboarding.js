@@ -17,7 +17,7 @@ class SurfOnboarding {
   get timeScale(){
     if(this.game.p.fallen||this.game.p.airborne)return 1;
     if(this.game.balance.mode==='recovery')return this.game.assist||this.completed.has('balance')?1:.75;
-    return !this.completed.has('steer')&&this.age<4?.65:1;
+    return 1;
   }
   cue(){
     const g=this.game,p=g.p,keys=g.input.mode==='keys'&&!matchMedia('(pointer:coarse)').matches;

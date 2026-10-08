@@ -6,10 +6,16 @@ class WaveRide {
     this.capturedIds=new Set();this.crestAwards=new Set();this.cutbackAwards=new Set();this.lastId=null;this.lastCatchTime=-100;
     this.crestTime=0;this.departure=null;this.activeId=null;this.previousFace=null;
     this.catchPulse=0;this.soundClock=0;
+    this.momentum=0;this.firstCatchTime=null;
+  }
+  reward(name){
+    if(['ВПРИТЫК!','НАД БУЕМ!','РАЗОШЛИСЬ'].includes(name))this.momentum=Math.min(8,this.momentum+2);
+    if(['360°','КОСОЙ 360°','ПЕРЕВОРОТ!','ПРЯМОЙ ВЫЛЕТ','БОКОВОЙ ПЕРЕЛЁТ','МЯГКАЯ ПОСАДКА'].includes(name))this.momentum=Math.min(8,this.momentum+(name==='ПЕРЕВОРОТ!'?5:3));
   }
   step(dt){
     const g=this.game,p=g.p,s=g.wave.sample(p.x,p.z),w=s.wave;
     if(g.flowTest){g.flowTest.stepRide(dt,s);return;}
+    this.momentum=Math.max(0,this.momentum-dt*(p.airborne?.20:this.caught?.18:.85));
     this.zone=s.zone;
     const direction=w?Math.atan((g.wave.crestX(w,p.z+1)-g.wave.crestX(w,p.z-1))/2/.38):0;
     this.catchPulse=Math.max(0,this.catchPulse-dt*1.8);this.soundClock=Math.max(0,this.soundClock-dt);
@@ -30,6 +36,7 @@ class WaveRide {
       if(!this.capturedIds.has(w.id)){
         const transfer=this.lastId!==null&&this.lastId!==w.id&&g.time-this.lastCatchTime<4.8;
         this.capturedIds.add(w.id);this.totalCaught++;this.lastId=w.id;g.awardTrick('ПОЙМАЛ ВОЛНУ',120,this.totalCaught>1);
+        this.firstCatchTime??=g.time;this.momentum=Math.min(7,this.momentum+3.5);
         p.speed=Math.min(g.assist?38:42,p.speed+2.4+this.quality*1.8);this.catchPulse=1;
         g.ribbon?.catchWave();g.juice.punch(3.8);g.juice.buzz(18);g.emit(18,1.15,true);g.audio?.playCarve(.95);this.soundClock=.9;
         if(transfer){this.transfers++;g.awardTrick('ПЕРЕХОД',220,true);}

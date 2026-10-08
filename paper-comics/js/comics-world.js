@@ -111,9 +111,10 @@ class ComicsWorld {
     const p=this.game.p;
     return this.hazards.filter(h=>h.chasing).map(h=>({shark:h,gap:p.z-h.z})).sort((a,b)=>Math.abs(a.gap)-Math.abs(b.gap))[0]||null;
   }
-  step(dt){
+  step(dt,hazards=this.hazards){
     const g=this.game,p=g.p;
-    this.hazards.forEach(h=>{
+    hazards.forEach(h=>{
+      if(h.done)return;
       if(h.type==='shark'){this.stepChaser(h,dt);return;}
       if(h.type==='jetski'){
         if(p.z>h.initialZ-65&&h.activeAt===null){h.activeAt=g.time;if(h.mode==='overtake')h.z=p.z-22;}

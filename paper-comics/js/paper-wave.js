@@ -154,7 +154,7 @@ class PaperWave {
   }
 
   resetWaves(seed=Math.random()*10000){
-    if(window.FLOW_TEST_MODE){FlowTest.configureWaves(this);return;}
+    if(window.FLOW_TEST_MODE){(window.DRIVE_TEST_MODE?DriveTest:FlowTest).configureWaves(this);return;}
     this.seed=seed;
     this.waves.forEach((w,i)=>{
       const variation=this.hash(seed+i*37+21),progress=i/(this.waves.length-1);
@@ -181,6 +181,10 @@ class PaperWave {
       w.peelSpeed=28.2+w.size*1.4;
       w.peelOriginZ=centerZ-14;w.peelOriginTime=centerZ/30;
     });
+    Object.assign(this.waves[0],{anchorFrom:-72,anchorTo:180,anchorStart:-3.6,anchorEnd:-4.2,
+      height:3.7,size:.65,width:10,backWidth:15,centerX:-3,span:38,arc:0,bow:0,crestSlope:50,
+      encounterTime:54/28,velocityX:.12,velocityZ:-.02,breakRate:.014,
+      flowShape:[-3.6,-4.8,-3,-4.2],flowFace:[.34,.30,.48,.30]});
     this.time=0;this.lastPrintFrame=-1;
   }
 

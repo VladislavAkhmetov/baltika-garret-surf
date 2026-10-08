@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="css/arcade.css">
   <link rel="stylesheet" href="css/arcade-art.css">
   <link rel="stylesheet" href="css/flow-test.css">
+  <link rel="stylesheet" href="css/drive-test.css">
 </head>
 <body>
   <main id="app-container" aria-label="Игра Ни капли" tabindex="-1">
@@ -26,12 +27,12 @@
     <div id="sfx-layer" class="sfx-layer" aria-hidden="true"></div>
     <header class="hud" id="hud">
       <div class="beer-ticket paper"><canvas id="beer-canvas" width="104" height="144"></canvas><div><span class="ticket-label">ДОВЕЗИ</span><strong id="beer-value">100<span>%</span></strong><div class="beer-track"><i id="beer-fill"></i></div></div><b id="beer-mult" class="beer-mult" data-level="3" title="Множитель очков от пива">×3</b></div>
-      <div class="collection-ticket paper"><div class="wave-caps"><i class="wave-cap"><img src="assets/sprites/cap_fish.png" alt="Крышка первой волны"></i><i class="wave-cap"><img src="assets/sprites/cap_palm.png" alt="Крышка второй волны"></i><i class="wave-cap sun-cap" aria-label="Крышка третьей волны">☀</i></div><small id="collection-value">0 / 3</small></div><div class="score-ticket"><span>СЧЁТ</span><strong id="score-value">000000</strong></div>
+      <div class="collection-ticket paper" hidden aria-hidden="true"><div class="wave-caps"><i class="wave-cap"></i><i class="wave-cap"></i><i class="wave-cap"></i></div><small id="collection-value">0 / 3</small></div><div class="score-ticket"><span>СЧЁТ</span><strong id="score-value">000000</strong></div>
       <button id="pause-button" class="small-button paper" aria-label="Пауза">Ⅱ</button>
     </header>
     <button id="sound-button" class="sound-button paper" type="button" aria-label="Отключить звук" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="sound-waves" d="M16 8c2 2 2 6 0 8m3-11c4 4 4 10 0 14"/><path class="sound-off" d="m17 9 5 6m0-6-5 6"/></svg></button>
     <div id="ride-debug" class="hidden" aria-hidden="true">
-      <div class="caps-ticket paper"><img id="cap-icon" alt="Крышка"><span id="caps-value">0</span><span class="ticket-label">КРЫШЕК</span></div>
+      <div class="caps-ticket paper" hidden aria-hidden="true"><img id="cap-icon" alt=""><span id="caps-value">0</span></div>
       <span id="input-label" class="input-label paper">НАКЛОН ТЕЛЕФОНА</span>
       <span id="combo-value" class="combo-value">×1</span>
     <div class="wave-ticket paper"><div class="wave-heading"><span id="wave-label">НАЙДИ ПЕННУЮ ЛИНИЮ</span><b id="wave-number">1/7</b></div><div class="wave-contact"><i id="wave-fill"></i></div><div class="wave-readout"><span id="wave-status">СПОКОЙНЫЙ УЧАСТОК</span><span id="wave-remaining">ЧЕРЕЗ 35 М</span></div></div>
@@ -119,6 +120,7 @@
   <script src="js/comics-course.js"></script>
   <script src="js/wave-ribbon.js"></script>
   <script src="js/flow-test.js"></script>
+  <script src="js/drive-test.js"></script>
   <script src="js/paper-wave.js"></script>
   <script src="js/wave-ride.js"></script>
   <script src="js/hero-animation.js"></script>
@@ -136,6 +138,7 @@
   <script src="js/run-comic.js"></script>
   <script src="js/arcade-route.js"></script>
   <script src="js/speed-blur.js"></script>
+  <script src="js/rival-cast.js"></script>
   <script src="js/paper-prototype.js"></script>
 </body>
 </html>

@@ -1,11 +1,11 @@
 /* Small printed dots mark a fixed course; only their ink responds to the rider. */
 class WaveRibbon {
   constructor(game,options={}){
-    this.game=game;this.customRoute=options.route||null;
+    this.game=game;this.customRoute=options.route||null;this.customHeight=options.height||null;
     const params=new URLSearchParams(location.search);
     let saved=true;try{saved=localStorage.getItem('garret_comics_ribbon')!=='off';}catch(_){}
     this.enabled=options.enabled??(params.has('ribbon')?params.get('ribbon')!=='off':saved);
-    this.rows=64;this.columns=6;this.route=[];this.planAt=-100;this.planZ=-100;
+    this.rows=64;this.columns=6;this.route=[];
     const geometry=new THREE.PlaneGeometry(1,1,this.columns,this.rows);
     geometry.index.setUsage(THREE.DynamicDrawUsage);geometry.attributes.position.setUsage(THREE.DynamicDrawUsage);
     this.uniforms={uAccuracy:{value:0},uQuiet:{value:game.reducedMotion?1:0}};this.feedbackTime=-1;
@@ -34,11 +34,11 @@ class WaveRibbon {
     this.mesh=new THREE.Mesh(geometry,material);this.mesh.frustumCulled=false;this.mesh.renderOrder=1;game.scene.add(this.mesh);
   }
   reset(){
-    this.route=[];this.planAt=this.planZ=-100;
+    this.route=[];
     this.uniforms.uAccuracy.value=0;this.feedbackTime=-1;
   }
   setEnabled(enabled){
-    this.enabled=enabled;this.game.renderDirty=true;this.planAt=-100;
+    this.enabled=enabled;this.game.renderDirty=true;
     if(!this.customRoute){try{localStorage.setItem('garret_comics_ribbon',enabled?'on':'off');}catch(_){}this.renderToggle();}
   }
   renderToggle(){
@@ -69,7 +69,7 @@ class WaveRibbon {
       const t=row/this.rows,z=start+length*t,x=this.routePoint(z),width=x===null?0:.32;
       for(let col=0;col<=this.columns;col++){
         const index=row*(this.columns+1)+col,across=col/this.columns,px=(x??p.x)+(across-.5)*width*2;
-        const ground=this.customRoute?g.wave.height(px,z):g.trickRoute.guidanceHeight(px,z);
+        const ground=this.customHeight?this.customHeight(px,z):this.customRoute?g.wave.height(px,z):g.trickRoute.guidanceHeight(px,z);
         pos.setXYZ(index,-px,ground+.065,z);uv.setXY(index,across,t);
       }
     }

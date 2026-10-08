@@ -55,7 +55,7 @@ class SurfJump {
         this.takeoffRamp=null;this.sideKick=0;
         this.takeoffZone=surface.zone;this.takeoffWave=surface.wave?.id??null;
         const wake=g.world.wakeSourceAt(p.x,p.z);
-        this.takeoffSource=this.takeoffWave??(wake.quality>.3?'wake:'+wake.hazard.index:null);
+        this.takeoffSource=wake.quality>.3?'wake:'+wake.hazard.index:this.takeoffWave;
         this.airTime=this.lastHeight=0;this.apexFired=false;this.clearSpin();
         const rise=THREE.MathUtils.clamp(surface.dz*p.speed*Math.cos(p.heading)+surface.dx*p.sideVelocity+surface.waterVelocity,0,1.4);
         const lip=surface.wave?surface.wave.height*surface.energy*(.85+surface.crest*1.05):0;

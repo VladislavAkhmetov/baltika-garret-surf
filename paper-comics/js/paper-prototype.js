@@ -123,8 +123,9 @@ class PaperSurfGame {
     this.onboarding=new SurfOnboarding(this);
     this.chase=new FoamChase(this);this.chain=new TrickChain(this);this.juice=new ArcadeJuice(this);this.meta=new RunMeta(this);this.runComic=new RunComic(this);
     this.trickRoute=new TrickRoute(this);this.speedBlur=new SpeedBlur(this);
-    this.flowTest=window.FLOW_TEST_MODE?new FlowTest(this):null;
+    this.flowTest=window.FLOW_TEST_MODE?new (window.DRIVE_TEST_MODE?DriveTest:FlowTest)(this):null;
     this.ribbon=this.flowTest?null:new WaveRibbon(this);
+    this.openingGuide=this.flowTest?null:new WaveRibbon(this,{route:z=>this.trickRoute.bypassPoint(z)});
     this.container.classList.toggle('ribbon-ride',!this.flowTest);
     this.reset(); this.resize(); this.bindUI();
     this.journey=new SurfJourney(this);
@@ -231,16 +232,13 @@ class PaperSurfGame {
     this.trail = new THREE.Mesh(geo,material);this.trail.frustumCulled=false;this.scene.add(this.trail);
   }
   initRivals() {
-    this.rivals = [
-      {name:'ТОНИ', kind:'showoff', x:-3.2, z:30, speed:28, scale:1, color:0xe75735, line:'СМОТРИ, КАК НАДО!'},
-      {name:'ВИТЯ', kind:'calm', x:4, z:45, speed:26, scale:1.13, color:0xedbd36, line:'ТИШЕ ЕДЕШЬ…'},
-      {name:'СТАС', kind:'wobbly', x:1.3, z:72, speed:27, scale:.94, color:0x8ba544, line:'Я ВСЁ КОНТРОЛИРУЮ!'}
-    ];
+    this.rivals = [{scale:1,color:0x268f83},{scale:1,color:0xe9714e}];
     this.rivals.forEach((r,i)=>{
       r.rig=this.makeSurfer(r.scale,r.color);
       r.wake=[];for(let j=0;j<9;j++){let s=this.sprite(this.dropTexture,.25,.25);r.wake.push(s);}
       r.index=i;
     });
+    this.rivalCast=new RivalCast(this);
   }
   initLandingEffects(){
     this.landingRings=Array.from({length:4},()=>{
@@ -268,12 +266,8 @@ class PaperSurfGame {
     }
   }
   initCaps() {
+    // Pickups are shelved while testing waves, rivals and ramps.
     this.caps=[];
-    for(let i=0;i<44;i++){
-      const z=27+i*25.5, x=Math.sin(i*.47)*4.2;
-      const mesh=this.sprite(i%3===0?this.textures.cap_palm:this.textures.cap_fish,.8,.8);
-      this.caps.push({mesh,x,z,collected:false});
-    }
   }
   initFinish() {
     this.finishSign=this.sprite(this.label('ПЛЯЖНЫЙ БАР','#124f6a',512,90),11,1.9);
@@ -316,7 +310,7 @@ class PaperSurfGame {
   }
   reset() {
     this.input.reset();this.time=this.elapsed=this.accumulator=this.score=this.collected=0;
-    this.p={x:1,z:0,y:0,speed:23,heading:0,lean:0,pitch:0,smoothLean:0,sideVelocity:0,verticalVelocity:0,crouch:.1,balance:0,recovering:0,airborne:false,airY:0,spin:0};
+    this.p={x:1.4,z:0,y:0,speed:29,heading:0,lean:0,pitch:0,smoothLean:0,sideVelocity:0,verticalVelocity:0,crouch:.1,balance:0,recovering:0,airborne:false,airY:0,spin:0};
     this.wave.resetWaves(this.meta.seed);this.deliveryBonus=0;
     this.spillFlash=this.impactCooldown=this.momentTime=this.hintIndex=this.trickCooldown=this.carveClock=this.wakeClock=0;
     this.combo=1;this.hintTime=0;this.tricksSeen=new Set();this.world.reset();this.comics.reset();this.onboarding.reset();
@@ -326,11 +320,13 @@ class PaperSurfGame {
     this.companion.reset();
     this.flowTest?.reset();
     this.ribbon?.reset();
+    this.openingGuide?.reset();
+    if(!this.flowTest)this.chase.startIntro();
     this.p.y=this.wave.height(this.p.x,0,0);this.trailPoints=[];this.sprayAccumulator=this.trailClock=0;
     this.particles.forEach(d=>{d.life=0;d.mesh.visible=false;});
     this.landingRings.forEach(r=>{r.life=0;r.mesh.visible=false;});
     this.caps.forEach(c=>{c.collected=false;c.mesh.visible=true;});
-    this.rivals.forEach((r,i)=>{r.x=[-3.2,4,1.3][i];r.z=[30,45,72][i];r.lean=0;r.airY=0;r.passed=r.chat=r.contactLocked=r.collided=false;r.yieldTime=0;r.yieldSide=0;r.nearest=Infinity;});
+    this.rivalCast.reset();
     document.getElementById('moment').classList.remove('visible');document.getElementById('hint').classList.add('invisible');
     this.wave.update(0,0,true);this.updateCamera(1,true);this.updateVisuals(0);this.updateHUD();
   }
@@ -342,7 +338,8 @@ class PaperSurfGame {
       const button=document.getElementById('start-button');button.disabled=true;
       if(this.flowTest)calibrate=false;
       if(calibrate&&matchMedia('(pointer:coarse)').matches)button.textContent='ЗАПОМИНАЕМ НАКЛОН…';
-      await Promise.all([this.heroAnimator.ready,this.comics.ready,this.world.ready,this.coastReady,this.wave.ready,this.companion.ready,calibrate?this.input.calibrate():Promise.resolve()]);
+      await Promise.all([this.heroAnimator.ready,this.rivalCast.ready,this.comics.ready,this.world.ready,this.coastReady,this.wave.ready,this.companion.ready,calibrate?this.input.calibrate():Promise.resolve()]);
+      this.rivalCast.run++;
       this.reset();this.state='playing';this.container.classList.add('playing');
       this.journey?.hideAll();
       ['start-screen','pause-screen','result-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));
@@ -357,9 +354,10 @@ class PaperSurfGame {
     document.getElementById('center-button').textContent='◎ Запомнить нейтраль';
     document.getElementById('center-button').classList.toggle('hidden',this.input.mode!=='gyro');
     document.getElementById('pause-help').innerHTML=this.input.mode==='keys'?'← → / A D — курс по склону.<br>↑ ↓ / W S — вес на доске.':this.input.mode==='touch'?'Тяни вбок — курс по склону.<br>Вверх / вниз — вес на доске.':'Вбок — курс по склону.<br>Вперёд / назад — вес на доске.';
-    document.getElementById('pause-help').innerHTML+='<br>Кнопка / пробел: первое нажатие — прыжок, второе в воздухе — 360°. Высокий вылет с гребня открывает переворот: кнопка покажет «ФЛИП».<br>Держись у пены — карман ×2. Метры показывают отрыв от накрытия; время — оценка по текущей скорости. Пролив сжигает цепочку.';
+    document.getElementById('pause-help').innerHTML+='<br>Кнопка / пробел: первое нажатие — прыжок, второе в воздухе — 360°. Высокий вылет с гребня открывает переворот: кнопка покажет «ФЛИП».<br>После ошибки пена возвращается за спину. Чистая езда, новая волна и удачная посадка помогают оторваться; повторная ошибка приближает накрытие. Малый пролив уменьшает множитель цепочки; удар, падение и накрытие сжигают её. Очки трюков считаются отдельно от бонуса доставки.';
     document.getElementById('pause-help').innerHTML+='<br>Пунктир — маршрут: зелёный, когда держишь линию; красный, когда отклоняешься. L — подсказки на воде. На боковой борт заезжай поперёк с воды. Трамплин подбрасывает сам; прыжок на нём усиливает вылет. В воздухе нажми ещё раз для трюка. Ближе к пене — больше очков; скорость помогает оторваться.';
     if(this.flowTest)document.getElementById('pause-help').innerHTML='← → / A D или кнопки — поворот.<br>Пробел / прыжок — вылет, ещё раз — трюк.<br>L — лента, R — тот же участок заново.';
+    if(window.DRIVE_TEST_MODE)document.getElementById('pause-help').innerHTML+='<br>Трамплин слева, спокойный объезд справа. После посадки отпусти поворот, чтобы зачесть цепочку. Небольшой пролив уменьшает её множитель; падение сжигает цепочку. Довези не меньше 30% бокала.';
     this.renderCameraToggle();this.renderMissions(document.getElementById('pause-missions'),this.meta.missions.map(m=>({...m,done:this.meta.completedLive.has(m.id)})));
     document.getElementById('pause-screen').classList.remove('hidden');
     document.getElementById('moment')?.classList.remove('visible');
@@ -372,10 +370,11 @@ class PaperSurfGame {
     const el=document.getElementById('moment');el.querySelector('strong').textContent=word;el.querySelector('strong').style.fontSize='';el.querySelector('span').textContent=sub;el.querySelector('span').style.display=sub?'table':'none';el.classList.toggle('bad',bad);el.classList.remove('reward','big-reward','visible');el.querySelector('.moment-points').textContent='';el.querySelector('.moment-mult').textContent='';void el.offsetWidth;el.classList.add('visible');this.momentTime=seconds;
   }
   awardTrick(name,points,quiet=false){
-    if(this.flowTest){this.flowTest.award(name);return;}
+    if(this.flowTest){this.flowTest.award(name,points);return;}
     this.tricksSeen.add(name);const gain=this.chain.add(name,points);this.combo=this.chain.multiplier;
+    this.waveRide.reward(name);this.chase.onTrick(name);
     if(!quiet){
-      this.moment(name,name==='ПОЙМАЛ ВОЛНУ'?'КРЫШКА В КОЛЛЕКЦИЮ':'',false,1.15);
+      this.moment(name,'',false,1.15);
       const el=document.getElementById('moment');el.classList.add('reward');el.classList.toggle('big-reward',points>=600);
       el.querySelector('.moment-points').textContent='+'+gain.toLocaleString('ru-RU');
       el.querySelector('.moment-mult').textContent='ЦЕПОЧКА ×'+this.chain.multiplier;
@@ -399,12 +398,14 @@ class PaperSurfGame {
   }
   runStats(finished){
     const sharks=this.world.hazards.filter(h=>h.type==='shark');
-    return {finished,beer:this.mug.level,score:Math.round(this.score+(finished?0:this.chain.value*this.mug.multiplier)),tricks:this.jump.tricks,special:this.jump.specialTricks,
+    return {finished,beer:this.mug.level,score:Math.round(this.score+(finished?0:this.chain.value)),tricks:this.jump.tricks,special:this.jump.specialTricks,
       pocket2:this.chase.pocket2Time,longest:this.chain.longest,bestBank:this.chain.best,near:this.chain.nearMisses,wake:this.world.wakeRides,
       sharkAir:sharks.filter(h=>h.escaped&&h.airDodge).length,falls:this.balance.falls,wipes:this.chase.wipes};
   }
   spill(amount,reason) {
-    this.chain.burn();this.combo=1;this.juice.shake(.3+amount*3);
+    if(this.flowTest){if(!this.flowTest.handleSpill?.(amount,reason))this.chain.burn();}
+    else {this.chain.penalize(amount);this.waveRide.momentum=amount>=.10?0:this.waveRide.momentum*.55;this.chase.onMistake(amount,reason);}
+    this.combo=this.chain.multiplier;this.juice.shake(.3+amount*3);
     this.mug.level=Math.max(0,this.mug.level-amount);this.mug.applyStumbleImpulse(0);this.mug.onSpill(Math.sign(this.p.lean),amount);this.spillFlash=.7;
     this.moment(reason.toUpperCase(),'',true,.85);this.audio.playScratch();
     this.companion.react('spill');
@@ -430,7 +431,7 @@ class PaperSurfGame {
     this.waveRide.step(dt);
     const wake=p.airborne?0:this.world.wakeQualityAt(p.x,p.z);
     const trim=p.pitch*(this.waveRide.caught||wake>.3?3.2:.6);
-    const target=this.flowTest?this.flowTest.targetSpeed(slope):THREE.MathUtils.clamp((p.airborne?Math.max(this.assist?25:27,p.speed-.8):(this.assist?24:26)+this.waveRide.boost)+this.jump.landingBoost-slope*9+trim-Math.abs(p.heading)*1.2+(p.airborne?0:s.flowZ*.4)+(wake>.3?5*wake:0)-(p.recovering>0?5:0),18,this.assist?38:42);
+    const target=this.flowTest?this.flowTest.targetSpeed(slope):THREE.MathUtils.clamp((p.airborne?Math.max(this.assist?25:27,p.speed-.8):(this.assist?24:26)+this.waveRide.boost)+this.waveRide.momentum+this.jump.landingBoost-slope*9+trim-Math.abs(p.heading)*1.2+(p.airborne?0:s.flowZ*.4)+(wake>.3?5*wake:0)-(p.recovering>0?5:0),18,42);
     p.speed+=(target-p.speed)*(1-Math.exp(-1.65*dt));
     p.x=THREE.MathUtils.clamp(p.x+p.sideVelocity*dt,-9,9.2);p.z+=p.speed*Math.cos(p.heading)*dt;
     const next=this.trickRoute.stepRide(dt,previousPosition,this.wave.sample(p.x,p.z));this.jump.step(dt,next);
@@ -450,7 +451,8 @@ class PaperSurfGame {
     if(this.wakeClock>.45&&this.trickCooldown===0){this.awardTrick('НА ХВОСТЕ',180);this.trickCooldown=3;this.world.wakeRides++;this.juice.punch(2);}
     const waterImpact=verticalImpulse*(this.assist&&this.jump.landingPulse>0?.22:1);
     this.handBeer.step(dt,(p.heading-previousHeading)/dt,wake+waterImpact,THREE.MathUtils.clamp((p.lean-previousLean)/dt,-3,3));
-    if(!this.flowTest){this.world.step(dt);this.updateRivals(dt);this.updateCaps(dt);}this.trickRoute.step(dt);this.updateParticles(dt);
+    if(!this.flowTest){this.world.step(dt);this.updateRivals(dt);this.updateCaps(dt);}
+    this.flowTest?.step?.(dt);this.trickRoute.step(dt);this.updateParticles(dt);
     this.updateLandingEffects(dt);
     if(!p.airborne)this.sprayAccumulator+=dt*(Math.abs(p.lean)*20+this.waveRide.boost*.55+wake*12);
     if(this.sprayAccumulator>1){const n=Math.floor(this.sprayAccumulator);this.emit(n,.6+Math.abs(p.lean));this.sprayAccumulator-=n;}
@@ -593,12 +595,13 @@ class PaperSurfGame {
       rig.group.visible=!this.p.fallen||this.balance.fallTime>.55;
       if(this.p.fallen){rig.group.position.y-=Math.max(0,1.25-this.balance.fallTime)*2;rig.card.rotateZ((1.25-this.balance.fallTime)*1.2);}
     }
-    if(rig!==this.player&&poseFrame!==this.lastPoseFrame){
+    if(rig.castProfile)this.rivalCast.place(rig);
+    else if(rig!==this.player&&poseFrame!==this.lastPoseFrame){
       const pose=Math.abs(lean)>.2?'turn':'norma';rig.card.material.map=this.textures['surfer_'+pose];rig.pose=pose;
       rig.card.scale.set(pose==='turn'&&lean<0?-1:1,1,1);
     }
     rig.shadow.position.set(-x,sample.height+.04,z-.15);rig.shadow.material.opacity=.25/(1+airY*.8);
-    rig.shadow.rotation.z=Math.atan(sample.dx);rig.shadow.scale.set(1,1.5,1);
+    rig.shadow.rotation.z=Math.atan(sample.dx);rig.shadow.scale.set(rig.castProfile?.couple?1.6:1,1.5,1);
   }
 
   updateVisuals(dt) {
@@ -634,6 +637,7 @@ class PaperSurfGame {
     pos.needsUpdate=true;
     this.flowTest?.update(dt);
     this.ribbon?.update();
+    if(this.openingGuide){this.openingGuide.enabled=this.ribbon.enabled;this.openingGuide.update();}
   }
   updateCamera(dt,snap=false) {
     // Camera and route share game time, including a comic freeze or onboarding slow-down.
@@ -711,7 +715,7 @@ class PaperSurfGame {
     const fin=document.getElementById('shark-threat');fin.classList.toggle('visible',!!threat);fin.classList.toggle('close',danger>.7);fin.dataset.phase=threat?.shark.attackPhase||'chase';fin.querySelector('b').style.transform='scaleX('+danger+')';
     document.getElementById('spill-flash').style.opacity=this.spillFlash;this.drawBeer();
     this.balance.updateHUD();this.chain.render();
-    const mult=document.getElementById('beer-mult'),label='×'+this.mug.multiplier;if(mult.textContent!==label){mult.textContent=label;mult.dataset.level=this.mug.multiplier;}
+    const mult=document.getElementById('beer-mult'),label='×'+this.mug.multiplier;if(mult.textContent!==label){mult.textContent=label;mult.dataset.level=this.mug.multiplier;}mult.title='Бонус доставки '+label;mult.setAttribute('aria-label','Бонус доставки '+label);
     document.querySelector('.score-ticket').classList.toggle('beaten',this.meta.challenge>0&&this.score>this.meta.challenge);
   }
   updateCoach(guidance){
@@ -729,7 +733,9 @@ class PaperSurfGame {
     }
     else if(this.chase.critical){id='chase';title='ПЕНА ВПЛОТНУЮ!';line=this.input.mode==='keys'&&!matchMedia('(pointer:coarse)').matches?'Пробел — перепрыгни гребень.':'Нажми прыжок — перепрыгни гребень.';this.onboarding.highlight='jump';}
     else if(threat){id='danger';title=threat.shark.attackPhase==='windup'?'АКУЛА ГОТОВИТ БРОСОК!':threat.shark.attackPhase==='lunge'?'БРОСОК! УЙДИ С ЛИНИИ':'АКУЛА НА ХВОСТЕ!';line='Уйди с её линии в сторону.';this.onboarding.highlight='';}
-    else if(obstacle){id='danger';title=(obstacle.type==='buoy'?'БУЙ ВПЕРЕДИ':'АКВАБАЙК РЯДОМ')+' '+(p.x<obstacle.x?'←':'→');line='Обойди или перепрыгни.';this.onboarding.highlight='';}
+    else if(lesson?.id==='steer'){({title,line,id}=lesson);}
+    else if(obstacle){id='danger';const left=obstacle.type==='buoy'?this.trickRoute.routePoint(obstacle.z)<obstacle.x:p.x<obstacle.x;title=(obstacle.type==='buoy'?'БУЙ ВПЕРЕДИ':'АКВАБАЙК РЯДОМ')+' '+(left?'←':'→');line='Обойди или перепрыгни.';this.onboarding.highlight='';}
+    else if(!this.flowTest&&p.z>175&&p.z<212){id='danger';title='← ВЫЛЕТ · ОБЪЕЗД →';line='Трамплин подбрасывает сам.';}
     else if(lesson){({title,line,id}=lesson);}
     else if(this.jump.rampTricks===0){
       const ramp=this.trickRoute.lines.find(l=>!l.done&&l.z-p.z>0&&l.z-p.z<38);
@@ -757,6 +763,7 @@ class PaperSurfGame {
       const foamPressure=this.chase.active?.25+.75*this.wave.smooth((12-this.chase.gap)/10.9):0;
       this.audio.updateWave(this.p.speed/32,false,foamPressure);
       this.audio.updateAmbient?.(realDt);
+      if(!this.flowTest)this.rivalCast.music(realDt);
       const wake=this.p.airborne?0:this.world.wakeQualityAt(this.p.x,this.p.z);
       const jetski=this.world.hazards.find(h=>h.type==='jetski'&&h.activeAt!==null&&Math.abs(h.z-this.p.z)<48);
       if(jetski){

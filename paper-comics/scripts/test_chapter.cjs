@@ -57,7 +57,7 @@ async function run(){
       for(let i=0;i<80;i++)g.step(1/120);g.updateHUD();const feedbackHidden=document.getElementById('ride-coach').classList.contains('hidden'),feedbackLesson=document.getElementById('ride-coach').dataset.lesson;
       for(let i=0;i<160;i++)g.step(1/120);g.updateHUD();g.updateCamera(1,true);g.updateVisuals(0);g.wave.update(g.p.z,g.time,true);g.renderer.render(g.scene,g.camera);g.state='paused';
       return {scale,releasePrompt,completed,normalScale,feedbackHidden,feedbackLesson,waves:g.waveRide.totalCaught,lesson:document.getElementById('ride-coach').dataset.lesson};
-    });assert.ok(steering.scale<1);assert.equal(steering.releasePrompt,'ТЕПЕРЬ ОТПУСТИ');assert.ok(steering.completed&&(steering.feedbackHidden||steering.feedbackLesson==='jump'),'wave feedback yields to the optional jump lesson: '+JSON.stringify(steering));assert.equal(steering.normalScale,1);assert.ok(steering.waves>0);assert.equal(steering.lesson,'jump');await shot('onboarding-jump');
+    });assert.equal(steering.scale,1);assert.equal(steering.releasePrompt,'ТЕПЕРЬ ОТПУСТИ');assert.ok(steering.completed&&(steering.feedbackHidden||steering.feedbackLesson==='jump'||steering.feedbackLesson==='danger'),'wave feedback yields to the optional jump lesson: '+JSON.stringify(steering));assert.equal(steering.normalScale,1);assert.ok(steering.waves>0);assert.equal(steering.lesson,'jump');await shot('onboarding-jump');
     const landing=await page.evaluate(()=>{const g=game;g.state='playing';g.jump.press();g.step(1/120);g.updateHUD();g.updateVisuals(0);g.renderer.render(g.scene,g.camera);g.state='paused';return {lesson:document.getElementById('ride-coach').dataset.lesson,jumped:g.onboarding.completed.has('jump'),airborne:g.p.airborne,holding:g.jump.holding};});assert.equal(landing.lesson,'landing');assert.ok(landing.jumped&&landing.airborne&&!landing.holding);await shot('onboarding-tap-jump');
     const balanceLesson=await page.evaluate(()=>{
       const g=game;g.state='playing';while(g.p.airborne)g.step(1/120);const landed=g.onboarding.completed.has('landing');
@@ -90,11 +90,11 @@ async function run(){
       setup();g.balance.disturb(.55,'ТЕСТ ПОСАДКИ');
       tick(340,()=>{g.input.target=THREE.MathUtils.clamp(-g.balance.roll*1.7-g.balance.velocity*.85,-1,1);});
       const rescued={mode:g.balance.mode,saves:g.balance.saves,falls:g.balance.falls,balance:g.p.balance};
-      setup();g.collected=4;g.caps[0].collected=true;g.combo=4;g.score=500;const initialZ=g.p.z;
+      setup();g.collected=0;g.combo=4;g.score=500;const initialZ=g.p.z;
       g.balance.disturb(.75,'НЕ ПОЙМАЛ');tick(180);
       const falling={mode:g.balance.mode,falls:g.balance.falls,beer:g.mug.level,z:g.p.z,initialZ,combo:g.combo};
       tick(180);
-      const respawn={mode:g.balance.mode,fallen:g.p.fallen,immunity:g.balance.immunity,beer:g.mug.level,falls:g.balance.falls,score:g.score,collected:g.collected,cap:g.caps[0].collected,hidden:document.getElementById('wipeout-screen').classList.contains('hidden')};
+      const respawn={mode:g.balance.mode,fallen:g.p.fallen,immunity:g.balance.immunity,beer:g.mug.level,falls:g.balance.falls,score:g.score,collected:g.collected,capCount:g.caps.length,hidden:document.getElementById('wipeout-screen').classList.contains('hidden')};
       g.balance.disturb(.8,'Защита');const protectedMode=g.balance.mode;
       g.pause();g.reset();const reset={falls:g.balance.falls,saves:g.balance.saves,roll:g.balance.roll,hidden:document.getElementById('wipeout-screen').classList.contains('hidden')};
       return {idle,corrected,hard,uncorrected,rescued,falling,respawn,protectedMode,reset};
@@ -104,7 +104,7 @@ async function run(){
     assert.equal(mechanics.hard.mode,'recovery');assert.equal(mechanics.hard.clean,0);assert.ok(mechanics.hard.recovering>0);
     assert.ok(mechanics.uncorrected.recovering>0||mechanics.uncorrected.falls>0,'recovery cannot disappear on a timer');
     assert.ok(mechanics.rescued.saves>0);assert.equal(mechanics.rescued.falls,0);assert.equal(mechanics.rescued.mode,'stable');
-    assert.equal(mechanics.falling.falls,1);assert.equal(mechanics.falling.combo,1);assert.equal(mechanics.respawn.falls,1);assert.equal(mechanics.respawn.mode,'stable');assert.equal(mechanics.respawn.hidden,true);assert.ok(mechanics.respawn.immunity>0);assert.equal(mechanics.respawn.collected,4);assert.equal(mechanics.respawn.cap,true);assert.equal(mechanics.protectedMode,'stable');
+    assert.equal(mechanics.falling.falls,1);assert.equal(mechanics.falling.combo,1);assert.equal(mechanics.respawn.falls,1);assert.equal(mechanics.respawn.mode,'stable');assert.equal(mechanics.respawn.hidden,true);assert.ok(mechanics.respawn.immunity>0);assert.equal(mechanics.respawn.collected,0);assert.equal(mechanics.respawn.capCount,0);assert.equal(mechanics.protectedMode,'stable');
     assert.deepEqual(mechanics.reset,{falls:0,saves:0,roll:0,hidden:true});
     const scenes=[['crest',100],['shark',425],['jetski-cross',645],['jetski-other-side',645],['jetski-rear',790],['large-wave',990],['collection',1110]];
     for(const [name,z] of scenes){

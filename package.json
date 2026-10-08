@@ -16,8 +16,11 @@
     "test:arcade-art": "node paper-comics/scripts/test_arcade-art.cjs",
     "test:danger-cues": "node paper-comics/scripts/test_danger-cues.cjs",
     "test:flow": "node paper-comics/scripts/test_flow.cjs",
+    "test:drive": "node paper-comics/scripts/test_drive.cjs",
+    "test:action": "node paper-comics/scripts/test_action.cjs",
     "test:ribbon": "node paper-comics/scripts/test_ribbon.cjs",
-    "test:maneuvers": "node paper-comics/scripts/test_maneuvers.cjs"
+    "test:maneuvers": "node paper-comics/scripts/test_maneuvers.cjs",
+    "test:rivals": "node paper-comics/scripts/test_rivals.cjs"
   },
   "dependencies": {
     "puppeteer-core": "^24.43.1"

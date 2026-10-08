@@ -1,4 +1,4 @@
-/* Whitewater chases the rider along the wave. The gap to the foam sets the pocket multiplier. */
+/* Whitewater returns after a mistake; its visible front is the actual contact line. */
 class FoamChase {
   constructor(game){
     this.game=game;
@@ -36,6 +36,8 @@ class FoamChase {
   reset(){
     this.active=false;this.wave=null;this.z=this.speed=this.level=this.danger=this.offWave=this.rideScore=this.sprayClock=this.spraySerial=0;
     this.gap=Infinity;this.pocketTime=this.pocket2Time=this.wipes=this.chases=0;this.done=new Set();
+    this.phase='idle';this.pursuit=false;this.age=this.cleanTime=this.rush=this.cooldown=this.strikes=this.escapes=0;
+    this.lastMistake=-100;this.inWipe=false;
     this.game.wave.peelFront=null;
     this.spray.forEach(s=>{s.life=0;s.mesh.visible=false;});
     this.frontMesh.visible=this.crestFroth.visible=false;
@@ -44,10 +46,12 @@ class FoamChase {
   get distanceLeft(){return this.active?Math.max(0,this.gap-1.1):Infinity;}
   get closingSpeed(){return this.active?this.speed-this.game.p.speed*Math.cos(this.game.p.heading):0;}
   get impactETA(){return this.closingSpeed>.35?this.distanceLeft/this.closingSpeed:Infinity;}
-  get critical(){return this.active&&this.game.p.airY<1.2&&(this.distanceLeft<1.4||this.impactETA<1.2);}
+  get critical(){return this.active&&!['intro','warning'].includes(this.phase)&&this.game.p.airY<1.2&&(this.distanceLeft<1.4||this.impactETA<1.2);}
   frontEnergy(w,z,u){
-    return this.game.wave.envelope(w,z)*Math.pow(Math.sin(Math.PI*u),.45);
+    const energy=this.game.wave.envelope(w,z);
+    return (this.pursuit?Math.max(.65,energy):energy)*Math.pow(Math.sin(Math.PI*u),.45);
   }
+  frontX(w,z,u){return this.pursuit?(u-.5)*19:this.game.wave.crestX(w,z)+w.width*(.015+u*.91);}
   makeSprayTexture(){
     const canvas=document.createElement('canvas');canvas.width=canvas.height=96;const c=canvas.getContext('2d');
     // Crisp broken flecks carry the foam texture into the air without large soft circles.
@@ -67,35 +71,61 @@ class FoamChase {
     const front=g.wave.frontAt(w),gap=p.z-front.z;
     return w.height>=2.3&&g.onboarding.completed.has('wave')&&p.z>180&&w.to-p.z>15&&gap>1.1&&gap<65&&!this.done.has(w.id);
   }
-  begin(w){
+  startIntro(){this.begin(this.game.wave.waves[0],{pursuit:true,intro:true});}
+  onMistake(amount){
+    const g=this.game;
+    if(amount<.02||this.inWipe||g.p.fallen||g.state!=='playing'||g.time-this.lastMistake<.65)return;
+    if(this.active&&this.phase==='intro'){this.end('intro');this.cooldown=0;}
+    if(!this.active){
+      if(this.cooldown>0)return;
+      this.begin(g.wave.field(g.p.x,g.p.z).wave||g.wave.waves.reduce((a,b)=>Math.abs((a.from+a.to)/2-g.p.z)<Math.abs((b.from+b.to)/2-g.p.z)?a:b),{pursuit:true});
+      g.hint('ПЕНА ЗА СПИНОЙ · ЛОВИ ВОЛНУ И ДЕРЖИ КУРС',2.4);
+    }else if(this.pursuit){
+      this.strikes++;this.rush=Math.min(3,this.rush+1.6);this.cleanTime=0;
+      g.hint('ЕЩЁ ОШИБКА — ПЕНА БЛИЖЕ! ПРЫЖОК ИЛИ РАЗГОН',2.2);
+      g.juice.punch(2);
+    }
+    this.lastMistake=g.time;
+  }
+  onTrick(name){
+    if(!this.active||!this.pursuit||this.phase==='intro')return;
+    if(['ПОЙМАЛ ВОЛНУ','ПЕРЕХОД','ВЫРУЛИЛ','ВПРИТЫК!','НАД БУЕМ!','РАЗОШЛИСЬ'].includes(name))this.cleanTime+=.7;
+    if(['360°','КОСОЙ 360°','ПЕРЕВОРОТ!','ПРЯМОЙ ВЫЛЕТ','БОКОВОЙ ПЕРЕЛЁТ','МЯГКАЯ ПОСАДКА'].includes(name))this.cleanTime+=1.6;
+  }
+  begin(w,options={}){
     const g=this.game,p=g.p;
     const front=g.wave.frontAt(w);
-    this.active=true;this.wave=w;this.z=front.z;this.gap=p.z-this.z;this.speed=front.speed;this.offWave=this.rideScore=0;this.chases++;
-    if(!this.taught){this.taught=true;g.hint('ПЕНА ЗА СПИНОЙ · БЛИЖЕ К НЕЙ — ОЧКИ ×2',3.4);}
+    this.active=true;this.wave=w;this.z=front.z;this.gap=p.z-this.z;this.speed=front.speed;this.offWave=this.rideScore=0;
+    this.pursuit=!!options.pursuit;this.phase=options.intro?'intro':this.pursuit?'warning':'chasing';
+    this.age=this.cleanTime=this.rush=0;this.strikes=options.intro?0:1;this.level=0;
+    if(this.pursuit){this.z=p.z-(options.intro?10:24);this.gap=p.z-this.z;this.speed=options.intro?18:20;}
+    if(!options.intro)this.chases++;
   }
   end(reason){
     if(!this.active)return;
     const g=this.game;this.done.add(this.wave.id);
-    if(reason!=='wipe'&&reason!=='fall'&&this.rideScore>1){
+    if(this.pursuit&&reason==='escape'&&this.strikes){
+      this.escapes++;g.awardTrick('ОТОРВАЛСЯ ОТ ПЕНЫ',200,true);g.hint('ОТОРВАЛСЯ! СОХРАНИ РАЗГОН',1.7);
+    }else if(!this.pursuit&&reason!=='wipe'&&reason!=='fall'&&this.rideScore>1){
       g.awardTrick('КАРМАН',Math.round((100+this.rideScore*45)/10)*10);
     }
-    this.active=false;this.wave=null;this.level=0;this.gap=Infinity;g.wave.peelFront=null;
+    this.cooldown=reason==='wipe'?3.5:reason==='fall'?2.5:reason==='escape'?1.5:reason==='intro'?.35:0;
+    this.active=false;this.wave=null;this.level=0;this.phase='idle';this.gap=Infinity;g.wave.peelFront=null;
     this.frontMesh.visible=this.crestFroth.visible=false;
   }
   wipe(){
     const g=this.game,p=g.p,t=this.tuning();
     this.wipes++;this.end('wipe');
-    g.spill(t.spill,'Пена догнала');g.moment('ПЕНА НАКРЫЛА!','',true,1.1);
+    this.inWipe=true;g.chain.burn();g.spill(t.spill,'Пена догнала');this.inWipe=false;g.moment('ПЕНА НАКРЫЛА!','',true,1.1);
     p.speed*=.75;g.impactCooldown=1.5;g.balance.disturb(.42,'НАКРЫЛО ПЕНОЙ');g.emit(30,1.4,true);
     g.juice.hitstop(.11);g.juice.shake(.55);g.juice.buzz([30,40,60]);g.juice.pop('ХРЯСЬ!',p.x,p.y+1.8,p.z,'bad');
     g.runComic.capture('wipe','ХРЯСЬ!','ПЕНА ДОГНАЛА',80);
   }
   step(dt){
     const g=this.game,p=g.p,s=g.wave.field(p.x,p.z);
-    if(!this.active){
-      if(g.waveRide.caught&&s.wave&&this.eligible(s.wave))this.begin(s.wave);
-      else return;
-    }
+    this.cooldown=Math.max(0,this.cooldown-dt);
+    if(!this.active)return;
+    if(this.pursuit){this.stepPursuit(dt);return;}
     const onWave=s.wave?.id===this.wave.id&&s.face<1||p.airborne&&p.z<this.wave.to+10;
     this.offWave=onWave?0:this.offWave+dt;
     if(this.offWave>.45){this.end('left');return;}
@@ -119,6 +149,31 @@ class FoamChase {
       else this.end('passed');
     }
   }
+  stepPursuit(dt){
+    const g=this.game,p=g.p;this.age+=dt;this.rush=Math.max(0,this.rush-dt);
+    if(this.phase==='intro'){
+      this.speed=18;this.z+=this.speed*dt;this.gap=p.z-this.z;
+      if(this.age>=1.4){this.end('intro');return;}
+    }else{
+      this.phase=this.age<.9?'warning':'chasing';
+      this.speed=this.phase==='warning'?20:(g.assist?26:29)+(this.rush>0?7:0);
+      this.z+=this.speed*dt;this.gap=p.z-this.z;
+      if(this.phase==='chasing'&&p.recovering===0&&p.balance<.65&&g.time-this.lastMistake>.9)this.cleanTime+=dt;
+      if(this.gap>38||this.age>1.7&&this.cleanTime>=4.6){this.end('escape');return;}
+      this.level=this.phase==='warning'||p.airborne?0:this.gap<5.5?2:this.gap<11?1:0;
+      if(this.level){
+        this.pocketTime+=dt;if(this.level===2)this.pocket2Time+=dt;
+        this.rideScore+=dt*this.level;g.chain.addPocket(dt*(this.level===2?90:45));
+      }
+      if(this.gap<=1.1){
+        if(this.phase==='chasing'&&p.airY<1.2&&g.impactCooldown===0&&g.balance.immunity===0)this.wipe();
+        else this.end(p.airY>=1.2?'escape':'passed');
+        return;
+      }
+    }
+    if(g.wave.envelope(this.wave,this.z)<.2)this.wave=g.wave.waves.reduce((a,b)=>g.wave.envelope(a,this.z)>g.wave.envelope(b,this.z)?a:b);
+    g.wave.peelFront={id:this.wave.id,z:this.z};
+  }
   update(dt){
     const g=this.game,target=this.active?THREE.MathUtils.clamp(1-(this.gap-1.1)/11,0,1):0;
     this.danger+=(target-this.danger)*(1-Math.exp(-dt*6));
@@ -138,7 +193,7 @@ class FoamChase {
   }
   updateFront(){
     const g=this.game,w=this.wave,mesh=this.frontMesh;
-    mesh.visible=this.crestFroth.visible=this.active&&!!w;if(!mesh.visible)return;
+    mesh.visible=this.crestFroth.visible=this.active&&!!w&&['playing','paused'].includes(g.state);if(!mesh.visible)return;
     const pos=mesh.geometry.attributes.position,foam=mesh.geometry.attributes.waterFoam;
     for(let col=0;col<=this.columns;col++){
       const u=col/this.columns;
@@ -156,14 +211,14 @@ class FoamChase {
           lift=(height-radius*(1-Math.cos(2.2)))*(1-g.wave.smooth(t));
         }
         // The leading white tongue ends at the actual capture threshold, not an arbitrary visual offset.
-        const z=Math.min(this.z+1.1,this.z+along+skew*(1-g.wave.smooth((v-.45)/.42))),x=g.wave.crestX(w,z)+w.width*(.015+u*.91);
+        const z=Math.min(this.z+1.1,this.z+along+skew*(1-g.wave.smooth((v-.45)/.42))),x=this.frontX(w,z,u);
         const i=row*(this.columns+1)+col;pos.setXYZ(i,-x,g.wave.height(x,z)+.025+lift,z);
         const crest=g.wave.smooth((v-.32)/.23)*(1-g.wave.smooth((v-.87)/.13));
         const tongue=g.wave.smooth((v-.88)/.1);
         foam.setX(i,(.22+crest*2.7+tongue*1.8)*energy*(.91+.09*Math.sin(col*.7+row*.8-g.time*3)));
       }
       if(col<this.columns)for(let puff=0;puff<2;puff++){
-        const z=this.z-.6+skew*.8+puff*.25,x=g.wave.crestX(w,z)+w.width*(.015+u*.91);
+        const z=this.z-.6+skew*.8+puff*.25,x=this.frontX(w,z,u);
         const y=g.wave.height(x,z)+height+.08+Math.sin(g.time*5.2+col*.9+puff)*.14*energy;
         const size=(.8+g.wave.hash(col*7+puff+15)*1.35)*energy;
         this.frothDummy.position.set(-x,y,z);
@@ -180,8 +235,7 @@ class FoamChase {
   launchSpray(){
     const g=this.game,w=this.wave,s=this.spray.find(item=>item.life<=0);if(!s||!w)return;
     const serial=this.spraySerial++,u=.08+(serial*.61803398875%1)*.84,energy=this.frontEnergy(w,this.z,u);
-    const crest=g.wave.crestX(w,this.z);
-    s.x=crest+w.width*(.015+u*.91);s.z=this.z-.6+(u-.5)*1.8;s.y=g.wave.height(s.x,s.z)+(.8+w.size*1.1)*energy;
+    s.x=this.frontX(w,this.z,u);s.z=this.z-.6+(u-.5)*1.8;s.y=g.wave.height(s.x,s.z)+(.8+w.size*1.1)*energy;
     s.vx=(Math.random()-.5)*2.6;s.vy=6.5+(serial%5)*.65;s.vz=this.speed+1.5+(serial%4)*.75;
     s.life=1.1+(serial%5)*.08;s.size=.28+((serial*7)%11)*.015;s.mesh.material.rotation=Math.random()*Math.PI;s.mesh.visible=true;
   }

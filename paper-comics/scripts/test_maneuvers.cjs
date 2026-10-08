@@ -19,7 +19,7 @@ async function run(){
         g.p.z=entry.z-18;g.time=g.p.z/30;g.wave.time=g.time;g.p.x=entry.x;g.p.speed=31;g.p.y=g.wave.height(g.p.x,g.p.z);
         return line;
       }
-      for(const [index,spin,pop] of [[0,false,false],[1,false,false],[0,true,false],[1,true,false],[0,false,true]]){
+      for(const [index,spin,pop] of [[0,false,false],[1,false,false],[0,true,false],[1,true,false],[0,false,true],[3,true,false],[5,true,false],[7,true,false]]){
         const line=prepare(index);let pressed=false,spinPressed=false,launch=null,maxAir=0,landing=null;
         for(let i=0;i<120*7;i++){
           const target=g.trickRoute.routePoint(g.p.z+7)??g.p.x;
@@ -98,11 +98,16 @@ async function run(){
           let surfaceError=0;const pos=line.top.geometry.attributes.position;
           for(let i=0;i<pos.count;i++)surfaceError=Math.max(surfaceError,Math.abs(pos.getY(i)-g.trickRoute.surface(line,-pos.getX(i),pos.getZ(i)).height));
           const inner=line.x-line.edgeSide*line.width/2,outer=line.x+line.edgeSide*line.width*.499;
-          const wallSlope=line.type==='side'?Math.abs(g.trickRoute.surface(line,outer,line.z).dx-g.wave.sample(outer,line.z).dx):0;
-          return {error,surfaceError,wallSlope,edge:Math.min(Math.abs(inner),Math.abs(outer)),finite:Array.from(pos.array).every(Number.isFinite),visible:line.group.visible,overflow:document.documentElement.scrollWidth>innerWidth};
+          const wallSlope=line.type==='side'?Math.abs(g.trickRoute.surface(line,outer,line.z).dx):0;
+          const forwardSlope=line.type==='side'?g.trickRoute.surface(line,outer,line.z).dz:0;
+          let flatError=0;if(line.type==='side')for(let i=0;i<pos.count;i++){
+            const x=-pos.getX(i),z=pos.getZ(i),center=g.trickRoute.point(line,.5,0);
+            flatError=Math.max(flatError,Math.abs(pos.getY(i)-center.y-(x-center.x)*line.edgeSide*line.height/line.width-(z-center.z)*line.forwardRise/line.length));
+          }
+          return {error,surfaceError,flatError,wallSlope,forwardSlope,edge:Math.min(Math.abs(inner),Math.abs(outer)),finite:Array.from(pos.array).every(Number.isFinite),visible:line.group.visible,overflow:document.documentElement.scrollWidth>innerWidth};
         },type);
         assert.ok(layout.error<.001&&layout.surfaceError<.001&&layout.finite&&layout.visible&&!layout.overflow,'printed route and physical geometry agree');
-        if(type==='side')assert.ok(layout.edge>=5&&layout.wallSlope>10,'side ramps stay at the course edge and have a nearly vertical lip');
+        if(type==='side')assert.ok(layout.edge>=5&&layout.wallSlope>.4&&layout.wallSlope<1&&layout.forwardSlope>0&&layout.flatError<.001,'side ramps are flat planes sloped outward and forward at the course edge');
         report.layouts.push({name,type,...layout});await page.evaluate(()=>document.fonts.ready);await page.screenshot({path:path.join(review,name+'-'+type+'.png')});
       }
     }

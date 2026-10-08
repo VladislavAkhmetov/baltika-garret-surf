@@ -1,6 +1,7 @@
 {
   "redirects": [
     { "source": "/", "destination": "/paper-comics/index.html", "permanent": false },
+    { "source": "/index.html", "destination": "/paper-comics/index.html", "permanent": false },
     { "source": "/paper-comics", "destination": "/paper-comics/index.html", "permanent": false },
     { "source": "/paper-comics/", "destination": "/paper-comics/index.html", "permanent": false },
     { "source": "/prototype.html", "destination": "/paper-comics/index.html", "permanent": false }

@@ -1,4 +1,4 @@
-/* Tricks stack into a chain that scores only once banked. Any spill burns it. */
+/* Tricks bank separately from delivery; small spills reduce the chain multiplier. */
 class TrickChain {
   constructor(game){
     this.game=game;this.el=document.getElementById('arcade-chain');this.toast=document.getElementById('chain-toast');
@@ -6,6 +6,7 @@ class TrickChain {
     this.timerEl=this.el.querySelector('.chain-timer i');this.chaseEl=this.el.querySelector('.chase-row');
     this.chaseFill=this.el.querySelector('.chase-fill');this.chaseMult=this.el.querySelector('.chase-mult');
     this.chaseDistance=this.el.querySelector('.chase-distance');this.chaseStatus=this.el.querySelector('.chase-status');
+    this.pursuitCue=document.createElement('small');this.pursuitCue.className='pursuit-cue';this.pursuitCue.setAttribute('role','status');this.el.append(this.pursuitCue);
     this.reset();
   }
   reset(){
@@ -30,13 +31,13 @@ class TrickChain {
     this.toastTime=Math.max(0,this.toastTime-dt);if(this.toastTime===0)this.toast.classList.remove('visible');
     if(!this.count)return;
     const g=this.game;
-    // Flight and pocket riding keep the chain open; the clock runs on open water.
-    if(!g.p.airborne&&g.chase.level===0)this.timer-=dt;
+    if(g.p.airborne||g.trickRoute.riding||g.waveRide.caught||g.chase.level>0)this.timer=this.window;
+    else if(Math.abs(g.p.lean)<.35)this.timer-=dt;
     if(this.timer<=0)this.bank();
   }
   bank(){
     if(!this.count)return 0;
-    const g=this.game,count=this.count,value=Math.round(this.value*g.mug.multiplier);
+    const g=this.game,count=this.count,value=this.value;
     g.score+=value;this.total+=value;this.banked++;this.best=Math.max(this.best,value);this.clear();
     this.show('ЗАЧТЕНО','+'+value.toLocaleString('ru-RU'),false);
     if(g.state==='playing'){
@@ -51,6 +52,14 @@ class TrickChain {
     if(lost>=150)this.show('ЦЕПОЧКА СГОРЕЛА','−'+lost.toLocaleString('ru-RU'),true);
     return lost;
   }
+  penalize(amount){
+    if(amount<.01)return 0;
+    if(amount>=.10)return this.burn();
+    if(!this.count)return 0;
+    this.count=Math.max(1,this.count-1);
+    this.show('ЦЕПОЧКА ЖИВА','МНОЖИТЕЛЬ ×'+this.multiplier,true);
+    return 0;
+  }
   clear(){this.items=[];this.points=this.count=this.timer=0;}
   show(title,line,bad){
     this.toast.querySelector('strong').textContent=title;this.toast.querySelector('span').textContent=line;
@@ -62,8 +71,10 @@ class TrickChain {
     if(text!==this.lastText){this.itemsEl.textContent=text;this.lastText=text;}
     this.pointsEl.textContent=Math.round(this.points).toLocaleString('ru-RU');this.countEl.textContent=this.multiplier;
     this.timerEl.style.transform='scaleX('+(active?THREE.MathUtils.clamp(this.timer/this.window,0,1):0)+')';
-    this.el.classList.toggle('has-chain',active);this.el.classList.toggle('held',active&&(p.airborne||chase.level>0));
+    this.el.classList.toggle('has-chain',active);this.el.classList.toggle('held',active&&(p.airborne||g.trickRoute?.riding||g.waveRide?.caught||chase.level>0));
     const chasing=!!chase?.active;this.el.classList.toggle('chasing',chasing);
+    this.el.classList.toggle('pursuing',chasing&&chase.pursuit&&chase.phase!=='intro');
+    this.pursuitCue.textContent=chase.critical?'ПЕНА ВПЛОТНУЮ · ПРЫГАЙ!':chase.rush>0?'ЕЩЁ ОШИБКА — ПЕНА БЛИЖЕ':'ПЕНА ЗА СПИНОЙ · ЛОВИ ВОЛНУ';
     if(chasing){
       this.chaseFill.style.transform='scaleX('+THREE.MathUtils.clamp(1-(chase.gap-1.1)/20.9,0,1)+')';
       this.chaseMult.textContent='×'+chase.multiplier;this.chaseEl.dataset.level=chase.level;

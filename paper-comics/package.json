@@ -16,8 +16,11 @@
     "test:arcade-art": "node scripts/test_arcade-art.cjs",
     "test:danger-cues": "node scripts/test_danger-cues.cjs",
     "test:flow": "node scripts/test_flow.cjs",
+    "test:drive": "node scripts/test_drive.cjs",
+    "test:action": "node scripts/test_action.cjs",
     "test:ribbon": "node scripts/test_ribbon.cjs",
-    "test:maneuvers": "node scripts/test_maneuvers.cjs"
+    "test:maneuvers": "node scripts/test_maneuvers.cjs",
+    "test:rivals": "node scripts/test_rivals.cjs"
   },
   "dependencies": {
     "puppeteer-core": "^24.43.1"

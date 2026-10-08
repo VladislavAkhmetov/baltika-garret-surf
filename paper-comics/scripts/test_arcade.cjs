@@ -20,6 +20,7 @@ async function run(){
         const w=g.wave.waves.filter(w=>w.height>=2.6&&w.anchorFrom>230).sort((a,b)=>a.anchorFrom-b.anchorFrom)[0];
         g.time=w.peelOriginTime;g.wave.time=g.time;g.p.z=g.wave.frontAt(w).z+12;g.p.x=g.wave.crestX(w,g.p.z)+w.width*face;
         g.p.y=g.wave.height(g.p.x,g.p.z);g.p.speed=28;g.waveRide.charge=1;g.balance.immunity=0;g.impactCooldown=0;
+        g.chase.reset();g.chase.begin(w);
         return w;
       };
     });
@@ -40,7 +41,7 @@ async function run(){
       g.state='paused';return {start,pocket,breakingAtRider,breakingAhead,gain,doubled,wipe};
     });
     const c=report.chase;
-    assert.equal(c.start.active,true,'riding a big wave starts the foam chase');assert.equal(c.start.wave,c.start.expected);
+    assert.equal(c.start.active,true,'an explicitly started physical wave chase tracks the intended wave');assert.equal(c.start.wave,c.start.expected);
     assert.deepEqual([c.pocket.level,c.pocket.mult,c.pocket.peel],[2,2,true],'a 4 m gap is the ×2 pocket and the wave peels from the front');
     assert.ok(c.pocket.chain>=1&&c.pocket.points>0,'pocket riding feeds the chain');
     assert.ok(c.breakingAtRider>.3&&c.breakingAhead===0,'the curl reaches the rider while the shoulder ahead stays open');
@@ -53,16 +54,18 @@ async function run(){
       const pending={score:g.score,count:g.chain.count,value:g.chain.value,mult:g.mug.multiplier};
       g.p.airborne=true;g.chain.step(3);const heldInAir=g.chain.count;g.p.airborne=false;
       g.chain.step(2.7);const banked=g.score;
-      g.awardTrick('В',500,true);g.spill(.02,'тест');const burned={score:g.score,count:g.chain.count,lost:g.chain.burned};
+      g.awardTrick('В',500,true);g.spill(.02,'тест');const small={score:g.score,count:g.chain.count,points:g.chain.points};
+      g.spill(.10,'УДАР');const burned={score:g.score,count:g.chain.count,lost:g.chain.burned};
       g.awardTrick('Г',100,true);const before=g.score;g.mug.level=.8;const finishMult=g.mug.multiplier;g.finish();const finishBank=g.score-before;
-      g.state='paused';return {pending,heldInAir,banked,burned,finishBank,finishMult,delivery:g.deliveryBonus};
+      g.state='paused';return {pending,heldInAir,banked,small,burned,finishBank,finishMult,delivery:g.deliveryBonus};
     });
     const k=report.chain;
     assert.deepEqual(k.pending,{score:0,count:2,value:600,mult:3},'tricks wait in the chain: (100+200)×2');
     assert.equal(k.heldInAir,2,'the chain clock stops in the air');
-    assert.equal(k.banked,1800,'banking multiplies by the beer multiplier ×3');
-    assert.deepEqual(k.burned,{score:1800,count:0,lost:1},'a spill burns the unbanked chain');
-    assert.equal(k.finishBank,100*k.finishMult+k.delivery,'finish banks the open chain before the delivery bonus');
+    assert.equal(k.banked,600,'trick scores are independent of the delivery multiplier');
+    assert.deepEqual(k.small,{score:600,count:1,points:500},'a small spill retains pending points');
+    assert.deepEqual(k.burned,{score:600,count:0,lost:1},'an impact burns the unbanked chain');
+    assert.equal(k.finishBank,100+k.delivery,'finish banks the open chain before the separate delivery bonus');
 
     report.near=await page.evaluate(()=>{
       const g=game,dt=1/120;g.reset();g.wave.resetWaves(42);g.state='playing';g.comics.trigger=()=>false;
