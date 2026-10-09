@@ -23,10 +23,11 @@ async function test(){
     const before=g.p.x;g.input.gamma=g.input.neutral+18;g.input.beta=g.input.neutralBeta-8;
     for(let i=0;i<60;i++)g.step(1/120);g.state='paused';
     const result={mode:g.input.mode,before,after:g.p.x,pitch:g.p.pitch,neutral:g.input.neutral,beta:g.input.neutralBeta,calls:permissionCalls};
+    const sample=new Event('deviceorientation');Object.defineProperties(sample,{gamma:{value:g.input.gamma},beta:{value:g.input.beta}});dispatchEvent(sample);
     g.input.recenter();result.center=[g.input.gamma-g.input.neutral,g.input.beta-g.input.neutralBeta];
     return result;
   });
-  assert.equal(gyro.mode,'gyro');assert.equal(gyro.calls,1);assert.ok(gyro.after>gyro.before+.3);assert.ok(gyro.pitch>.3);assert.deepEqual(gyro.center,[0,0]);
+  assert.equal(gyro.mode,'gyro');assert.equal(gyro.calls,1);assert.ok(gyro.after>gyro.before+.3);assert.ok(Math.abs(gyro.pitch)<=.2,'weight follows the surface automatically');assert.deepEqual(gyro.center,[0,0]);
   const controls=await page.evaluate(()=>{
     const input=game.input,orientation=screen.orientation,descriptor=Object.getOwnPropertyDescriptor(orientation,'angle');let angle=0;
     Object.defineProperty(orientation,'angle',{configurable:true,get:()=>angle});input.orientationAngle=0;
@@ -37,12 +38,12 @@ async function test(){
       sensor(...tilt);input.update(1);rotations.push({angle:a,centered,lean:input.lean,pitch:input.pitch});
     }
     if(descriptor)Object.defineProperty(orientation,'angle',descriptor);else delete orientation.angle;
-    input.reset();dispatchEvent(new KeyboardEvent('keydown',{code:'KeyD',bubbles:true}));dispatchEvent(new KeyboardEvent('keydown',{code:'KeyW',bubbles:true}));input.update(1);
+    input.reset();input.recenter();dispatchEvent(new KeyboardEvent('keydown',{code:'KeyD',bubbles:true}));dispatchEvent(new KeyboardEvent('keydown',{code:'KeyW',bubbles:true}));input.update(1);
     const keyboard={mode:input.mode,lean:input.lean,pitch:input.pitch};dispatchEvent(new Event('blur'));input.update(1);keyboard.released=Math.abs(input.lean)+Math.abs(input.pitch);
     return {rotations,keyboard};
   });
-  for(const r of controls.rotations){assert.ok(r.centered<.002);assert.ok(r.lean>.8&&r.pitch>.5);}
-  assert.equal(controls.keyboard.mode,'keys');assert.ok(controls.keyboard.lean>.99&&controls.keyboard.pitch>.99);assert.ok(controls.keyboard.released<.002);
+  for(const r of controls.rotations){assert.ok(r.centered<.002);assert.ok(r.lean>.8);assert.equal(r.pitch,0);}
+  assert.equal(controls.keyboard.mode,'gyro');assert.ok(controls.keyboard.lean>.99);assert.equal(controls.keyboard.pitch,0);assert.ok(controls.keyboard.released<.002);
   const assets=await page.evaluate(async()=>{
     const out=[];
     for(const [name,texture] of Object.entries(game.heroAnimator.atlases)){
@@ -98,7 +99,7 @@ async function test(){
   assert.deepEqual(mechanics.reset,{level:1,spilled:0,caught:0,bonus:0});
   const jumpsAndChase=await page.evaluate(()=>{
     const g=game,dt=1/120;
-    const setup=(z=20)=>{g.assist=false;g.reset();g.state='playing';g.input.mode='touch';g.rivals.forEach(r=>{r.z=2000;r.x=8;});g.p.z=z;g.p.x=1;g.p.y=g.wave.height(1,z);};
+    const setup=(z=20)=>{g.assist=false;g.reset();g.state='playing';g.container.classList.add('playing');for(const id of ['pause-screen','result-screen'])document.getElementById(id).classList.add('hidden');g.input.mode='touch';g.rivals.forEach(r=>{r.z=2000;r.x=8;});g.p.z=z;g.p.x=1;g.p.y=g.wave.height(1,z);};
     const key=(type)=>dispatchEvent(new KeyboardEvent(type,{code:'Space',bubbles:true}));
     setup();key('keydown');g.step(dt);const charged=g.jump.charge;key('keyup');
     const launched=g.p.airborne;g.heroAnimator.update(dt);const pose={state:g.heroAnimator.state,frame:g.heroAnimator.frame};
@@ -130,7 +131,7 @@ async function test(){
     return {clean,hard,peak,cancelled,paused,activation,lag,fast,lunge,slow,dodge,reset,slopes};
   });
   const jc=jumpsAndChase;
-  assert.ok(jc.clean.charged===0&&jc.clean.launched&&jc.clean.landed);assert.ok(jc.clean.height>.4);assert.equal(jc.clean.landings,1);assert.equal(jc.clean.pose.state,'trim');assert.equal(jc.clean.pose.frame,2);
+  assert.ok(jc.clean.charged===0&&jc.clean.launched&&jc.clean.landed,JSON.stringify(jc.clean));assert.ok(jc.clean.height>.4);assert.equal(jc.clean.landings,1);assert.equal(jc.clean.pose.state,'trim');assert.equal(jc.clean.pose.frame,2);
   assert.equal(jc.hard.landings,0);assert.ok(jc.hard.beer<jc.clean.beer-.04&&jc.hard.recovering>0);
   assert.ok(jc.peak.height>2&&jc.peak.landed);
   assert.deepEqual(jc.cancelled,{holding:false,requested:false,airborne:false});assert.deepEqual(jc.paused,{holding:false,requested:false});
@@ -197,13 +198,13 @@ async function test(){
   await page.evaluate(()=>{game.reducedMotion=true;game.comics.reset();game.comics.trigger('ФУХ!','','save');});
   assert.equal(await page.evaluate(()=>game.comics.active),false);
   await page.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'no-preference'}]);
-  // Permission denial still leaves a playable two-dimensional touch fallback.
+  // Permission denial leaves the same single-axis steering and jump action.
   const fallback=await browser.newPage();fallback.on('pageerror',e=>errors.push(e.message));
   await fallback.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
   await fallback.evaluateOnNewDocument(()=>{Object.defineProperty(DeviceOrientationEvent,'requestPermission',{value:async()=>'denied'});});
   await fallback.goto(base,{waitUntil:'domcontentloaded'});await fallback.click('#start-button');await fallback.click('#setup-next');await fallback.click('#story-skip');await fallback.waitForFunction(()=>game.state==='playing');
   const touch=await fallback.evaluate(()=>{const g=game;g.state='paused';const el=g.container;const event=(name,x,y)=>el.dispatchEvent(new PointerEvent(name,{pointerId:11,pointerType:'touch',clientX:x,clientY:y,bubbles:true}));event('pointerdown',90,490);event('pointermove',140,435);g.input.update(.2);const result={mode:g.input.mode,lean:g.input.lean,pitch:g.input.pitch};event('pointercancel',140,435);g.input.update(1);result.cancelled=Math.abs(g.input.pitch)+Math.abs(g.input.lean);return result;});
-  assert.equal(touch.mode,'touch');assert.ok(touch.lean>.3&&touch.pitch>.3);assert.ok(touch.cancelled<.002);
+  assert.equal(touch.mode,'touch');assert.ok(touch.lean>.3);assert.equal(touch.pitch,0);assert.ok(touch.cancelled<.002);
   await fallback.close();
   await page.setViewport({width:1240,height:900,isMobile:false,hasTouch:false});
   await page.evaluate(async()=>{await game.start(false);game.state='paused';game.comics.reset();game.reducedMotion=false;game.p.z=480;game.p.x=game.wave.crestX(game.wave.waves[2],480)+4.2;game.p.y=game.wave.height(game.p.x,480);game.resize();game.updateCamera(1,true);game.updateVisuals(0);game.wave.update(game.p.z,game.time,true);});
@@ -212,6 +213,6 @@ async function test(){
   assert.deepEqual(errors,[]);assert.deepEqual(missing,[]);
   fs.writeFileSync(path.join(review,'verification.json'),JSON.stringify({gyro,controls,assets,mechanics,jumpsAndChase,feedback,animation,comic,touch,errors,missing},null,2));
   console.log('PASS: wave acceleration, gyro/touch/keyboard, wake, tap jump/landing, shark chase/escape/dodge, beer, HUD, 32 animation frames, comic timing, finish/restart, portrait and full desktop stage.');
- }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
+ }finally{if(browser)await browser.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 }
 test().catch(error=>{console.error(error);process.exitCode=1;});

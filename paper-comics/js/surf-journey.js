@@ -31,6 +31,7 @@ class SurfJourney {
     document.getElementById('comic-retry').addEventListener('click',()=>this.renderStory());
     this.renderStory();this.renderSelection();
     window.addEventListener('keydown',e=>{
+      if(!document.getElementById('controls-screen').classList.contains('hidden'))return;
       if(game.state!=='start')return;
       if(this.launching)return;
       if(this.screen==='story'&&['ArrowRight','Enter'].includes(e.code)&&e.target.tagName!=='BUTTON'){e.preventDefault();this.advance();}

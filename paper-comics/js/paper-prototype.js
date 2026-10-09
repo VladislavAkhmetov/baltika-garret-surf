@@ -1,77 +1,3 @@
-/* GARRET — a playable paper-surfing sketch, isolated from the existing slice. */
-class PaperInput {
-  constructor(container){
-    this.container=container;this.mode=matchMedia('(pointer:coarse)').matches?'touch':'keys';
-    this.lean=this.pitch=this.target=this.pitchTarget=0;this.keys=new Set();this.pointers=new Map();
-    this.gamma=this.beta=null;this.neutral=this.neutralBeta=0;
-    // Chrome long-press menus are independent of pointerdown's default action.
-    const isControl=target=>target.closest?.('#jump-button,.steer-controls');
-    container.addEventListener('contextmenu',e=>{if(e.target.closest?.('button,canvas'))e.preventDefault();});
-    container.addEventListener('touchstart',e=>{if(isControl(e.target))e.preventDefault();},{passive:false});
-    container.addEventListener('selectstart',e=>{if(isControl(e.target))e.preventDefault();});
-    container.addEventListener('dragstart',e=>{if(isControl(e.target))e.preventDefault();});
-    window.addEventListener('deviceorientation',e=>{
-      if(!Number.isFinite(e.gamma)||!Number.isFinite(e.beta))return;
-      const angle=screen.orientation?.angle??window.orientation??0;
-      this.gamma=angle===90?-e.beta:angle===270||angle===-90?e.beta:angle===180?-e.gamma:e.gamma;
-      this.beta=angle===90?e.gamma:angle===270||angle===-90?-e.gamma:angle===180?-e.beta:e.beta;
-      if(this.orientationAngle!==undefined&&this.orientationAngle!==angle&&this.mode==='gyro')this.recenter();
-      this.orientationAngle=angle;
-    });
-    window.addEventListener('keydown',e=>{
-      if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyA','KeyD','KeyW','KeyS'].includes(e.code))return;
-      if(!container.classList.contains('playing')||!document.getElementById('pause-screen').classList.contains('hidden'))return;
-      e.preventDefault();this.keys.add(e.code);this.mode='keys';
-    });
-    window.addEventListener('keyup',e=>this.keys.delete(e.code));
-    container.addEventListener('pointerdown',e=>{
-      if(e.target.closest('button,.screen')||this.mode==='gyro')return;
-      e.preventDefault();this.mode='touch';this.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
-      if(e.isTrusted)container.setPointerCapture(e.pointerId);
-    });
-    container.addEventListener('pointermove',e=>{
-      const point=this.pointers.get(e.pointerId);if(!point)return;
-      this.target=THREE.MathUtils.clamp((e.clientX-point.x)/90,-1,1);
-      this.pitchTarget=THREE.MathUtils.clamp((point.y-e.clientY)/100,-1,1);
-    });
-    const end=e=>{this.pointers.delete(e.pointerId);if(!this.pointers.size)this.target=this.pitchTarget=0;};
-    container.addEventListener('pointerup',end);container.addEventListener('pointercancel',end);
-    window.addEventListener('blur',()=>this.reset());
-  }
-  async calibrate(){
-    if(!matchMedia('(pointer:coarse)').matches)return;
-    try{
-      if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'&&await DeviceOrientationEvent.requestPermission()!=='granted'){this.mode='touch';return;}
-      const samples=[];
-      for(let i=0;i<8;i++){await new Promise(resolve=>setTimeout(resolve,60));if(this.gamma!==null&&this.beta!==null)samples.push([this.gamma,this.beta]);}
-      if(samples.length){this.neutral=samples.reduce((sum,v)=>sum+v[0],0)/samples.length;this.neutralBeta=samples.reduce((sum,v)=>sum+v[1],0)/samples.length;this.mode='gyro';}
-      else this.mode='touch';
-    }catch(_){this.mode='touch';}
-  }
-  bindSteering(){
-    for(const [id,code] of [['steer-left','ArrowLeft'],['steer-right','ArrowRight']]){
-      const button=document.getElementById(id);
-      button.addEventListener('pointerdown',e=>{if(!this.container.classList.contains('playing'))return;e.preventDefault();if(e.isTrusted)button.setPointerCapture(e.pointerId);this.mode='keys';this.keys.add(code);button.classList.add('pressed');});
-      const release=()=>{this.keys.delete(code);button.classList.remove('pressed');};
-      button.addEventListener('pointerup',release);button.addEventListener('pointercancel',release);button.addEventListener('lostpointercapture',release);
-    }
-  }
-  reset(){this.keys.clear();this.pointers.clear();this.target=this.pitchTarget=this.lean=this.pitch=0;document.querySelectorAll('.steer-controls .pressed').forEach(b=>b.classList.remove('pressed'));}
-  recenter(){if(this.gamma!==null&&this.beta!==null){this.neutral=this.gamma;this.neutralBeta=this.beta;this.lean=this.pitch=0;}}
-  update(dt){
-    let lean=this.target,pitch=this.pitchTarget;
-    if(this.mode==='keys'){
-      lean=Number(this.keys.has('ArrowRight')||this.keys.has('KeyD'))-Number(this.keys.has('ArrowLeft')||this.keys.has('KeyA'));
-      pitch=Number(this.keys.has('ArrowUp')||this.keys.has('KeyW'))-Number(this.keys.has('ArrowDown')||this.keys.has('KeyS'));
-    }
-    if(this.mode==='gyro'){
-      const axis=(v,range)=>Math.abs(v)<1.5?0:THREE.MathUtils.clamp((v-Math.sign(v)*1.5)/range,-1,1);
-      lean=axis((this.gamma??this.neutral)-this.neutral,20);pitch=axis(this.neutralBeta-(this.beta??this.neutralBeta),12);
-    }
-    this.lean+=(lean-this.lean)*(1-Math.exp(-9*dt));this.pitch+=(pitch-this.pitch)*(1-Math.exp(-7*dt));
-  }
-}
-
 class PaperSurfGame {
   constructor() {
     this.container = document.getElementById('app-container');
@@ -133,7 +59,8 @@ class PaperSurfGame {
     document.getElementById('cap-icon').src = SPRITE_ASSETS.cap_fish;
     window.addEventListener('resize', () => this.resize());
     document.addEventListener('visibilitychange', () => {if (document.hidden && this.state === 'playing') this.pause();});
-    window.addEventListener('keydown', e => {if (e.code === 'Escape' || e.code === 'KeyP') {if (this.state === 'playing') this.pause(); else if (this.state === 'paused') this.resume();}});
+    window.addEventListener('blur',()=>{if(this.state==='playing')this.pause();});
+    window.addEventListener('keydown', e => {if(!document.getElementById('controls-screen').classList.contains('hidden')||e.target.closest?.('input,select,textarea'))return;if (e.code === 'Escape' || e.code === 'KeyP') {if (this.state === 'playing') this.pause(); else if (this.state === 'paused') this.resume();}});
     this.animate = this.animate.bind(this); requestAnimationFrame(this.animate);
   }
 
@@ -241,6 +168,10 @@ class PaperSurfGame {
     this.rivalCast=new RivalCast(this);
   }
   initLandingEffects(){
+    const targetGeometry=new THREE.RingGeometry(.9,1.02,48);targetGeometry.rotateX(-Math.PI/2);
+    this.landingTargetOriginal=Float32Array.from(targetGeometry.attributes.position.array);
+    this.landingTarget=new THREE.Mesh(targetGeometry,new THREE.MeshBasicMaterial({color:0xd9ffe9,transparent:true,opacity:.6,depthWrite:false,side:THREE.DoubleSide}));
+    this.landingTarget.frustumCulled=false;this.landingTarget.visible=false;this.scene.add(this.landingTarget);
     this.landingRings=Array.from({length:4},()=>{
       const geometry=new THREE.RingGeometry(.72,1,48,3);geometry.rotateX(-Math.PI/2);
       const original=Float32Array.from(geometry.attributes.position.array);
@@ -254,6 +185,25 @@ class PaperSurfGame {
     ring.life=1;ring.strength=strength;ring.x=this.p.x;ring.z=this.p.z;ring.mesh.visible=true;
   }
   updateLandingEffects(dt){
+    const p=this.p;
+    this.landingTarget.visible=!!p.airborne&&!p.fallen;
+    if(this.landingTarget.visible){
+      let flight=Math.min(2.2,this.jump.flightRemaining),x=p.x,z=p.z;
+      // Estimate contact with the moving surface; steering can still change this landing.
+      for(let i=0;i<4;i++){
+        x=THREE.MathUtils.clamp(p.x+p.sideVelocity*flight,-9,9.2);z=p.z+p.speed*Math.cos(p.heading)*flight;
+        const height=this.wave.height(x,z,this.time+flight),discriminant=p.jumpVelocity*p.jumpVelocity+2*this.jump.gravity*(p.y-height);
+        flight=THREE.MathUtils.clamp((p.jumpVelocity+Math.sqrt(Math.max(0,discriminant)))/this.jump.gravity,0,2.2);
+      }
+      const pos=this.landingTarget.geometry.attributes.position;
+      for(let i=0;i<pos.count;i++){
+        const wx=x-this.landingTargetOriginal[i*3],wz=z+this.landingTargetOriginal[i*3+2]*.7;
+        pos.setXYZ(i,-wx,this.wave.height(wx,wz)+.07,wz);
+      }
+      pos.needsUpdate=true;
+      this.landingTarget.material.color.setHex(this.jump.spinStarted&&!this.jump.spinCompleted?0xffd58b:0xd9ffe9);
+      this.landingTarget.material.opacity=this.reducedMotion?.5:.4+.18*(1-Math.min(1,flight));
+    }
     for(const ring of this.landingRings){
       if(ring.life<=0)continue;
       ring.life=Math.max(0,ring.life-dt/ .85);ring.mesh.visible=ring.life>0;
@@ -278,6 +228,7 @@ class PaperSurfGame {
   }
   bindUI() {
     this.input.bindSteering();
+    this.controlSettings=new SurfControlSettings(this);
     document.getElementById('start-button').addEventListener('click',()=>this.flowTest?this.start(false):this.journey.open('setup'));
     document.getElementById('replay-button').addEventListener('click',()=>this.start(false));
     document.getElementById('pause-button').addEventListener('click',()=>this.pause());
@@ -286,7 +237,7 @@ class PaperSurfGame {
     sound.addEventListener('click',()=>{if(this.audio.isMuted)this.audio.unlock();this.audio.toggleMute();renderSound();});renderSound();
     document.getElementById('resume-button').addEventListener('click',()=>this.resume());
     document.getElementById('reset-button').addEventListener('click',()=>this.start(false));
-    document.getElementById('center-button').addEventListener('click',()=>{this.input.recenter();document.getElementById('center-button').textContent='◎ Нейтраль запомнили';});
+    document.getElementById('center-button').addEventListener('click',()=>{document.getElementById('center-button').textContent=this.input.recenter()?'◎ Нейтраль запомнили':'◎ Подожди сигнал датчика';});
     document.getElementById('camera-toggle').addEventListener('click',()=>{this.juice.setLiveCamera(!this.juice.liveCamera);this.renderCameraToggle();});
     if(this.ribbon){
       const toggle=document.createElement('button');toggle.id='ribbon-toggle';toggle.className='text-button';toggle.type='button';
@@ -294,7 +245,7 @@ class PaperSurfGame {
     }
     document.getElementById('quick-button').addEventListener('click',()=>{this.journey.hideAll();this.start(true).then(()=>{if(this.state==='playing')this.journey.screen='playing';});});
     window.addEventListener('keydown',e=>{
-      if(e.repeat||e.target.closest?.('input,textarea'))return;
+      if(e.repeat||e.target.closest?.('input,textarea')||!document.getElementById('controls-screen').classList.contains('hidden'))return;
       if(this.ribbon&&e.code==='KeyL'){e.preventDefault();this.ribbon.setEnabled(!this.ribbon.enabled);return;}
       const sharing=!document.getElementById('share-screen').classList.contains('hidden');
       if(this.state==='finished'&&!sharing&&(e.code==='KeyR'||e.code==='Enter'&&e.target.tagName!=='BUTTON')){e.preventDefault();this.start(false);}
@@ -325,6 +276,7 @@ class PaperSurfGame {
     this.p.y=this.wave.height(this.p.x,0,0);this.trailPoints=[];this.sprayAccumulator=this.trailClock=0;
     this.particles.forEach(d=>{d.life=0;d.mesh.visible=false;});
     this.landingRings.forEach(r=>{r.life=0;r.mesh.visible=false;});
+    this.landingTarget.visible=false;
     this.caps.forEach(c=>{c.collected=false;c.mesh.visible=true;});
     this.rivalCast.reset();
     document.getElementById('moment').classList.remove('visible');document.getElementById('hint').classList.add('invisible');
@@ -337,8 +289,9 @@ class PaperSurfGame {
       this.audio.unlock();
       const button=document.getElementById('start-button');button.disabled=true;
       if(this.flowTest)calibrate=false;
-      if(calibrate&&matchMedia('(pointer:coarse)').matches)button.textContent='ЗАПОМИНАЕМ НАКЛОН…';
-      await Promise.all([this.heroAnimator.ready,this.rivalCast.ready,this.comics.ready,this.world.ready,this.coastReady,this.wave.ready,this.companion.ready,calibrate?this.input.calibrate():Promise.resolve()]);
+      const needsCalibration=this.input.preferredMode==='gyro'&&(calibrate||this.input.mode!=='gyro');
+      if(needsCalibration)button.textContent='ЗАПОМИНАЕМ НАКЛОН…';
+      await Promise.all([this.heroAnimator.ready,this.rivalCast.ready,this.comics.ready,this.world.ready,this.coastReady,this.wave.ready,this.companion.ready,needsCalibration?this.input.calibrate():Promise.resolve()]);
       this.rivalCast.run++;
       this.reset();this.state='playing';this.container.classList.add('playing');
       this.journey?.hideAll();
@@ -352,11 +305,10 @@ class PaperSurfGame {
     if(this.state!=='playing')return;this.state='paused';this.input.reset();this.jump.cancel();this.audio.stopBGM();this.audio.stopJetski?.();
     document.querySelector('.pause-balance-help').classList.toggle('hidden',this.assist);
     document.getElementById('center-button').textContent='◎ Запомнить нейтраль';
-    document.getElementById('center-button').classList.toggle('hidden',this.input.mode!=='gyro');
-    document.getElementById('pause-help').innerHTML=this.input.mode==='keys'?'← → / A D — курс по склону.<br>↑ ↓ / W S — вес на доске.':this.input.mode==='touch'?'Тяни вбок — курс по склону.<br>Вверх / вниз — вес на доске.':'Вбок — курс по склону.<br>Вперёд / назад — вес на доске.';
+    this.renderControlHelp();
     document.getElementById('pause-help').innerHTML+='<br>Кнопка / пробел: первое нажатие — прыжок, второе в воздухе — 360°. Высокий вылет с гребня открывает переворот: кнопка покажет «ФЛИП».<br>После ошибки пена возвращается за спину. Чистая езда, новая волна и удачная посадка помогают оторваться; повторная ошибка приближает накрытие. Малый пролив уменьшает множитель цепочки; удар, падение и накрытие сжигают её. Очки трюков считаются отдельно от бонуса доставки.';
     document.getElementById('pause-help').innerHTML+='<br>Пунктир — маршрут: зелёный, когда держишь линию; красный, когда отклоняешься. L — подсказки на воде. На боковой борт заезжай поперёк с воды. Трамплин подбрасывает сам; прыжок на нём усиливает вылет. В воздухе нажми ещё раз для трюка. Ближе к пене — больше очков; скорость помогает оторваться.';
-    if(this.flowTest)document.getElementById('pause-help').innerHTML='← → / A D или кнопки — поворот.<br>Пробел / прыжок — вылет, ещё раз — трюк.<br>L — лента, R — тот же участок заново.';
+    if(this.flowTest)document.getElementById('pause-help').innerHTML+='<br>L — лента, R — тот же участок заново.';
     if(window.DRIVE_TEST_MODE)document.getElementById('pause-help').innerHTML+='<br>Трамплин слева, спокойный объезд справа. После посадки отпусти поворот, чтобы зачесть цепочку. Небольшой пролив уменьшает её множитель; падение сжигает цепочку. Довези не меньше 30% бокала.';
     this.renderCameraToggle();this.renderMissions(document.getElementById('pause-missions'),this.meta.missions.map(m=>({...m,done:this.meta.completedLive.has(m.id)})));
     document.getElementById('pause-screen').classList.remove('hidden');
@@ -365,6 +317,12 @@ class PaperSurfGame {
     if(this.chain)this.chain.toastTime=0;
   }
   resume() {if(this.state!=='paused')return;this.state='playing';this.input.reset();document.getElementById('pause-screen').classList.add('hidden');this.audio.startBGM();}
+  renderControlHelp() {
+    const mode=this.input.mode;
+    document.getElementById('center-button').classList.toggle('hidden',mode!=='gyro');
+    const course=mode==='keys'?'← → / A D — курс.':mode==='touch'?'Тяни вбок '+(this.input.jumpSide==='right'?'слева':'справа')+' — курс.':'Наклоняй телефон вбок — курс.';
+    document.getElementById('pause-help').innerHTML=course+'<br>Вес на доске — автоматически. Нажми — прыжок; ещё раз в воздухе — трюк. Верни курс в центр для чистой посадки.';
+  }
   hint(text,seconds=4) {document.getElementById('hint').textContent=text;document.getElementById('hint').classList.remove('invisible');this.hintTime=seconds;}
   moment(word,sub='',bad=false,seconds=1) {
     const el=document.getElementById('moment');el.querySelector('strong').textContent=word;el.querySelector('strong').style.fontSize='';el.querySelector('span').textContent=sub;el.querySelector('span').style.display=sub?'table':'none';el.classList.toggle('bad',bad);el.classList.remove('reward','big-reward','visible');el.querySelector('.moment-points').textContent='';el.querySelector('.moment-mult').textContent='';void el.offsetWidth;el.classList.add('visible');this.momentTime=seconds;
@@ -416,15 +374,18 @@ class PaperSurfGame {
     this.companion.step();
     if(this.p.fallen){this.chase.end('fall');this.trickRoute.step(dt);this.balance.stepFall(dt);return;}
     const p=this.p,s=this.wave.sample(p.x,p.z),previousLean=p.lean,previousHeading=p.heading,previousY=p.y,previousPosition={x:p.x,z:p.z};
-    p.lean=this.input.lean;p.pitch=this.flowTest?0:this.input.pitch;p.smoothLean+=(p.lean-p.smoothLean)*(1-Math.exp(-dt/.18));
+    p.lean=this.input.lean;
+    const autoWeight=this.flowTest||p.airborne||p.recovering>0?0:THREE.MathUtils.clamp(-s.baseDz*.9,-.16,.20);
+    p.pitch+=(autoWeight-p.pitch)*(1-Math.exp(-8*dt));
+    p.smoothLean+=(p.lean-p.smoothLean)*(1-Math.exp(-dt/.12));
     this.impactCooldown=Math.max(0,this.impactCooldown-dt);
     const steering=(this.assist?.53:.55)*(this.balance.mode==='recovery'?.55:1);
-    p.heading+=(p.lean*steering-p.heading)*(1-Math.exp(-10*dt));
+    p.heading+=(p.lean*steering-p.heading)*(1-Math.exp(-14*dt));
     const bank=this.trickRoute.riding;
     const freeLateral=Math.sin(p.heading)*p.speed*.38+(p.airborne?this.jump.sideKick:s.flowX*.55-s.baseDx*.32);
     const lateral=bank?.type==='side'?bank.edgeSide*(4.8+Math.max(0,p.lean*bank.edgeSide)*1.5):
       p.airborne&&this.jump.takeoffRamp?.type==='side'?THREE.MathUtils.clamp(freeLateral,-7,7):freeLateral;
-    p.sideVelocity+=(lateral-p.sideVelocity)*(1-Math.exp(-9*dt));
+    p.sideVelocity+=(lateral-p.sideVelocity)*(1-Math.exp(-12*dt));
     // The moving wake transfers energy; it is not a static hill to climb.
     // Its full surface still controls board height, banking, knees and beer.
     const slope=p.airborne?0:s.baseDz*Math.cos(p.heading)+s.baseDx*p.sideVelocity/Math.max(1,p.speed);
@@ -693,7 +654,7 @@ class PaperSurfGame {
     const pct=Math.round(this.mug.level*100);document.getElementById('beer-value').innerHTML=pct+'<span>%</span>';document.getElementById('beer-fill').style.width=pct+'%';
     document.getElementById('score-value').textContent=Math.round(this.score).toString().padStart(6,'0');document.getElementById('caps-value').textContent=this.collected;
     document.getElementById('combo-value').textContent='×'+this.combo;
-    document.getElementById('input-label').textContent=this.input.mode==='gyro'?'НАКЛОН: ↔ КУРС · ↕ ВЕС':this.input.mode==='touch'?'ТЯНИ: ↔ КУРС · ↕ ВЕС':'← → КУРС · ↑ ↓ ВЕС';
+    document.getElementById('input-label').textContent=this.input.mode==='gyro'?'НАКЛОН: ↔ КУРС':this.input.mode==='touch'?'ТЯНИ: ↔ КУРС':'← → КУРС · ПРОБЕЛ ПРЫЖОК';
     document.getElementById('speed-value').textContent=Math.round(this.p.speed);document.getElementById('speed-meter').style.width=THREE.MathUtils.clamp(this.p.speed/42*100,20,100)+'%';
     document.getElementById('route-fill').style.width=Math.min(100,this.p.z/this.distance*100)+'%';
     const routeTicket=document.querySelector('.route-ticket');routeTicket.setAttribute('aria-valuemax',this.distance);routeTicket.setAttribute('aria-valuenow',Math.min(this.distance,Math.round(this.p.z)));
@@ -743,7 +704,7 @@ class PaperSurfGame {
     }
     // Once learned, the wave and the highlighted jump control carry the cue.
     if(!lesson&&['balance','landing','danger'].includes(id)&&!(id==='landing'&&this.jump.spinStarted&&this.jump.tricks===0))line='';
-    const urgent=['balance','landing','danger','spin','chase'].includes(id),coach=document.getElementById('ride-coach');coach.dataset.lesson=id;
+    const urgent=['steer','balance','landing','danger','spin','chase'].includes(id),coach=document.getElementById('ride-coach');coach.dataset.lesson=id;
     coach.classList.toggle('hidden',!title||this.comics.pending||this.comics.active||(this.momentTime>0&&!urgent));
     document.getElementById('moment').classList.toggle('coach-muted',urgent&&!coach.classList.contains('hidden'));
     if(document.getElementById('coach-title').textContent!==title)document.getElementById('coach-title').textContent=title;

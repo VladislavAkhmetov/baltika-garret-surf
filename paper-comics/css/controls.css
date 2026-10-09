@@ -1,0 +1,39 @@
+/* Final control layer: mirrored reach, an unobstructed gyro view and a floating drag cue. */
+#app-container[data-input-mode="gyro"] .steer-controls,
+#app-container[data-input-mode="touch"] .steer-controls{display:none}
+#app-container #jump-button{width:var(--action-size,72px);height:var(--action-size,72px);right:max(18px,calc(env(safe-area-inset-right) + 12px));left:auto;bottom:max(20px,calc(env(safe-area-inset-bottom) + 14px))}
+#app-container[data-jump-side="left"] #jump-button{left:max(18px,calc(env(safe-area-inset-left) + 12px));right:auto}
+#app-container[data-jump-side="left"] .steer-controls{left:auto;right:max(18px,calc(env(safe-area-inset-right) + 12px))}
+#steer-pad{position:absolute;z-index:6;width:88px;height:56px;border:1px solid #e1fff08c;border-radius:40px;background:#12526732;transform:translate(-50%,-50%);opacity:0;pointer-events:none;transition:opacity .12s;box-shadow:inset 0 0 12px #c3fff010}
+#steer-pad.active{opacity:1}
+#steer-pad i{position:absolute;width:32px;height:32px;left:28px;top:11px;border:2px solid #e5fff5;border-radius:50%;background:#c2ffe92e;transform:translateX(var(--steer-offset,0px))}
+#app-container:not(.playing) #steer-pad,.fallen #steer-pad{display:none}
+#controls-screen{z-index:35;overflow-y:auto;align-items:flex-start;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));background:#103f58bf;overscroll-behavior:contain}
+#app-container:has(#controls-screen:not(.hidden)),#app-container:has(#pause-screen:not(.hidden)){touch-action:pan-y}
+#controls-screen,.pause-card{touch-action:pan-y}
+.controls-card{width:min(430px,100%);margin:auto;text-align:left;padding:26px 24px 22px;transform:none;background:#f4ead2;border:1px solid #e1d2b5;border-radius:16px;clip-path:none;filter:drop-shadow(0 6px 12px #103f5870)}
+.controls-card h2{font:26px/1.1 'Russo One',sans-serif;margin:8px 0 20px}
+.controls-card fieldset{padding:0;border:0;margin:16px 0 0;min-width:0}
+.controls-card legend,.control-slider{font:500 13px/1.4 Rubik,sans-serif;color:#214c56}
+.control-options{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.control-options button{flex:1;min-width:90px;min-height:44px;border:1px solid #56787566;border-radius:10px;padding:9px 8px;background:#f5eedb;color:#214c56;font:500 12px/1.3 Rubik,sans-serif;touch-action:manipulation}
+.control-options button[aria-pressed="true"]{background:#164e60;color:#f9f3df;border-color:#164e60;box-shadow:inset 0 0 0 1px #f9f3df33}
+#controls-description{font:13px/1.5 Rubik,sans-serif;min-height:39px;margin:10px 0 0;color:#325b60}
+#controls-status{font:12px/1.4 Rubik,sans-serif;color:#315c54;margin:5px 0 0}
+#controls-status:empty{display:none}
+.control-slider{display:block;margin-top:18px}
+.control-slider output{float:right;font-variant-numeric:tabular-nums;color:#164e60}
+.control-slider input{display:block;width:100%;height:36px;margin:3px 0 0;accent-color:#164e60;cursor:pointer}
+.control-slider>span{display:flex;justify-content:space-between;font-weight:400;color:#526b67}
+.controls-card .text-button{font:13px/1.4 Rubik,sans-serif;min-height:44px;padding:12px 0 4px;color:#164e60}
+.controls-action-help{font:12px/1.5 Rubik,sans-serif;color:#526b67;margin:16px 0}
+.controls-card .yellow-button{display:block;width:100%;min-height:46px;font-size:17px}
+.title-screen .controls-open{position:absolute;left:max(18px,env(safe-area-inset-left));top:max(14px,env(safe-area-inset-top));bottom:auto;color:#234b54;font:14px/1.4 Rubik,sans-serif;min-height:44px;padding:10px 0}
+.pause-card{max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain}
+.selection-footer .controls-open{display:block;margin:10px auto 0;font:13px/1.4 Rubik,sans-serif;min-height:36px;padding:8px;color:#234b54}
+.controls-card .yellow-button:disabled{opacity:.5;cursor:wait}
+.controls-card button:focus-visible,.controls-card input:focus-visible{outline:3px solid #df7848;outline-offset:3px}
+@media(max-width:370px){.controls-card{padding:22px 18px}.control-options button{font-size:11px}.controls-card h2{font-size:24px}}
+@media(orientation:landscape) and (max-height:520px){.controls-card{width:min(520px,100%);padding:20px 24px}}
+@media(min-width:601px){#app-container.playing .sound-button{right:16px}}
+@media(prefers-reduced-motion:reduce){#steer-pad{transition:none}}

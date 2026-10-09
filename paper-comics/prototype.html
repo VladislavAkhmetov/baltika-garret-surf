@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="css/arcade-art.css">
   <link rel="stylesheet" href="css/flow-test.css">
   <link rel="stylesheet" href="css/drive-test.css">
+  <link rel="stylesheet" href="css/controls.css">
 </head>
 <body>
   <main id="app-container" aria-label="Игра Ни капли" tabindex="-1">
@@ -62,7 +63,7 @@
       <div class="speed-ticket"><strong id="speed-value">26</strong><span>М/С</span><div id="speed-meter"></div></div>
       <div class="route-ticket" aria-label="Путь до бара" role="progressbar" aria-valuemin="0" aria-valuemax="1200" aria-valuenow="0"><div class="route-track"><i id="route-fill"></i></div></div>
     </div>
-    <div class="touch-guide" id="touch-guide"><span>↔ КУРС · ↕ ВЕС НА ДОСКЕ</span></div>
+    <div class="touch-guide" id="touch-guide"><span>↔ КУРС · НАЖМИ ДЛЯ ПРЫЖКА</span></div>
 
 
     <section id="start-screen" class="screen journey menu-screen title-screen" aria-label="Главное меню">
@@ -102,7 +103,7 @@
       <p id="story-error" class="story-error paper hidden" role="alert"></p>
     </section>
     <section id="pause-screen" class="screen hidden">
-      <div class="pause-card paper"><span class="eyebrow">МИНУТКА НА БЕРЕГУ</span><h2>ВЫДОХНИ.</h2><p id="pause-help" class="pause-help">Вбок — курс по склону.<br>Вперёд / назад — вес на доске.</p><p class="pause-balance-help">На гребне и после жёсткой посадки выруливай против завала. Маркер в центре — баланс пойман.</p><button id="resume-button" class="yellow-button">ОБРАТНО НА ВОЛНУ ↗</button><ul id="pause-missions" class="mission-list pause-missions" aria-label="Задания"></ul><button id="center-button" class="text-button" aria-label="Запомнить нейтральное положение телефона">◎ Запомнить нейтраль</button><button id="camera-toggle" class="text-button" aria-pressed="true">Камера: живая</button><button id="assist-toggle" class="text-button" aria-pressed="false">Сложность: обычная</button><button id="reset-button" class="text-button">Начать заново</button><button class="text-button menu-link" data-home>В главное меню</button></div>
+      <div class="pause-card paper"><span class="eyebrow">МИНУТКА НА БЕРЕГУ</span><h2>ВЫДОХНИ.</h2><p id="pause-help" class="pause-help">Вбок — курс по склону.<br>Вес на доске — автоматически.</p><p class="pause-balance-help">На гребне и после жёсткой посадки выруливай против завала. Маркер в центре — баланс пойман.</p><button id="resume-button" class="yellow-button">ОБРАТНО НА ВОЛНУ ↗</button><ul id="pause-missions" class="mission-list pause-missions" aria-label="Задания"></ul><button id="center-button" class="text-button" aria-label="Запомнить нейтральное положение телефона">◎ Запомнить нейтраль</button><button id="camera-toggle" class="text-button" aria-pressed="true">Камера: живая</button><button id="assist-toggle" class="text-button" aria-pressed="false">Сложность: обычная</button><button id="reset-button" class="text-button">Начать заново</button><button class="text-button menu-link" data-home>В главное меню</button></div>
     </section>
     <section id="result-screen" class="screen hidden">
       <div class="result-card paper"><h2 id="result-title">ДОВЁЗ!</h2><strong class="result-beer" id="result-beer">100%</strong><p id="result-comment"></p><div class="result-companion"><canvas id="result-crab" role="img" aria-label="Клешня на финише"></canvas><p><span id="result-crab-line"></span></p></div><div class="result-summary"><span>СЧЁТ</span><strong id="result-score">0</strong></div><p id="result-record" class="result-record"></p><div class="result-goals"><ul id="result-missions" class="mission-list" aria-label="Задания"></ul><b id="result-stars" class="result-stars">★ 0</b></div><button id="replay-button" class="yellow-button">ЕЩЁ РАЗ</button><div class="result-share"><button id="comic-button" class="text-button">КОМИКС ЗАЕЗДА</button><button id="challenge-button" class="text-button">ВЫЗОВ ДРУГУ</button><button class="text-button menu-link" data-setup>ВЫБОР</button></div></div>
@@ -139,6 +140,7 @@
   <script src="js/arcade-route.js"></script>
   <script src="js/speed-blur.js"></script>
   <script src="js/rival-cast.js"></script>
+  <script src="js/surf-controls.js"></script>
   <script src="js/paper-prototype.js"></script>
 </body>
 </html>

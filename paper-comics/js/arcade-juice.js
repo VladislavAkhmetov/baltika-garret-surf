@@ -37,8 +37,9 @@ class ArcadeJuice {
     else{
       const target=Math.min(70,58+THREE.MathUtils.clamp((p.speed-25)*.6,0,6)+this.kick);
       this.fov+=(target-this.fov)*(1-Math.exp(-dt*6));
-      const roll=p.airborne||p.fallen?0:THREE.MathUtils.clamp(-p.smoothLean*.056,-.056,.056);
-      this.roll+=(roll-this.roll)*(1-Math.exp(-dt*4));
+      const roll=THREE.MathUtils.clamp(-p.smoothLean*.024,-.024,.024);
+      if(p.airborne||p.fallen)this.roll=0;
+      else this.roll+=(roll-this.roll)*(1-Math.exp(-dt*4));
       if(Math.abs(this.roll)>1e-5){camera.rotateZ(this.roll);camera.updateMatrixWorld();}
     }
     if(camera.fov!==this.fov){camera.fov=this.fov;camera.updateProjectionMatrix();}

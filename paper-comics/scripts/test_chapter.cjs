@@ -37,7 +37,7 @@ async function run(){
         const coach=document.getElementById('ride-coach'),r=coach.getBoundingClientRect(),stage=document.getElementById('app-container').getBoundingClientRect();
         const controls=['steer-left','steer-right','jump-button'].map(id=>document.getElementById(id).getBoundingClientRect());
         return {lesson:coach.dataset.lesson,visible:!coach.classList.contains('hidden'),fits:r.left>=stage.left&&r.right<=stage.right&&r.top>=stage.top&&r.bottom<=stage.bottom,overlap:controls.some(c=>r.left<c.right&&r.right>c.left&&r.top<c.bottom&&r.bottom>c.top)};
-      });assert.equal(cue.lesson,'steer');assert.ok(cue.visible&&cue.fits&&!cue.overlap,name+' onboarding leaves controls clear');
+      });assert.equal(cue.lesson,'steer');assert.ok(cue.visible&&cue.fits&&!cue.overlap,name+' onboarding leaves controls clear: '+JSON.stringify(cue));
       await page.evaluate(()=>{game.state='playing';});await shot(name+'-06-ride');
       await page.click('#pause-button');assert.equal(await page.evaluate(()=>game.state),'paused');await shot(name+'-07-pause');
       await page.click('#assist-toggle');assert.equal(await page.evaluate(()=>game.assist),false);await page.click('#assist-toggle');assert.equal(await page.evaluate(()=>game.assist),true);
@@ -57,7 +57,7 @@ async function run(){
       for(let i=0;i<80;i++)g.step(1/120);g.updateHUD();const feedbackHidden=document.getElementById('ride-coach').classList.contains('hidden'),feedbackLesson=document.getElementById('ride-coach').dataset.lesson;
       for(let i=0;i<160;i++)g.step(1/120);g.updateHUD();g.updateCamera(1,true);g.updateVisuals(0);g.wave.update(g.p.z,g.time,true);g.renderer.render(g.scene,g.camera);g.state='paused';
       return {scale,releasePrompt,completed,normalScale,feedbackHidden,feedbackLesson,waves:g.waveRide.totalCaught,lesson:document.getElementById('ride-coach').dataset.lesson};
-    });assert.equal(steering.scale,1);assert.equal(steering.releasePrompt,'ТЕПЕРЬ ОТПУСТИ');assert.ok(steering.completed&&(steering.feedbackHidden||steering.feedbackLesson==='jump'||steering.feedbackLesson==='danger'),'wave feedback yields to the optional jump lesson: '+JSON.stringify(steering));assert.equal(steering.normalScale,1);assert.ok(steering.waves>0);assert.equal(steering.lesson,'jump');await shot('onboarding-jump');
+    });assert.equal(steering.scale,1);assert.equal(steering.releasePrompt,'ВЕРНИ КУРС В ЦЕНТР');assert.ok(steering.completed&&(steering.feedbackHidden||steering.feedbackLesson==='jump'||steering.feedbackLesson==='danger'),'wave feedback yields to the optional jump lesson: '+JSON.stringify(steering));assert.equal(steering.normalScale,1);assert.ok(steering.waves>0);assert.equal(steering.lesson,'jump');await shot('onboarding-jump');
     const landing=await page.evaluate(()=>{const g=game;g.state='playing';g.jump.press();g.step(1/120);g.updateHUD();g.updateVisuals(0);g.renderer.render(g.scene,g.camera);g.state='paused';return {lesson:document.getElementById('ride-coach').dataset.lesson,jumped:g.onboarding.completed.has('jump'),airborne:g.p.airborne,holding:g.jump.holding};});assert.equal(landing.lesson,'landing');assert.ok(landing.jumped&&landing.airborne&&!landing.holding);await shot('onboarding-tap-jump');
     const balanceLesson=await page.evaluate(()=>{
       const g=game;g.state='playing';while(g.p.airborne)g.step(1/120);const landed=g.onboarding.completed.has('landing');
@@ -130,6 +130,6 @@ async function run(){
     assert.deepEqual(errors,[]);assert.deepEqual(missing,[]);
     fs.writeFileSync(path.join(review,'verification.json'),JSON.stringify({mechanics,onboarding,layouts,errors,missing},null,2));
     console.log('PASS: direct story-to-game launch, contextual onboarding and input progress, four viewports, carousels, story, crest balance, landing recovery, fall/respawn, reset, scene captures.');
-  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
+  }finally{if(browser)await browser.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 }
 run().catch(error=>{console.error(error);process.exitCode=1;});

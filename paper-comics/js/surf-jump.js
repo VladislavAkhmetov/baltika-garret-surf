@@ -6,7 +6,8 @@ class SurfJump {
     this.button.addEventListener('pointerup',e=>{e.preventDefault();if(e.pointerId===this.pointerId){this.pointerId=null;this.release();}});
     this.button.addEventListener('pointercancel',e=>{if(e.pointerId===this.pointerId)this.cancel();});
     this.button.addEventListener('lostpointercapture',e=>{if(e.pointerId===this.pointerId)this.cancel();});
-    window.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();if(!e.repeat)this.press();}});
+    this.button.addEventListener('keydown',e=>{if(['Space','Enter'].includes(e.code)&&this.game.input.active){e.preventDefault();if(!e.repeat)this.press();}});
+    window.addEventListener('keydown',e=>{if(e.code==='Space'&&this.game.input.active&&!e.target.closest?.('button,input,select,textarea')){e.preventDefault();if(!e.repeat)this.press();}});
     window.addEventListener('keyup',e=>{if(e.code==='Space'){e.preventDefault();this.release();}});
     window.addEventListener('blur',()=>this.cancel());
   }
@@ -17,7 +18,7 @@ class SurfJump {
   get canSpecial(){return this.canSpin&&this.specialLaunch&&this.flightRemaining>1.02;}
   cancel(){this.pointerId=null;this.holding=this.requested=false;this.charge=this.spinRequest=0;this.button?.classList.remove('preparing');this.button?.style.setProperty('--jump-charge','0deg');this.button?.style.setProperty('--jump-percent','0%');}
   press(){
-    if(this.game.state!=='playing')return;
+    if(this.game.state!=='playing'||document.getElementById('controls-screen')?.classList.contains('hidden')===false)return;
     if(this.canSpin){this.startSpin();return;}
     // A quick second tap just after takeoff waits briefly for enough clearance above the water.
     if(this.game.p.airborne&&!this.spinStarted&&this.airTime<.16){this.spinRequest=.18;return;}
@@ -62,8 +63,9 @@ class SurfJump {
         p.airborne=true;p.jumpVelocity=THREE.MathUtils.clamp(6.2+lip+rise+Math.max(0,p.speed-24)*.08+wake.quality*2.8,6.2,14.8);
         this.specialLaunch=!!surface.wave&&surface.wave.height>=4.2&&surface.energy>=.7&&surface.crest>=.72&&p.speed>=25.5&&p.jumpVelocity>=12.5;
         this.launchStrength=THREE.MathUtils.clamp((p.jumpVelocity-7)/7.8,0,1);this.landingPulse=0;
-        p.takeoffHeight=surface.height;p.y=surface.height+.06;g.trailPoints=[];this.jumps++;
+        p.takeoffHeight=surface.height;p.y=surface.height+.06;p.crouch=.6;g.trailPoints=[];this.jumps++;
         g.heroAnimator.beginTurn(0);g.emit(12,.7,true);
+        g.juice.punch(1.2+this.launchStrength*1.7);g.juice.buzz(12);
         if(g.audio)g.audio.playJump(this.launchStrength);
       }
       this.charge=0;
@@ -97,6 +99,7 @@ class SurfJump {
         g.handBeer.impact(clean);g.emit(22+Math.round(impact*18),.9+impact*.65,true);g.landingSplash?.(impact);p.crouch=.85;
         if(g.audio)g.audio.playLanding(clean>.72,impact);
         if(clean>.72){
+          if(!this.spinCompleted){g.juice.punch(1.4);g.juice.buzz(16);}
           if(g.assist)g.balance.immunity=Math.max(g.balance.immunity,.65);
           this.cleanLandings++;
           const special=this.spinCompleted&&this.trickKind==='flip';

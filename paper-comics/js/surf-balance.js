@@ -87,7 +87,7 @@ class SurfBalance {
     el.classList.toggle('catching',this.mode==='recovery');
     el.querySelector('strong').textContent=this.mode==='recovery'?(g.assist?'ОТПУСТИ ПОВОРОТ':'ПОЙМАЙ БАЛАНС'):'ДЕРЖИ ГРЕБЕНЬ';
     const control=g.assist?'ОТПУСТИ':this.roll>.08?'←':this.roll<-.08?'→':'ОТПУСТИ';
-    el.querySelector('small').textContent=!g.assist&&Math.abs(p.pitch)>.35?'ОТПУСТИ ↑ ↓':control;
+    el.querySelector('small').textContent=control;
     el.querySelector('.balance-needle').style.left=(50+THREE.MathUtils.clamp(this.roll,-1,1)*43)+'%';
     el.style.setProperty('--needle-top',(7+Math.pow(THREE.MathUtils.clamp(this.roll,-1,1),2)*22)+'px');
     el.querySelector('.catch-fill').style.width=(this.settle/.42*100)+'%';

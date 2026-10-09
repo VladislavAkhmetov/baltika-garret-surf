@@ -142,11 +142,12 @@ async function run(){
       return {glyph,left,canvas,outside,touchAction:style.touchAction,userSelect:style.userSelect,quickTap,cancel};
     });
     assert.deepEqual(report.controls,{glyph:true,left:true,canvas:true,outside:false,touchAction:'none',userSelect:'none',quickTap:1,cancel:{jumps:0,requested:false,pointer:null}});
+    await page.evaluate(()=>{game.input.mode='keys';game.input.render();});
     const left=await page.$('#steer-left'),box=await left.boundingBox();
     await page.touchscreen.touchStart(box.x+box.width/2,box.y+box.height/2);await new Promise(resolve=>setTimeout(resolve,850));
-    assert.equal(await page.evaluate(()=>game.input.keys.has('ArrowLeft')),true,'native touch keeps steering pressed');
+    assert.equal(await page.evaluate(()=>[...game.input.buttonPointers.values()].includes('ArrowLeft')),true,'native touch keeps steering pressed');
     await page.touchscreen.touchEnd();
-    assert.equal(await page.evaluate(()=>game.input.keys.has('ArrowLeft')),false,'native touch release clears steering');
+    assert.equal(await page.evaluate(()=>game.input.buttonPointers.size),0,'native touch release clears steering');
     await page.evaluate(()=>{game.reset();game.state='playing';game.world.hazards.forEach(h=>h.done=true);game.rivals.forEach(r=>r.collided=true);});
     const jump=await page.$('#jump-button'),jumpBox=await jump.boundingBox();
     await page.touchscreen.touchStart(jumpBox.x+jumpBox.width/2,jumpBox.y+jumpBox.height/2);await new Promise(resolve=>setTimeout(resolve,850));await page.touchscreen.touchEnd();
