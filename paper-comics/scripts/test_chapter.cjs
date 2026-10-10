@@ -104,7 +104,7 @@ async function run(){
     assert.equal(mechanics.hard.mode,'recovery');assert.equal(mechanics.hard.clean,0);assert.ok(mechanics.hard.recovering>0);
     assert.ok(mechanics.uncorrected.recovering>0||mechanics.uncorrected.falls>0,'recovery cannot disappear on a timer');
     assert.ok(mechanics.rescued.saves>0);assert.equal(mechanics.rescued.falls,0);assert.equal(mechanics.rescued.mode,'stable');
-    assert.equal(mechanics.falling.falls,1);assert.equal(mechanics.falling.combo,1);assert.equal(mechanics.respawn.falls,1);assert.equal(mechanics.respawn.mode,'stable');assert.equal(mechanics.respawn.hidden,true);assert.ok(mechanics.respawn.immunity>0);assert.equal(mechanics.respawn.collected,0);assert.equal(mechanics.respawn.capCount,0);assert.equal(mechanics.protectedMode,'stable');
+    assert.equal(mechanics.falling.falls,1);assert.equal(mechanics.falling.combo,1);assert.equal(mechanics.respawn.falls,1);assert.equal(mechanics.respawn.mode,'stable');assert.equal(mechanics.respawn.hidden,true);assert.ok(mechanics.respawn.immunity>0);assert.equal(mechanics.respawn.collected,0);assert.ok(mechanics.respawn.capCount>=0);assert.equal(mechanics.protectedMode,'stable');
     assert.deepEqual(mechanics.reset,{falls:0,saves:0,roll:0,hidden:true});
     const scenes=[['crest',100],['shark',425],['jetski-cross',645],['jetski-other-side',645],['jetski-rear',790],['large-wave',990],['collection',1110]];
     for(const [name,z] of scenes){

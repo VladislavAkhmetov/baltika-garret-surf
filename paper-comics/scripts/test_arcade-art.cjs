@@ -81,7 +81,7 @@ async function run(){
     assert.ok(report.chase.worldMesh&&report.chase.overlayRemoved&&report.chase.hiddenAfterReset,'foam is water geometry and resets cleanly');
 
     report.camera=await page.evaluate(()=>{
-      const g=game;g.reset();g.onboarding.completed=new Set(['steer','wave','jump','landing','balance']);
+      const g=game;g.reset();g.chase.reset();g.onboarding.completed=new Set(['steer','wave','jump','landing','balance']);
       g.juice.setLiveCamera(true);g.reducedMotion=false;g.p.speed=0;g.updateCamera(1,true);
       const base=g.camera.position.clone(),w=g.wave.waves[6];g.chase.taught=true;g.chase.begin(w);g.chase.gap=12;
       for(let i=0;i<30;i++)g.updateCamera(1/60);const far=base.distanceTo(g.camera.position);
@@ -93,14 +93,16 @@ async function run(){
       g.reducedMotion=true;g.updateCamera(1,true);const reduced=base.distanceTo(g.camera.position);g.reducedMotion=false;
       g.juice.setLiveCamera(false);g.updateCamera(1,true);const calm=base.distanceTo(g.camera.position);g.juice.setLiveCamera(true);
       g.updateCamera(1,true);g.chase.end('left');for(let i=0;i<360;i++)g.updateCamera(1/60);
-      const returned=base.distanceTo(g.camera.position);g.reset();const reset=g.cameraChasePull;g.state='paused';
-      return {far,pullback,lift,maxSpeed,freeze,reduced,calm,returned,reset};
+      const returned=base.distanceTo(g.camera.position);g.reset();const reset=g.cameraChasePull,resetIntro=g.chase.active&&g.chase.phase==='intro';g.state='paused';
+      return {far,pullback,lift,maxSpeed,freeze,reduced,calm,returned,reset,resetIntro};
     });
-    assert.ok(report.camera.far>1&&report.camera.far<5.1,'the framing begins opening at the first pursuing crest');
+    fs.writeFileSync(path.join(review,'camera-report.json'),JSON.stringify(report.camera,null,2));
+    assert.ok(report.camera.far>1&&report.camera.far<5.1,'the framing begins opening at the first pursuing crest: '+JSON.stringify(report.camera));
     assert.ok(report.camera.pullback>6&&report.camera.pullback<6.41&&report.camera.lift>1.5,'near foam opens and raises the framing');
     assert.ok(report.camera.maxSpeed<5,'camera retreat remains gradual');
     assert.equal(report.camera.freeze,0,'comic freeze also freezes the retreat');
-    assert.deepEqual([report.camera.reduced,report.camera.calm,report.camera.reset],[0,0,0],'motion preferences and reset remove the retreat');
+    assert.deepEqual([report.camera.reduced,report.camera.calm],[0,0],'motion preferences remove the retreat');
+    assert.ok(report.camera.resetIntro&&report.camera.reset>.7&&report.camera.reset<=1,'reset starts the visible introductory crest with its own framing');
     assert.ok(report.camera.returned<.1,'camera smoothly returns after the chase ends: '+JSON.stringify(report.camera));
 
     for(const [name,width,height] of [['desktop',1280,800],['mobile',393,852],['small',360,640],['landscape',852,393]]){
@@ -133,9 +135,12 @@ async function run(){
         game.player.card.getWorldPosition(hero);hero.project(game.camera);
         const chain=document.getElementById('arcade-chain').getBoundingClientRect();
         const overlaps=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
+        const card=game.player.card,corners=[];
+        for(const x of [-.5,.5])for(const y of [-.5,.5])corners.push(card.localToWorld(new THREE.Vector3(x*card.geometry.parameters.width,y*card.geometry.parameters.height,0)).project(game.camera));
+        const heroBounds={left:s.left+(1+Math.min(...corners.map(p=>p.x)))*s.width/2,right:s.left+(1+Math.max(...corners.map(p=>p.x)))*s.width/2,top:s.top+(1-Math.max(...corners.map(p=>p.y)))*s.height/2,bottom:s.top+(1-Math.min(...corners.map(p=>p.y)))*s.height/2};
         const tickets=[...document.querySelectorAll('.beer-ticket,.score-ticket,.collection-ticket')].map(el=>el.getBoundingClientRect());
         const utilities=['pause-button','sound-button'].map(id=>document.getElementById(id).getBoundingClientRect());
-        return {inside:r.left>=s.left&&r.right<=s.right&&r.top>=s.top&&r.bottom<=s.bottom,heroClear:r.bottom<s.top+(1-hero.y)/2*s.height,upperClear:[r,chain].every(a=>[...tickets,...utilities].every(b=>!overlaps(a,b))),chainAboveMessage:chain.bottom<=r.top,points:m.querySelector('.moment-points').textContent,visible:getComputedStyle(m).visibility,menusHidden:[...document.querySelectorAll('.screen')].every(el=>el.classList.contains('hidden'))};
+        return {inside:r.left>=s.left&&r.right<=s.right&&r.top>=s.top&&r.bottom<=s.bottom,heroClear:!overlaps(r,heroBounds),upperClear:[r,chain].every(a=>[...tickets,...utilities].every(b=>!overlaps(a,b))),chainAboveMessage:chain.bottom<=r.top,points:m.querySelector('.moment-points').textContent,visible:getComputedStyle(m).visibility,menusHidden:[...document.querySelectorAll('.screen')].every(el=>el.classList.contains('hidden'))};
       });
       assert.ok(layout.inside&&layout.heroClear,name+': celebration fits above the rider '+JSON.stringify(layout));
       assert.ok(layout.upperClear&&layout.chainAboveMessage,name+': upper readouts leave tickets and utility buttons clear '+JSON.stringify(layout));
@@ -149,11 +154,14 @@ async function run(){
           const g=game,source=g.renderer.domElement,c=document.createElement('canvas');c.width=source.width;c.height=source.height;const ctx=c.getContext('2d');
           g.speedBlur.amount=.015;g.speedBlur.render();ctx.drawImage(source,0,0);const normal=ctx.getImageData(0,0,c.width,c.height).data;
           g.speedBlur.amount=1;g.speedBlur.render();ctx.clearRect(0,0,c.width,c.height);ctx.drawImage(source,0,0);const fast=ctx.getImageData(0,0,c.width,c.height).data;
-          function difference(x0,y0,x1,y1){let sum=0,n=0;for(let y=Math.floor(c.height*y0);y<c.height*y1;y+=2)for(let x=Math.floor(c.width*x0);x<c.width*x1;x+=2){const i=(y*c.width+x)*4;for(let channel=0;channel<3;channel++){sum+=Math.abs(normal[i+channel]-fast[i+channel]);n++;}}return sum/n;}
-          return {foreground:difference(.35,.76,.65,.98),background:difference(.03,.39,.28,.55),width:g.speedBlur.width,height:g.speedBlur.height};
+          function difference(x0,y0,x1,y1){let sum=0,n=0,changed=0,peak=0;for(let y=Math.floor(c.height*y0);y<c.height*y1;y+=2)for(let x=Math.floor(c.width*x0);x<c.width*x1;x+=2){const i=(y*c.width+x)*4;let pixel=0;for(let channel=0;channel<3;channel++){const delta=Math.abs(normal[i+channel]-fast[i+channel]);sum+=delta;pixel=Math.max(pixel,delta);}n++;if(pixel>1)changed++;peak=Math.max(peak,pixel);}return {mean:sum/(n*3),changed:changed/n,peak};}
+          const foreground=difference(.35,.76,.65,.98),background=difference(.03,.39,.28,.55);
+          return {foreground:foreground.mean,background:background.mean,backgroundChanged:background.changed,backgroundPeak:background.peak,width:g.speedBlur.width,height:g.speedBlur.height};
         });
         assert.ok(report.pixels.foreground<.2,'near water and rider stay sharp: '+JSON.stringify(report.pixels));
-        assert.ok(report.pixels.background>.5,'the distant scenery actually changes: '+JSON.stringify(report.pixels));
+        // Flat sea/sky colour dilutes an average across the whole rectangle.
+        // Require a substantial set of changed pixels and visible edge differences.
+        assert.ok(report.pixels.backgroundChanged>.05&&report.pixels.backgroundPeak>5,'the distant scenery actually changes: '+JSON.stringify(report.pixels));
       }
       await page.evaluate(()=>{
         const g=game;g.reset();g.journey.hideAll();g.container.classList.add('playing');

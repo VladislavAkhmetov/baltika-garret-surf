@@ -24,8 +24,10 @@ async function run(){
       const profile=w.faceProfile.bind(w),epsilon=.00001;
       const joinSlopeError=Math.abs((profile(.1)-profile(.1-epsilon))/epsilon-(profile(.1+epsilon)-profile(.1))/epsilon);
       const sizes=w.waves.map(v=>({height:v.height,width:v.width,speedX:v.velocityX,speedZ:v.velocityZ}));
-      const centers=w.waves.map(v=>(v.anchorFrom+v.anchorTo)/2);
-      const crestTangents=w.waves.map(v=>{const z=(v.anchorFrom+v.anchorTo)/2;return (w.crestX(v,z+1)-w.crestX(v,z-1))/2;});
+      // The introductory face is deliberately long and follows the opening route.
+      // Density and oblique-crest checks apply to the generated wave train after it.
+      const centers=w.waves.slice(1).map(v=>(v.anchorFrom+v.anchorTo)/2);
+      const crestTangents=w.waves.slice(1).map(v=>{const z=(v.anchorFrom+v.anchorTo)/2;return (w.crestX(v,z+1)-w.crestX(v,z-1))/2;});
       const maxGap=Math.max(...centers.slice(1).map((z,i)=>z-centers[i]));
       const visiblePeaks=centers.filter(z=>z>790&&z<990).length;
       w.resetWaves(42);const deterministic=JSON.stringify(sizes)===JSON.stringify(w.waves.map(v=>({height:v.height,width:v.width,speedX:v.velocityX,speedZ:v.velocityZ})));
@@ -97,6 +99,6 @@ async function run(){
     fs.writeFileSync(path.join(review,'report.json'),JSON.stringify({motion,ride,frames,errors},null,2));
     assert.deepEqual(errors,[]);console.log(JSON.stringify({angular:ride.angular,verticalSpeed:ride.verticalSpeed,framing:[ride.minTop,ride.maxBottom,ride.maxX],movingWaves:motion.sizes.length,tricks:ride.tricks},null,2));
     console.log('PASS: travelling wave field, smooth crest, stable camera, high-jump framing and delivery bonus.');
-  }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
+  }finally{await browser?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 }
 run().catch(error=>{console.error(error);process.exitCode=1;});

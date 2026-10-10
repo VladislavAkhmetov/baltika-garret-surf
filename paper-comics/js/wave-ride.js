@@ -29,7 +29,7 @@ class WaveRide {
     this.charge=THREE.MathUtils.clamp(this.charge+dt*(engaging?3.2*this.quality:-1.5),0,1);
     this.caught=engaging&&this.charge>.32;
     const descending=this.previousFace!==null?Math.max(0,(s.face-this.previousFace)/dt):0;
-    const pump=this.caught?Math.min(3.4,descending*6):0;
+    const pump=this.caught?Math.min(4.5,descending*7.2):0;
     const target=this.caught?(7.5+this.quality*5.5)*this.charge*Math.min(1,s.energy*1.5)+pump:0;
     this.boost+=(target-this.boost)*(1-Math.exp(-dt*(this.caught?5:1.2)));
     if(this.caught&&w){

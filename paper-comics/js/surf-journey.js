@@ -19,16 +19,22 @@ class SurfJourney {
     ];
     this.comicImages=new Map();this.storyRender=0;
     this.story.flatMap(s=>s.panels).forEach(p=>this.loadComicImage(p.id).catch(()=>{}));
-    document.querySelectorAll('[data-cycle]').forEach(b=>b.addEventListener('click',()=>this.cycle(b.dataset.cycle,Number(b.dataset.direction))));
-    document.getElementById('setup-next').addEventListener('click',()=>{this.page=0;this.open('story');});
-    document.getElementById('assist-toggle').addEventListener('click',()=>{game.assist=!game.assist;this.renderSelection();});
-    document.getElementById('story-next').addEventListener('click',()=>this.advance());
-    document.getElementById('story-skip').addEventListener('click',()=>this.launch());
-    document.getElementById('story-prev').addEventListener('click',()=>{if(this.page>0){this.page--;this.renderStory();}else this.open('setup');});
-    document.querySelectorAll('[data-journey-back]').forEach(b=>b.addEventListener('click',()=>this.open(b.dataset.journeyBack)));
-    document.querySelectorAll('[data-home]').forEach(b=>b.addEventListener('click',()=>this.home()));
-    document.querySelectorAll('[data-setup]').forEach(b=>b.addEventListener('click',()=>{this.home();this.open('setup');}));
-    document.getElementById('comic-retry').addEventListener('click',()=>this.renderStory());
+    const bindTap=(id,handler)=>{
+      const el=typeof id==='string'?document.getElementById(id):id;if(!el)return;
+      let touchHandled=0;
+      el.addEventListener('touchend',e=>{touchHandled=performance.now();handler(e);},{passive:true});
+      el.addEventListener('click',e=>{if(performance.now()-touchHandled<450)return;handler(e);});
+    };
+    document.querySelectorAll('[data-cycle]').forEach(b=>bindTap(b,()=>this.cycle(b.dataset.cycle,Number(b.dataset.direction))));
+    bindTap('setup-next',()=>{this.page=0;this.open('story');});
+    bindTap('assist-toggle',()=>{game.assist=!game.assist;this.renderSelection();});
+    bindTap('story-next',()=>this.advance());
+    bindTap('story-skip',()=>this.launch());
+    bindTap('story-prev',()=>{if(this.page>0){this.page--;this.renderStory();}else this.open('setup');});
+    document.querySelectorAll('[data-journey-back]').forEach(b=>bindTap(b,()=>this.open(b.dataset.journeyBack)));
+    document.querySelectorAll('[data-home]').forEach(b=>bindTap(b,()=>this.home()));
+    document.querySelectorAll('[data-setup]').forEach(b=>bindTap(b,()=>{this.home();this.open('setup');}));
+    bindTap('comic-retry',()=>this.renderStory());
     this.renderStory();this.renderSelection();
     window.addEventListener('keydown',e=>{
       if(!document.getElementById('controls-screen').classList.contains('hidden'))return;

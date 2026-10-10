@@ -1,0 +1,20 @@
+/* A compact score leaves the approaching encounter on the water. */
+.race-mode #arcade-chain{width:156px;max-width:calc(100% - 132px)}
+.race-mode .chain-value{font-size:18px;letter-spacing:-.3px}
+.race-mode .chain-row{padding:4px 8px 7px;background:#0d3d4b50;border-color:#dcfff71f}
+.race-mode .pursuit-cue{font-size:9px;line-height:1.3}
+.race-mode:has(#arcade-chain.has-chain){--message-top:174px}
+.race-mode #ride-coach{max-width:min(250px,calc(100% - 124px));padding:6px 9px;background:#0d3d4b45}
+.race-mode #ride-coach strong{font-size:14px}.race-mode #ride-coach span{font-size:12px;line-height:1.25}
+.race-mode #moment strong,.race-mode #moment.reward strong{font-size:16px!important}
+.race-mode #moment.reward .moment-points{font-size:23px}
+.race-mode #hint{max-width:240px;font-size:13px;white-space:normal}
+.race-mode #chain-toast strong{font-size:13px}.race-mode #chain-toast span{font-size:23px}
+.race-callout{position:absolute;z-index:5;pointer-events:none;opacity:0;transform:translate(-50%,-100%) rotate(-3deg);background:#f4e9cdeb;color:#173e46;border:1.5px solid #173e46;border-radius:9px;padding:4px 9px;max-width:142px;font:700 18px/1.05 Caveat,cursive;text-align:center;transition:opacity .12s}
+.race-callout::after{content:'';position:absolute;left:48%;bottom:-6px;width:9px;height:9px;background:#f4e9cd;transform:rotate(45deg);border-right:1.5px solid #173e46;border-bottom:1.5px solid #173e46}
+.race-callout.visible{opacity:1}
+.race-mode:not(.playing) .race-callout{visibility:hidden}
+.race-mode.race-boost .route-track i{background:#fff1a6;box-shadow:0 0 8px #ffd26499}
+.race-mode:has(#pause-screen:not(.hidden)) .race-callout,.race-mode:has(#result-screen:not(.hidden)) .race-callout{visibility:hidden}
+@media(max-width:650px){.race-mode:has(#arcade-chain.has-chain){--message-top:136px}.race-mode #ride-coach{max-width:230px}}
+@media(orientation:landscape) and (max-height:520px){.race-mode:has(#arcade-chain.has-chain){--message-top:125px}.race-mode #ride-coach{max-width:240px}.race-callout{font-size:16px}}

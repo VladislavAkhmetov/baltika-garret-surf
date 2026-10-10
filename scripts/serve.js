@@ -7,10 +7,15 @@ const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charse
 function createServer() {
   return http.createServer((req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') {res.writeHead(405);res.end();return;}
-    let pathname;
-    try {pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);}
+    let pathname, url;
+    try {url = new URL(req.url, 'http://localhost');pathname = decodeURIComponent(url.pathname);}
     catch (_) {res.writeHead(400);res.end();return;}
-    const file = path.resolve(root, '.' + (pathname === '/' ? '/paper-comics/index.html' : pathname));
+    // Keep the document and its relative CSS, scripts and assets in the same directory.
+    if (pathname === '/' || pathname === '/index.html') {
+      res.writeHead(302, {'Location':'/paper-comics/index.html' + url.search, 'Cache-Control':'no-cache'});
+      res.end();return;
+    }
+    const file = path.resolve(root, '.' + (pathname === '/paper-comics/' ? '/paper-comics/index.html' : pathname));
     if (!file.startsWith(root + path.sep)) {res.writeHead(403);res.end();return;}
     fs.readFile(file, (error, data) => {
       if (error) {res.writeHead(404);res.end('Not found');return;}

@@ -74,7 +74,7 @@ class FoamChase {
   startIntro(){this.begin(this.game.wave.waves[0],{pursuit:true,intro:true});}
   onMistake(amount){
     const g=this.game;
-    if(amount<.02||this.inWipe||g.p.fallen||g.state!=='playing'||g.time-this.lastMistake<.65)return;
+    if(amount<.02||this.inWipe||g.p.fallen||g.state!=='playing'||g.time-this.lastMistake<.65||g.setpiece?.enabled&&g.p.z>1145)return;
     if(this.active&&this.phase==='intro'){this.end('intro');this.cooldown=0;}
     if(!this.active){
       if(this.cooldown>0)return;

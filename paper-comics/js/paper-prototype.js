@@ -32,8 +32,15 @@ class PaperSurfGame {
     this.textures.shark_fin.userData={directionAtlas:true};
     this.textures.shark_fin.generateMipmaps=false;this.textures.shark_fin.minFilter=THREE.LinearFilter;
     this.wave = new PaperWave(this.scene);
+    this.boardReady=new Promise((resolve,reject)=>{
+      this.surfboardTexture=loader.load('assets/comics/surfboard-paper-v1.png',texture=>{
+        texture.repeat.set(444/1024,1499/1536);texture.offset.set(289/1024,22/1536);
+        texture.minFilter=THREE.LinearMipmapLinearFilter;texture.magFilter=THREE.LinearFilter;
+        this.renderDirty=true;resolve();
+      },undefined,()=>reject(Error('Не удалось загрузить доску')));
+    });
+    this.boardReady.catch(()=>{});
     this.player = this.makeSurfer(1, 0x145990);
-    this.player.board.scale.set(2.7,1.25,1);
     this.companion=new CrabCompanion(this);
     this.mug = new ComicBeerLiquid();
     this.mug.addSpillListener((side, amount) => {
@@ -52,6 +59,10 @@ class PaperSurfGame {
     this.flowTest=window.FLOW_TEST_MODE?new (window.DRIVE_TEST_MODE?DriveTest:FlowTest)(this):null;
     this.ribbon=this.flowTest?null:new WaveRibbon(this);
     this.openingGuide=this.flowTest?null:new WaveRibbon(this,{route:z=>this.trickRoute.bypassPoint(z)});
+    this.race=new SurfRace(this);
+    this.setpiece=new SurfSetpiece(this);
+    this.beats=new SurfBeats(this);
+    this.rush=new SurfRush(this);
     this.container.classList.toggle('ribbon-ride',!this.flowTest);
     this.reset(); this.resize(); this.bindUI();
     this.journey=new SurfJourney(this);
@@ -72,12 +83,9 @@ class PaperSurfGame {
     const group = new THREE.Group();
     const card = new THREE.Mesh(new THREE.PlaneGeometry(2.25 * scale, 3.1 * scale), new THREE.MeshBasicMaterial({map:this.textures.surfer_norma, side:THREE.DoubleSide, transparent:true, alphaTest:.3}));
     card.position.y = 1.46 * scale; group.add(card);
-    const shape = new THREE.Shape();
-    shape.moveTo(0, 1.28); shape.quadraticCurveTo(.44, .7, .43, -.8); shape.quadraticCurveTo(0, -1.35, -.43, -.8); shape.quadraticCurveTo(-.44, .7, 0, 1.28);
-    const board = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({color, side:THREE.DoubleSide}));
+    const board = new THREE.Mesh(new THREE.PlaneGeometry(1.52,4.8),new THREE.MeshBasicMaterial({map:this.surfboardTexture,transparent:true,alphaTest:.25,depthWrite:false,side:THREE.DoubleSide}));
     board.rotation.x = -Math.PI / 2; board.position.y = .055; board.scale.setScalar(scale); group.add(board);
-    const rim=new THREE.Mesh(board.geometry,new THREE.MeshBasicMaterial({color:0xf6ebd0,side:THREE.DoubleSide}));
-    rim.scale.set(1.07,1.025,1);rim.position.z=-.008;board.add(rim);
+    board.renderOrder=1;
     this.scene.add(group);
     const shadow = new THREE.Mesh(new THREE.CircleGeometry(.85, 24), new THREE.MeshBasicMaterial({color:0x062c40, transparent:true, opacity:.25, depthWrite:false}));
     shadow.rotation.x = -Math.PI / 2; shadow.scale.set(1, 1.5, 1); this.scene.add(shadow);
@@ -142,18 +150,18 @@ class PaperSurfGame {
     const uv=new Float32Array(34*2*2);for(let i=0;i<34;i++){uv.set([0,i/33,1,i/33],i*4);}geo.setAttribute('uv',new THREE.BufferAttribute(uv,2));
     const ix=[];for(let i=0;i<33;i++){let a=i*2;ix.push(a,a+1,a+2,a+1,a+3,a+2);}geo.setIndex(ix);
     const material=new THREE.ShaderMaterial({
-      uniforms:{uTime:this.wave.waterTime},transparent:true,side:THREE.DoubleSide,depthWrite:false,
+      uniforms:{uTime:this.wave.waterTime,uRush:{value:0}},transparent:true,side:THREE.DoubleSide,depthWrite:false,
       vertexShader:`varying vec2 wakeUV;void main(){wakeUV=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
       fragmentShader:`
-        uniform float uTime;varying vec2 wakeUV;
+        uniform float uTime;uniform float uRush;varying vec2 wakeUV;
         float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
         float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
         void main(){
           float edge=pow(max(0.0,sin(wakeUV.x*3.14159)),1.4);
           float age=pow(1.0-wakeUV.y,1.8);
           float bubbles=noise(wakeUV*vec2(7.0,55.0)+vec2(uTime*.12,-uTime*.6));
-          float alpha=edge*age*smoothstep(.24,.74,bubbles)*.48;
-          gl_FragColor=vec4(mix(vec3(.68,.83,.80),vec3(.97,.98,.89),bubbles),alpha);
+          float alpha=edge*age*smoothstep(.24,.74,bubbles)*(.48+uRush*.32);
+          gl_FragColor=vec4(mix(vec3(.68,.83,.80),vec3(.97,.98,.89),min(1.0,bubbles+uRush*.35)),alpha);
         }`
     });
     this.trail = new THREE.Mesh(geo,material);this.trail.frustumCulled=false;this.scene.add(this.trail);
@@ -181,6 +189,7 @@ class PaperSurfGame {
     });
   }
   landingSplash(strength){
+    this.rush?.splash(.6+strength*.5);
     const ring=this.landingRings.find(r=>r.life<=0)||this.landingRings.reduce((a,b)=>a.life<b.life?a:b);
     ring.life=1;ring.strength=strength;ring.x=this.p.x;ring.z=this.p.z;ring.mesh.visible=true;
   }
@@ -216,7 +225,7 @@ class PaperSurfGame {
     }
   }
   initCaps() {
-    // Pickups are shelved while testing waves, rivals and ramps.
+    // SurfRush builds pickup trajectories after the physical route exists.
     this.caps=[];
   }
   initFinish() {
@@ -229,21 +238,31 @@ class PaperSurfGame {
   bindUI() {
     this.input.bindSteering();
     this.controlSettings=new SurfControlSettings(this);
-    document.getElementById('start-button').addEventListener('click',()=>this.flowTest?this.start(false):this.journey.open('setup'));
-    document.getElementById('replay-button').addEventListener('click',()=>this.start(false));
-    document.getElementById('pause-button').addEventListener('click',()=>this.pause());
+    this.pauseTips=document.createElement('details');this.pauseTips.className='pause-tips';
+    this.pauseTips.innerHTML='<summary>Трюки и подсказки</summary><p>В воздухе нажми ещё раз для 360°. После высокого вылета с гребня кнопка предложит «ФЛИП».</p><p>Зелёный пунктир — держишь маршрут. На боковой борт заезжай с воды; трамплин подбрасывает сам. Чистая посадка сохраняет цепочку, удар или падение сжигают её.</p><p>Держись ближе к пене ради очков. Поймай новую волну и набери скорость, чтобы оторваться. Довези хотя бы 30% бокала.</p>';
+    document.getElementById('resume-button').after(this.pauseTips);
+    const rushTip=document.createElement('p');rushTip.textContent='Три разных чистых манёвра подряд — Кураж: поймай волну, обгони, прыгни или пройди вплотную. Между ними — не больше 6,5 секунды. Крышки показывают траекторию; удар сбрасывает Кураж.';this.pauseTips.append(rushTip);
+    const bindTap=(id,handler)=>{
+      const el=document.getElementById(id);if(!el)return;
+      let touchHandled=0;
+      el.addEventListener('touchend',e=>{touchHandled=performance.now();handler(e);},{passive:true});
+      el.addEventListener('click',e=>{if(performance.now()-touchHandled<450)return;handler(e);});
+    };
+    bindTap('start-button',()=>this.flowTest?this.start(false):this.journey.open('setup'));
+    bindTap('replay-button',()=>this.start(false));
+    bindTap('pause-button',()=>this.pause());
     const sound=document.getElementById('sound-button');
     const renderSound=()=>{sound.setAttribute('aria-pressed',String(this.audio.isMuted));sound.setAttribute('aria-label',this.audio.isMuted?'Включить звук':'Отключить звук');sound.title=this.audio.isMuted?'Включить звук':'Отключить звук';};
-    sound.addEventListener('click',()=>{if(this.audio.isMuted)this.audio.unlock();this.audio.toggleMute();renderSound();});renderSound();
-    document.getElementById('resume-button').addEventListener('click',()=>this.resume());
-    document.getElementById('reset-button').addEventListener('click',()=>this.start(false));
-    document.getElementById('center-button').addEventListener('click',()=>{document.getElementById('center-button').textContent=this.input.recenter()?'◎ Нейтраль запомнили':'◎ Подожди сигнал датчика';});
-    document.getElementById('camera-toggle').addEventListener('click',()=>{this.juice.setLiveCamera(!this.juice.liveCamera);this.renderCameraToggle();});
+    bindTap('sound-button',()=>{if(this.audio.isMuted)this.audio.unlock();this.audio.toggleMute();renderSound();});renderSound();
+    bindTap('resume-button',()=>this.resume());
+    bindTap('reset-button',()=>this.start(false));
+    bindTap('center-button',()=>{document.getElementById('center-button').textContent=this.input.recenter()?'◎ Нейтраль запомнили':'◎ Подожди сигнал датчика';});
+    bindTap('camera-toggle',()=>{this.juice.setLiveCamera(!this.juice.liveCamera);this.renderCameraToggle();});
     if(this.ribbon){
       const toggle=document.createElement('button');toggle.id='ribbon-toggle';toggle.className='text-button';toggle.type='button';
       document.getElementById('camera-toggle').after(toggle);toggle.addEventListener('click',()=>this.ribbon.setEnabled(!this.ribbon.enabled));this.ribbon.renderToggle();
     }
-    document.getElementById('quick-button').addEventListener('click',()=>{this.journey.hideAll();this.start(true).then(()=>{if(this.state==='playing')this.journey.screen='playing';});});
+    bindTap('quick-button',()=>{this.journey.hideAll();this.start(true).then(()=>{if(this.state==='playing')this.journey.screen='playing';});});
     window.addEventListener('keydown',e=>{
       if(e.repeat||e.target.closest?.('input,textarea')||!document.getElementById('controls-screen').classList.contains('hidden'))return;
       if(this.ribbon&&e.code==='KeyL'){e.preventDefault();this.ribbon.setEnabled(!this.ribbon.enabled);return;}
@@ -257,7 +276,7 @@ class PaperSurfGame {
   renderMenuMeta(){
     const meta=this.meta,best=meta.daily?.score,label=document.getElementById('daily-label');
     label.textContent='ВОЛНА ДНЯ · '+meta.dayLabel+(best?' · РЕКОРД '+best.toLocaleString('ru-RU'):'')+(meta.challenge?' · ВЫЗОВ '+meta.challenge.toLocaleString('ru-RU'):'');
-    document.getElementById('quick-button').classList.toggle('hidden',!meta.storySeen);
+    document.getElementById('quick-button').classList.remove('hidden');
   }
   reset() {
     this.input.reset();this.time=this.elapsed=this.accumulator=this.score=this.collected=0;
@@ -279,6 +298,10 @@ class PaperSurfGame {
     this.landingTarget.visible=false;
     this.caps.forEach(c=>{c.collected=false;c.mesh.visible=true;});
     this.rivalCast.reset();
+    this.race.reset();
+    this.setpiece.reset();
+    this.beats.reset();
+    this.rush.reset();
     document.getElementById('moment').classList.remove('visible');document.getElementById('hint').classList.add('invisible');
     this.wave.update(0,0,true);this.updateCamera(1,true);this.updateVisuals(0);this.updateHUD();
   }
@@ -291,7 +314,7 @@ class PaperSurfGame {
       if(this.flowTest)calibrate=false;
       const needsCalibration=this.input.preferredMode==='gyro'&&(calibrate||this.input.mode!=='gyro');
       if(needsCalibration)button.textContent='ЗАПОМИНАЕМ НАКЛОН…';
-      await Promise.all([this.heroAnimator.ready,this.rivalCast.ready,this.comics.ready,this.world.ready,this.coastReady,this.wave.ready,this.companion.ready,needsCalibration?this.input.calibrate():Promise.resolve()]);
+      await Promise.all([this.heroAnimator.ready,this.rivalCast.ready,this.comics.ready,this.world.ready,this.coastReady,this.wave.ready,this.companion.ready,this.rush.ready,needsCalibration?this.input.calibrate():Promise.resolve()]);
       this.rivalCast.run++;
       this.reset();this.state='playing';this.container.classList.add('playing');
       this.journey?.hideAll();
@@ -306,8 +329,7 @@ class PaperSurfGame {
     document.querySelector('.pause-balance-help').classList.toggle('hidden',this.assist);
     document.getElementById('center-button').textContent='◎ Запомнить нейтраль';
     this.renderControlHelp();
-    document.getElementById('pause-help').innerHTML+='<br>Кнопка / пробел: первое нажатие — прыжок, второе в воздухе — 360°. Высокий вылет с гребня открывает переворот: кнопка покажет «ФЛИП».<br>После ошибки пена возвращается за спину. Чистая езда, новая волна и удачная посадка помогают оторваться; повторная ошибка приближает накрытие. Малый пролив уменьшает множитель цепочки; удар, падение и накрытие сжигают её. Очки трюков считаются отдельно от бонуса доставки.';
-    document.getElementById('pause-help').innerHTML+='<br>Пунктир — маршрут: зелёный, когда держишь линию; красный, когда отклоняешься. L — подсказки на воде. На боковой борт заезжай поперёк с воды. Трамплин подбрасывает сам; прыжок на нём усиливает вылет. В воздухе нажми ещё раз для трюка. Ближе к пене — больше очков; скорость помогает оторваться.';
+    this.pauseTips.open=false;
     if(this.flowTest)document.getElementById('pause-help').innerHTML+='<br>L — лента, R — тот же участок заново.';
     if(window.DRIVE_TEST_MODE)document.getElementById('pause-help').innerHTML+='<br>Трамплин слева, спокойный объезд справа. После посадки отпусти поворот, чтобы зачесть цепочку. Небольшой пролив уменьшает её множитель; падение сжигает цепочку. Довези не меньше 30% бокала.';
     this.renderCameraToggle();this.renderMissions(document.getElementById('pause-missions'),this.meta.missions.map(m=>({...m,done:this.meta.completedLive.has(m.id)})));
@@ -321,18 +343,20 @@ class PaperSurfGame {
     const mode=this.input.mode;
     document.getElementById('center-button').classList.toggle('hidden',mode!=='gyro');
     const course=mode==='keys'?'← → / A D — курс.':mode==='touch'?'Тяни вбок '+(this.input.jumpSide==='right'?'слева':'справа')+' — курс.':'Наклоняй телефон вбок — курс.';
-    document.getElementById('pause-help').innerHTML=course+'<br>Вес на доске — автоматически. Нажми — прыжок; ещё раз в воздухе — трюк. Верни курс в центр для чистой посадки.';
+    document.getElementById('pause-help').innerHTML=course+'<br>Нажми — прыжок; ещё раз в воздухе — трюк.<br>Отпусти поворот перед посадкой.';
   }
   hint(text,seconds=4) {document.getElementById('hint').textContent=text;document.getElementById('hint').classList.remove('invisible');this.hintTime=seconds;}
   moment(word,sub='',bad=false,seconds=1) {
-    const el=document.getElementById('moment');el.querySelector('strong').textContent=word;el.querySelector('strong').style.fontSize='';el.querySelector('span').textContent=sub;el.querySelector('span').style.display=sub?'table':'none';el.classList.toggle('bad',bad);el.classList.remove('reward','big-reward','visible');el.querySelector('.moment-points').textContent='';el.querySelector('.moment-mult').textContent='';void el.offsetWidth;el.classList.add('visible');this.momentTime=seconds;
+    if(!bad&&this.momentTime>0&&document.getElementById('moment').classList.contains('bad'))return false;
+    const el=document.getElementById('moment');el.querySelector('strong').textContent=word;el.querySelector('strong').style.fontSize='';el.querySelector('span').textContent=sub;el.querySelector('span').style.display=sub?'table':'none';el.classList.toggle('bad',bad);el.classList.remove('reward','big-reward','visible');el.querySelector('.moment-points').textContent='';el.querySelector('.moment-mult').textContent='';void el.offsetWidth;el.classList.add('visible');this.momentTime=seconds;return true;
   }
   awardTrick(name,points,quiet=false){
     if(this.flowTest){this.flowTest.award(name,points);return;}
     this.tricksSeen.add(name);const gain=this.chain.add(name,points);this.combo=this.chain.multiplier;
     this.waveRide.reward(name);this.chase.onTrick(name);
-    if(!quiet){
-      this.moment(name,'',false,1.15);
+    this.race.reward(name);
+    this.rush?.reward(name);
+    if(!quiet&&this.moment(name,'',false,1.15)){
       const el=document.getElementById('moment');el.classList.add('reward');el.classList.toggle('big-reward',points>=600);
       el.querySelector('.moment-points').textContent='+'+gain.toLocaleString('ru-RU');
       el.querySelector('.moment-mult').textContent='ЦЕПОЧКА ×'+this.chain.multiplier;
@@ -364,6 +388,7 @@ class PaperSurfGame {
     if(this.flowTest){if(!this.flowTest.handleSpill?.(amount,reason))this.chain.burn();}
     else {this.chain.penalize(amount);this.waveRide.momentum=amount>=.10?0:this.waveRide.momentum*.55;this.chase.onMistake(amount,reason);}
     this.combo=this.chain.multiplier;this.juice.shake(.3+amount*3);
+    if(amount>=.01){this.race.boostTime=0;this.race.boost*=.4;this.rush.breakStreak();}
     this.mug.level=Math.max(0,this.mug.level-amount);this.mug.applyStumbleImpulse(0);this.mug.onSpill(Math.sign(this.p.lean),amount);this.spillFlash=.7;
     this.moment(reason.toUpperCase(),'',true,.85);this.audio.playScratch();
     this.companion.react('spill');
@@ -371,6 +396,8 @@ class PaperSurfGame {
 
   step(dt) {
     this.time+=dt;this.elapsed+=dt;this.wave.time=this.time;this.input.update(dt);
+    this.race.step(dt);
+    this.rush.step(dt);
     this.companion.step();
     if(this.p.fallen){this.chase.end('fall');this.trickRoute.step(dt);this.balance.stepFall(dt);return;}
     const p=this.p,s=this.wave.sample(p.x,p.z),previousLean=p.lean,previousHeading=p.heading,previousY=p.y,previousPosition={x:p.x,z:p.z};
@@ -392,7 +419,7 @@ class PaperSurfGame {
     this.waveRide.step(dt);
     const wake=p.airborne?0:this.world.wakeQualityAt(p.x,p.z);
     const trim=p.pitch*(this.waveRide.caught||wake>.3?3.2:.6);
-    const target=this.flowTest?this.flowTest.targetSpeed(slope):THREE.MathUtils.clamp((p.airborne?Math.max(this.assist?25:27,p.speed-.8):(this.assist?24:26)+this.waveRide.boost)+this.waveRide.momentum+this.jump.landingBoost-slope*9+trim-Math.abs(p.heading)*1.2+(p.airborne?0:s.flowZ*.4)+(wake>.3?5*wake:0)-(p.recovering>0?5:0),18,42);
+    const target=this.flowTest?this.flowTest.targetSpeed(slope):THREE.MathUtils.clamp((p.airborne?Math.max(this.assist?25:27,p.speed-.8):(this.assist?24:26)+this.waveRide.boost)+this.waveRide.momentum+this.jump.landingBoost+this.race.boost+this.rush.boost+this.rush.padBoost-slope*9+trim-Math.abs(p.heading)*1.2+(p.airborne?0:s.flowZ*.4)+(wake>.3?5*wake:0)-(p.recovering>0?5:0),18,this.rush.active>0||this.rush.padBoost>1?46:42);
     p.speed+=(target-p.speed)*(1-Math.exp(-1.65*dt));
     p.x=THREE.MathUtils.clamp(p.x+p.sideVelocity*dt,-9,9.2);p.z+=p.speed*Math.cos(p.heading)*dt;
     const next=this.trickRoute.stepRide(dt,previousPosition,this.wave.sample(p.x,p.z));this.jump.step(dt,next);
@@ -412,11 +439,11 @@ class PaperSurfGame {
     if(this.wakeClock>.45&&this.trickCooldown===0){this.awardTrick('НА ХВОСТЕ',180);this.trickCooldown=3;this.world.wakeRides++;this.juice.punch(2);}
     const waterImpact=verticalImpulse*(this.assist&&this.jump.landingPulse>0?.22:1);
     this.handBeer.step(dt,(p.heading-previousHeading)/dt,wake+waterImpact,THREE.MathUtils.clamp((p.lean-previousLean)/dt,-3,3));
-    if(!this.flowTest){this.world.step(dt);this.updateRivals(dt);this.updateCaps(dt);}
+    if(!this.flowTest){this.setpiece.step();this.beats.step(dt);this.rush.collectAccelerators();this.world.step(dt);this.updateRivals(dt);this.updateCaps(dt);}
     this.flowTest?.step?.(dt);this.trickRoute.step(dt);this.updateParticles(dt);
     this.updateLandingEffects(dt);
-    if(!p.airborne)this.sprayAccumulator+=dt*(Math.abs(p.lean)*20+this.waveRide.boost*.55+wake*12);
-    if(this.sprayAccumulator>1){const n=Math.floor(this.sprayAccumulator);this.emit(n,.6+Math.abs(p.lean));this.sprayAccumulator-=n;}
+    if(!p.airborne)this.sprayAccumulator+=dt*(5+Math.abs(p.lean)*42+this.waveRide.boost*.65+wake*16+(this.rush.active>0?25:0)+this.rush.padBoost*2);
+    if(this.sprayAccumulator>1){const n=Math.floor(this.sprayAccumulator);this.emit(n,.8+Math.abs(p.lean),true);this.sprayAccumulator-=n;}
     this.trailClock+=dt;if(!p.airborne&&this.trailClock>.035){this.trailClock=0;this.trailPoints.unshift({x:p.x,z:p.z-.7});if(this.trailPoints.length>34)this.trailPoints.pop();}
     this.momentTime-=dt;if(this.momentTime<=0)document.getElementById('moment').classList.remove('visible');
     this.hintTime-=dt;if(this.hintTime<=0)document.getElementById('hint').classList.add('invisible');
@@ -425,37 +452,52 @@ class PaperSurfGame {
   }
 
 
+  rivalWaterLane(r,desired){
+    for(const ramp of this.trickRoute.lines){
+      if(ramp.disabled)continue;
+      const ahead=this.trickRoute.local(ramp,r.x,r.z+44),current=this.trickRoute.local(ramp,r.x,r.z);
+      if(ahead.t<0||current.t>1.2)continue;
+      const margin=r.couple?1.65:1.4,center=ramp.x+ramp.fx/ramp.fz*(r.z-ramp.z);
+      const clearance=(ramp.width/2+margin)/Math.abs(ramp.fz),limit=r.encounter?.phase==='exit'?15:8;
+      // Keep the chosen side until the board clears the whole ramp. Crossing to
+      // an otherwise safe target on the far side would still cut through it.
+      const options=[center-clearance,center+clearance].filter(x=>Math.abs(x)<=limit);
+      if(!options.length)continue;
+      const edge=options.reduce((best,x)=>Math.abs(x-r.x)<Math.abs(best-r.x)?x:best);
+      desired=edge<center?Math.min(desired,edge):Math.max(desired,edge);
+    }
+    return desired;
+  }
   updateRivals(dt){
     const p=this.p;
     this.rivals.forEach(r=>{
+      if(this.race.enabled&&!r.encounter&&Math.abs(r.z-p.z)>15)return;
       const previousX=r.x,w=this.wave.waves.find(w=>r.z>w.from&&r.z<w.to);
       const fraction=r.kind==='showoff'?.15:r.kind==='calm'?.65:.4+.22*Math.sin(this.time*1.8+r.index);
       r.yieldTime=Math.max(0,r.yieldTime-dt);
       if(r.contactLocked&&r.yieldTime===0&&(Math.abs(r.z-p.z)>8||Math.abs(r.x-p.x)>3))r.contactLocked=false;
       const line=w?this.wave.crestX(w,r.z)+w.width*fraction:Math.sin(this.time*.5+r.index)*3;
-      const desired=THREE.MathUtils.clamp(line+(r.yieldTime>0?r.yieldSide*1.8:0),-8,8);
+      let desired=THREE.MathUtils.clamp(line+(r.yieldTime>0?r.yieldSide*1.8:0),-8,8);
+      const racePlan=this.race.plan(r);if(racePlan)desired=racePlan.x;
+      desired=this.rivalWaterLane(r,desired);
+      desired=this.setpiece.steerRival(r,desired);
       r.x+=(desired-r.x)*(1-Math.exp(-dt*1.5));r.lean=THREE.MathUtils.clamp((r.x-previousX)/dt*.15,-1,1);
       const catchup=THREE.MathUtils.clamp((p.z-r.z)*.045,-3.5,4),sample=this.wave.sample(r.x,r.z);
-      r.speed+=(25+sample.energy*5+catchup-r.speed)*(1-Math.exp(-dt*2));r.z+=r.speed*dt;r.airY=0;
+      r.speed+=((racePlan?.speed??25+sample.energy*5+catchup)-r.speed)*(1-Math.exp(-dt*2));r.z+=r.speed*dt;r.airY=racePlan?.air||0;
       if(!r.chat&&Math.abs(r.z-p.z)<12)r.chat=true;
+      if(r.z-p.z>3)r.wasAhead=true;
       if(Math.abs(r.z-p.z)<2.2)r.nearest=Math.min(r.nearest,Math.abs(r.x-p.x));
-      if(!r.passed&&p.z-r.z>3){r.passed=true;this.score+=100;if(!r.collided&&r.nearest<1.7)this.nearMiss('ВПРИТЫК!',90,r.x,r.z);}
-      if(!r.collided&&!r.contactLocked&&Math.abs(r.z-p.z)<1.5&&Math.abs(r.x-p.x)<.85&&this.impactCooldown===0){
+      if(!r.passed&&(!this.race.enabled||r.wasAhead)&&p.z-r.z>3){r.passed=true;if(this.race.enabled)this.race.onPass(r);else this.score+=100;if(!r.collided&&r.nearest<1.7)this.nearMiss('ВПРИТЫК!',90,r.x,r.z);}
+      if(r.encounter?.phase!=='exit'&&!r.collided&&!r.contactLocked&&Math.abs(r.z-p.z)<1.5&&Math.abs(r.x-p.x)<(r.couple?1.05:.85)&&Math.abs(p.airY-r.airY)<.95&&this.impactCooldown===0){
         r.collided=r.contactLocked=true;r.yieldTime=3.5;r.yieldSide=r.x>p.x?1:-1;
         this.spill(.08,r.name+': «Сорян!»');p.speed*=.8;this.impactCooldown=1.6;r.x+=r.yieldSide*1.5;r.z+=2;this.emit(16,1);
       }
-      if(r.z<p.z-24){r.z=p.z+50+r.index*13;r.passed=r.chat=r.contactLocked=false;r.yieldTime=0;r.nearest=Infinity;}
+      if(!this.race.enabled&&r.z<p.z-24){r.z=p.z+50+r.index*13;r.passed=r.chat=r.contactLocked=false;r.yieldTime=0;r.nearest=Infinity;}
     });
   }
 
   updateCaps(dt) {
-    this.caps.forEach(c=>{
-      if(c.collected)return;
-      if(Math.abs(c.z-this.p.z)<2.1&&Math.abs(c.x-this.p.x)<1.25&&this.p.airY<2.2){
-        c.collected=true;c.mesh.visible=false;this.collected++;this.score+=50*this.mug.multiplier;this.audio.playFruit();
-      }
-      c.mesh.material.rotation=Math.sin(this.time*2+c.z)*.16;
-    });
+    this.rush.collect();
   }
   emit(count,strength,soft=false) {
     const p=this.p;
@@ -463,7 +505,7 @@ class PaperSurfGame {
       const d=this.particles.find(item=>item.life<=0);if(!d)break;
       d.mesh.material.map=soft?this.sprayTexture:this.dropTexture;
       d.x=-p.x+(Math.random()-.5)*.7;d.y=p.y+.12;d.z=p.z-.45;
-      d.vx=(Math.random()-.5)*5*strength-p.lean*2;d.vy=2+Math.random()*3*strength;d.vz=-3-Math.random()*7;d.life=.45+Math.random()*.3;d.mesh.visible=true;
+      d.vx=(Math.random()-.5)*5*strength+p.lean*5;d.vy=2+Math.random()*3*strength;d.vz=-3-Math.random()*7;d.life=.45+Math.random()*.3;d.size=soft?1.15:.45;d.mesh.visible=true;
     }
   }
   emitBeer(side,count){
@@ -471,15 +513,16 @@ class PaperSurfGame {
     for(let i=0;i<count;i++){
       const d=this.particles.find(item=>item.life<=0);if(!d)break;
       d.mesh.material.map=this.beerDropTexture;d.x=origin.x;d.y=origin.y+.5;d.z=p.z-.1;
-      d.vx=-side*(1.4+Math.random()*3);d.vy=1+Math.random()*3;d.vz=-2-Math.random()*3;d.life=.6+Math.random()*.3;d.mesh.visible=true;
+      d.vx=-side*(1.4+Math.random()*3);d.vy=1+Math.random()*3;d.vz=-2-Math.random()*3;d.life=.6+Math.random()*.3;d.size=.45;d.mesh.visible=true;
     }
   }
   updateParticles(dt) {
-    this.particles.forEach(d=>{if(d.life<=0)return;d.life-=dt;d.x+=d.vx*dt;d.y+=d.vy*dt;d.z+=d.vz*dt;d.vy-=12*dt;d.mesh.position.set(d.x,d.y,d.z);d.mesh.material.rotation=Math.floor(this.time*12)*.37;d.mesh.scale.setScalar(Math.max(0,d.life)*.45);if(d.life<=0)d.mesh.visible=false;});
+    this.particles.forEach(d=>{if(d.life<=0)return;d.life-=dt;d.x+=d.vx*dt;d.y+=d.vy*dt;d.z+=d.vz*dt;d.vy-=12*dt;d.mesh.position.set(d.x,d.y,d.z);d.mesh.material.rotation=Math.floor(this.time*12)*.37;d.mesh.scale.setScalar(Math.max(0,d.life)*(d.size||.45));if(d.life<=0)d.mesh.visible=false;});
   }
   finish() {
     if(this.flowTest){this.flowTest.finish();return;}
     if(this.state==='finished')return;
+    this.world.finish();
     this.chain.bank();this.chase.end('finish');
     this.runComic.capture('finish','ДОВЁЗ!','БАР УЖЕ ТУТ',6,true);this.renderDirty=true;
     this.state='finished';this.audio.stopBGM();this.audio.stopJetski?.();this.input.reset();this.juice.reset();
@@ -536,13 +579,13 @@ class PaperSurfGame {
     rig.board.quaternion.copy(surfaceRotation)
       .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),-Math.PI/2))
       .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),Math.PI+(rig===this.player?this.p.heading:lean*.3)));
-    rig.board.position.y=.12-(rig===this.player?this.jump.landingPulse*.07:0);rig.board.visible=true;
+    rig.board.position.y=(rig.castProfile?.18:.12)-(rig===this.player?this.jump.landingPulse*.07:0);rig.board.visible=true;
     rig.card.quaternion.copy(this.camera.quaternion);rig.card.rotateZ(-lean*.16+Math.atan(sample.dx)*.30);
     if(rig===this.player){
       rig.card.rotateZ(-this.balance.roll*.3);
       surfaceRotation.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),this.balance.roll*.12));
       this.heroAnimator.fitDeck(surfaceRotation,this.p.heading);
-      rig.card.scale.y=1-this.jump.landingPulse*.065;this.heroAnimator.placeOnBoard();
+      rig.card.scale.y=1-this.jump.landingPulse*.11;this.heroAnimator.placeOnBoard();
       if(this.p.airborne&&this.p.spin){
         const axis=this.jump.trickKind==='flip'?new THREE.Vector3(1,0,0):this.jump.trickKind==='cork'?new THREE.Vector3(.6,.18,.8).normalize():new THREE.Vector3(0,0,1);
         rig.group.quaternion.setFromAxisAngle(axis.applyQuaternion(this.camera.quaternion),this.p.spin);
@@ -562,7 +605,7 @@ class PaperSurfGame {
       rig.card.scale.set(pose==='turn'&&lean<0?-1:1,1,1);
     }
     rig.shadow.position.set(-x,sample.height+.04,z-.15);rig.shadow.material.opacity=.25/(1+airY*.8);
-    rig.shadow.rotation.z=Math.atan(sample.dx);rig.shadow.scale.set(rig.castProfile?.couple?1.6:1,1.5,1);
+    rig.shadow.rotation.z=Math.atan(sample.dx);rig.shadow.scale.set(rig.castProfile?.couple?1.1:1,rig.castProfile?.couple?2.4:1.5,1);
   }
 
   updateVisuals(dt) {
@@ -572,7 +615,8 @@ class PaperSurfGame {
     this.updateSurfer(this.player,p.x,p.z,p.y,p.lean,p.airY,p.crouch,frame);
     this.rivals.forEach(r=>{
       const s=this.wave.sample(r.x,r.z);this.updateSurfer(r.rig,r.x,r.z,s.height+r.airY,r.lean,r.airY,0,frame);
-      r.wake.forEach((drop,i)=>{const z=r.z-1-i*.65;const x=r.x+Math.sin(i*2+this.time*4)*.2;drop.position.set(-x,this.wave.height(x,z)+.06,z);drop.scale.set(.4+i*.05,.14+i*.02,1);drop.visible=r.airY<.3;});
+      const visible=!this.race.enabled||r.z>p.z-18&&Math.abs(r.z-p.z)<160;r.rig.group.visible=visible;r.rig.shadow.visible=visible;
+      r.wake.forEach((drop,i)=>{const z=r.z-1-i*.65;const x=r.x+Math.sin(i*2+this.time*4)*.2;drop.position.set(-x,this.wave.height(x,z)+.06,z);drop.scale.set(.4+i*.05,.14+i*.02,1);drop.visible=visible&&r.airY<.3;});
     });
     this.meta.updateGhost(frame);
     this.lastPoseFrame=frame;
@@ -581,17 +625,21 @@ class PaperSurfGame {
     this.companion.update();
     this.placeCoast();
     this.world.update();
+    this.race.update();
     this.birds.forEach((b,i)=>{b.position.set((i===0?18:-19)+Math.sin(this.time*.6+i)*3,15+Math.sin(this.time*1.4+i),p.z+75+i*22);b.material.rotation=Math.sin(Math.floor(this.time*12)*.2+i)*.1;});
-    this.caps.forEach(c=>{if(!c.collected)c.mesh.position.set(-c.x,this.wave.height(c.x,c.z)+.8+Math.sin(this.time*3+c.z)*.09,c.z);});
+    this.rush.update();
+    this.setpiece.update();
+    this.beats.update();
     this.finishSign.position.set(0,7,this.distance+2);this.finishPosts.forEach(({pole,x})=>pole.position.set(x,3,this.distance+2));
     // Only connect recorded points. Repeating the final point with an expanding
     // width creates a vertical paper fan on a curved wave face.
     this.trail.visible=this.trailPoints.length>1&&!p.fallen;
+    this.trail.material.uniforms.uRush.value=this.rush.boost/7;
     this.trail.geometry.setDrawRange(0,Math.max(0,Math.min(33,this.trailPoints.length-1))*6);
     const pos=this.trail.geometry.attributes.position;
     for(let i=0;i<34;i++){
       const t=this.trailPoints[Math.min(i,this.trailPoints.length-1)]||{x:p.x,z:p.z};
-      const spread=.22+i*.045;
+      const spread=.38+i*.065;
       pos.setXYZ(i*2,-t.x-spread,this.wave.height(t.x+spread,t.z)+.035,t.z);
       pos.setXYZ(i*2+1,-t.x+spread,this.wave.height(t.x-spread,t.z)+.035,t.z);
     }
@@ -614,24 +662,29 @@ class PaperSurfGame {
       this.cameraChasePull+=(chaseTarget-this.cameraChasePull)*easing;
       this.cameraChaseLift+=(chaseLiftTarget-this.cameraChaseLift)*easing;
     }
-    const back=15+this.cameraChasePull*6.4;
+    const wide=this.camera.aspect>1.3;
+    const airTarget=p.airborne?1.9+Math.min(3.1,this.jump.lastHeight*.4)+this.jump.launchStrength*.6+(this.jump.takeoffRamp?.type==='side'?2.5:0):0;
+    if(snap)this.cameraAirPull=airTarget;
+    else this.cameraAirPull+=(airTarget-this.cameraAirPull)*(1-Math.exp(-dt*(p.airborne?4:3)));
+    const back=(wide?15.5:11.7)+this.cameraChasePull*.9+this.cameraAirPull;
     const ground=this.wave.height(p.x,p.z,this.time,false);
     // Release the takeoff crest during flight so the camera can descend before
     // touchdown, instead of holding a high-water offset until the landing frame.
     const release=this.wave.smooth((this.jump.airTime-.25)/.75);
     const base=p.airborne?THREE.MathUtils.lerp(p.takeoffHeight??ground,ground,release):ground;
     // Begin low to show the distant crest, then lift to keep the rider clear of the approaching wall.
-    const targetY=7.5+base*.90+(p.airborne?Math.max(0,p.y-base)*.32:0)+this.cameraChaseLift;
+    const targetY=(wide?7.5:6.1)+base*.94+(p.airborne?Math.max(0,p.y-base)*.8+1.4*this.wave.smooth(this.jump.airTime/.18):0)+this.cameraChaseLift*.25;
     if(snap){
-      this.camera.position.set(-p.x*.94,targetY,p.z-back);
+      this.camera.position.set(-p.x,targetY,p.z-back);
       this.cameraLateralSpeed=this.cameraVerticalSpeed=0;this.cameraForwardSpeed=p.speed*Math.cos(p.heading);
     }
     else{
       const damping=1-Math.exp(-dt/.20);
-      const lateral=THREE.MathUtils.clamp((-p.x*.94-p.sideVelocity*.22-this.camera.position.x)/.42,-7.5,7.5);
-      const vertical=THREE.MathUtils.clamp((targetY-this.camera.position.y)/.62,-2.6,2.6);
-      this.cameraLateralSpeed+=(lateral-this.cameraLateralSpeed)*damping;
-      this.cameraVerticalSpeed+=(vertical-this.cameraVerticalSpeed)*damping;
+      const followingFlight=p.airborne||this.jump.landingAge<.65;
+      const lateral=THREE.MathUtils.clamp((-p.x-p.sideVelocity*.32-this.camera.position.x)/(followingFlight?.26:.32),followingFlight?-12:-9.5,followingFlight?12:9.5);
+      const vertical=THREE.MathUtils.clamp((targetY-this.camera.position.y)/(followingFlight?.20:.62),followingFlight?-8:-2.6,followingFlight?12:2.6);
+      this.cameraLateralSpeed+=(lateral-this.cameraLateralSpeed)*(followingFlight?1-Math.exp(-dt/.14):damping);
+      this.cameraVerticalSpeed+=(vertical-this.cameraVerticalSpeed)*(1-Math.exp(-dt/(followingFlight?.12:.20)));
       this.camera.position.x+=this.cameraLateralSpeed*dt;
       this.camera.position.y+=this.cameraVerticalSpeed*dt;
       // Speed prediction removes steady follow lag without snapping to route progress.
@@ -676,11 +729,12 @@ class PaperSurfGame {
     const fin=document.getElementById('shark-threat');fin.classList.toggle('visible',!!threat);fin.classList.toggle('close',danger>.7);fin.dataset.phase=threat?.shark.attackPhase||'chase';fin.querySelector('b').style.transform='scaleX('+danger+')';
     document.getElementById('spill-flash').style.opacity=this.spillFlash;this.drawBeer();
     this.balance.updateHUD();this.chain.render();
+    this.rush.updateHUD();
     const mult=document.getElementById('beer-mult'),label='×'+this.mug.multiplier;if(mult.textContent!==label){mult.textContent=label;mult.dataset.level=this.mug.multiplier;}mult.title='Бонус доставки '+label;mult.setAttribute('aria-label','Бонус доставки '+label);
     document.querySelector('.score-ticket').classList.toggle('beaten',this.meta.challenge>0&&this.score>this.meta.challenge);
   }
   updateCoach(guidance){
-    const p=this.p,s=this.wave.sample(p.x,p.z),threat=this.world.threat(),lesson=this.onboarding.cue();let title='',line='',id='';
+    const p=this.p,s=this.wave.sample(p.x,p.z),threat=this.world.threat(),lesson=this.onboarding.cue(),sceneCue=this.setpiece.cue()||this.beats.cue()||this.rush.cue();let title='',line='',id='';
     const obstacle=this.world.hazards.filter(h=>!h.hit&&!h.done&&h.type!=='shark'&&h.z-p.z>3&&h.z-p.z<35&&Math.abs(h.x-p.x)<2.2).sort((a,b)=>a.z-b.z)[0];
     if(p.fallen){this.onboarding.highlight='';}
     else if(this.balance.mode==='recovery'){id='balance';title=this.balance.recoveryAge<1.2?this.balance.reason:lesson?.id==='balance'?lesson.title:this.assist?'ОТПУСТИ ПОВОРОТ':'ПОЙМАЙ БАЛАНС';line=lesson?.id==='balance'?lesson.line:this.assist?'Отпусти поворот — доска выровняется.':'Против завала. В центре — отпусти.';}
@@ -693,13 +747,14 @@ class PaperSurfGame {
       else {id='landing';title=this.assist?'':lesson?.title||'';line=this.assist?'':lesson?.line||'';}
     }
     else if(this.chase.critical){id='chase';title='ПЕНА ВПЛОТНУЮ!';line=this.input.mode==='keys'&&!matchMedia('(pointer:coarse)').matches?'Пробел — перепрыгни гребень.':'Нажми прыжок — перепрыгни гребень.';this.onboarding.highlight='jump';}
-    else if(threat){id='danger';title=threat.shark.attackPhase==='windup'?'АКУЛА ГОТОВИТ БРОСОК!':threat.shark.attackPhase==='lunge'?'БРОСОК! УЙДИ С ЛИНИИ':'АКУЛА НА ХВОСТЕ!';line='Уйди с её линии в сторону.';this.onboarding.highlight='';}
+    else if(threat){id='danger';title=threat.shark.attackPhase==='windup'?'ПЛАВНИК · ГОТОВЬ ПОВОРОТ':threat.shark.attackPhase==='lunge'?'БРОСОК · СМЕНИ ЛИНИЮ':'ПЛАВНИК СЗАДИ';line='Уйди с её линии в сторону.';this.onboarding.highlight='';}
     else if(lesson?.id==='steer'){({title,line,id}=lesson);}
+    else if(sceneCue){({title,line,id}=sceneCue);}
     else if(obstacle){id='danger';const left=obstacle.type==='buoy'?this.trickRoute.routePoint(obstacle.z)<obstacle.x:p.x<obstacle.x;title=(obstacle.type==='buoy'?'БУЙ ВПЕРЕДИ':'АКВАБАЙК РЯДОМ')+' '+(left?'←':'→');line='Обойди или перепрыгни.';this.onboarding.highlight='';}
     else if(!this.flowTest&&p.z>175&&p.z<212){id='danger';title='← ВЫЛЕТ · ОБЪЕЗД →';line='Трамплин подбрасывает сам.';}
     else if(lesson){({title,line,id}=lesson);}
     else if(this.jump.rampTricks===0){
-      const ramp=this.trickRoute.lines.find(l=>!l.done&&l.z-p.z>0&&l.z-p.z<38);
+      const ramp=this.trickRoute.lines.find(l=>!l.disabled&&!l.done&&l.z-p.z>0&&l.z-p.z<38);
       if(ramp){id='ramp';title=ramp.type==='side'?'БОРТ У КРАЯ':'ТРАМПЛИН ВПЕРЕДИ';line=ramp.type==='side'?'Заедь сбоку с воды — вылетишь к середине.':'Держи пунктир — доска взлетит сама.';}
     }
     // Once learned, the wave and the highlighted jump control carry the cue.

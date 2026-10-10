@@ -21,7 +21,7 @@ async function run(){
         jetskis:g.world.hazards.filter(h=>h.type==='jetski').map(h=>h.initialZ),rivals:g.rivals.length,
         hudFits:beer.left>=0&&score.right<=innerWidth&&beer.right<score.left};
     });
-    assert.equal(report.scene.caps,0);assert.equal(report.scene.collection,'none');assert.equal(report.scene.rivals,2);assert.ok(report.scene.hudFits);assert.ok(Math.min(...report.scene.jetskis)>=658);
+    assert.equal(report.scene.caps,0);assert.equal(report.scene.collection,'none');assert.equal(report.scene.rivals,2);assert.ok(report.scene.hudFits);assert.equal(Math.min(...report.scene.jetskis),310,'the first jetski encounter belongs to the opening twenty seconds');
     report.cast=[];
     for(const id of ['grandma','dj','blonde','couple']){
       const r=await page.evaluate(id=>{
@@ -29,14 +29,18 @@ async function run(){
         const rival=g.rivals[0],profile=g.rivalCast.profiles.find(p=>p.id===id);g.rivalCast.apply(rival,profile);rival.x=-3.8;rival.z=g.p.z+7;rival.lean=0;g.rivals[1].z=g.p.z+250;
         g.world.hazards.forEach(h=>h.done=true);g.wave.update(g.p.z,g.time,true);g.updateCamera(1,true);g.updateVisuals(0);g.updateHUD();g.speedBlur.render();
         const image=profile.texture.image,canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);
-        const alpha=ctx.getImageData(0,0,1,1).data[3],anchor=rival.rig.footAnchor.clone().applyQuaternion(rival.rig.card.quaternion).add(rival.rig.card.position);
-        const footer=anchor.distanceTo(rival.rig.board.position);
-        return {id,height:rival.rig.card.geometry.parameters.height,boardWidth:rival.rig.board.scale.x,texture:image.src,alpha,footer,finite:rival.rig.card.matrixWorld.elements.every(Number.isFinite)};
+        const alpha=ctx.getImageData(0,0,1,1).data[3],rig=rival.rig;
+        const footer=Math.max(...rig.castRiders.map(({card,cutout,deckPoint})=>{
+          const anchor=cutout.foot.clone().applyQuaternion(card.quaternion).add(card.position),deck=deckPoint.clone().multiply(rig.board.scale).applyQuaternion(rig.board.quaternion).add(rig.board.position);return anchor.distanceTo(deck);
+        }));
+        const board=rival.rig.board;
+        return {id,height:rival.rig.card.geometry.parameters.height,boardWidth:board.geometry.parameters.width*board.scale.x,boardLength:board.geometry.parameters.height*board.scale.y,texture:image.src,alpha,footer,finite:rival.rig.card.matrixWorld.elements.every(Number.isFinite)};
       },id);
-      assert.ok(r.height>=3.2&&r.height<=3.5,'adult cutouts match the hero scale');assert.ok(r.alpha<=2,'source background is transparent');assert.ok(r.footer<.0001&&r.finite,'photographed stance stays anchored on the shared board');
+      assert.ok(r.height>=3.2&&r.height<=3.5,'all adults keep the same scale, including both tandem riders');assert.ok(r.alpha<=2,'source background is transparent');assert.ok(r.footer<.0001&&r.finite,'photographed stance stays anchored on the shared board');
+      assert.ok(r.boardLength/r.boardWidth>2.8,'every rider uses a forward-facing surfboard, not a wide platform');
       report.cast.push(r);await page.screenshot({path:path.join(review,id+'.png')});
     }
-    assert.equal(new Set(report.cast.map(r=>r.texture)).size,4);assert.ok(report.cast[3].boardWidth>report.cast[0].boardWidth);
+    assert.equal(new Set(report.cast.map(r=>r.texture)).size,4);assert.ok(report.cast[3].boardLength>report.cast[0].boardLength*1.5);assert.ok(report.cast[3].boardWidth<report.cast[0].boardWidth*1.35);
     report.props=[];
     for(const id of ['ship','umbrella','rescue','sign']){
       const r=await page.evaluate(id=>{
@@ -66,6 +70,6 @@ async function run(){
     });
     assert.deepEqual(report.music,{plays:true,paused:true,muted:true,distant:true});
     assert.deepEqual(errors,[]);report.errors=errors;fs.writeFileSync(path.join(review,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
-  }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
+  }finally{if(browser)await browser.close();server.closeAllConnections();await new Promise(r=>server.close(r));}
 }
 run().catch(e=>{console.error(e);process.exitCode=1;});

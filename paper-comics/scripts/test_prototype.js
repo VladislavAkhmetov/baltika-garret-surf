@@ -113,7 +113,7 @@ async function test(){
     setup();g.jump.button.dispatchEvent(new PointerEvent('pointerdown',{pointerId:12,bubbles:true}));g.jump.button.dispatchEvent(new PointerEvent('pointercancel',{pointerId:12,bubbles:true}));g.step(dt);
     const cancelled={holding:g.jump.holding,requested:g.jump.requested,airborne:g.p.airborne};
     key('keydown');g.pause();key('keyup');const paused={holding:g.jump.holding,requested:g.jump.requested};
-    const chaseSetup=()=>{setup(406);g.time=5;g.world.step(dt);return g.world.hazards.find(h=>h.type==='shark');};
+    const chaseSetup=()=>{setup(606);g.time=5;g.world.step(dt);return g.world.hazards.find(h=>h.type==='shark');};
     let shark=chaseSetup();g.updateHUD();const activation={gap:g.p.z-shark.z,active:shark.chasing,icon:document.getElementById('shark-threat').classList.contains('visible')};
     g.p.x=7;const previousX=shark.x;g.time+=.1;g.world.step(.1);const lag={sharkX:shark.x,playerX:g.p.x,previousX};
     for(let i=0;i<1000&&shark.chasing;i++){g.time+=dt;g.p.z+=36*dt;g.world.step(dt);}const fast={escaped:shark.escaped,escapes:g.world.escapes,beer:g.mug.level};

@@ -98,13 +98,13 @@ async function run(){
       await page.evaluate(async()=>{await game.start(false);game.state='paused';game.comics.trigger=()=>false;game.meta.seed=42;});
       const layout=await page.evaluate(()=>{
         const g=pursuitSetup();document.getElementById('pause-screen').classList.add('hidden');document.getElementById('result-screen').classList.add('hidden');g.journey.hideAll();g.container.classList.add('playing');
-        g.spill(.025,'Неудачная посадка');g.chase.age=1.4;g.chase.phase='chasing';g.chase.z=g.p.z-8;g.chase.gap=8;
+        g.spill(.025,'Неудачная посадка');g.chase.age=1.4;g.chase.phase='chasing';g.chase.z=g.p.z-2;g.chase.gap=2;
         g.momentTime=0;document.getElementById('moment').classList.remove('visible');g.hintTime=0;document.getElementById('hint').classList.add('invisible');
         g.state='paused';g.resize();g.wave.update(g.p.z,g.time,true);g.updateCamera(1,true);g.updateVisuals(0);g.updateHUD();g.speedBlur.render();
         const r=document.getElementById('arcade-chain').getBoundingClientRect(),s=g.container.getBoundingClientRect(),jump=document.getElementById('jump-button').getBoundingClientRect();
-        const cue=g.chain.pursuitCue.getBoundingClientRect(),positions=g.chase.frontMesh.geometry.attributes.position;
+        const cue=document.getElementById('ride-coach'),positions=g.chase.frontMesh.geometry.attributes.position;
         let front=-Infinity;for(let i=0;i<positions.count;i++)front=Math.max(front,positions.getZ(i));
-        return {hudFits:r.left>=s.left&&r.right<=s.right&&r.bottom<jump.top,cueVisible:cue.height>0,
+        return {hudFits:r.left>=s.left&&r.right<=s.right&&r.bottom<jump.top,cueVisible:!cue.classList.contains('hidden')&&getComputedStyle(cue).visibility==='visible'&&cue.dataset.lesson==='chase',
           foamVisible:g.chase.frontMesh.visible,finite:Array.from(positions.array).every(Number.isFinite),frontError:Math.abs(front-g.chase.z-1.1),overflow:document.documentElement.scrollWidth>innerWidth};
       });
       assert.ok(layout.hudFits&&layout.cueVisible&&layout.foamVisible&&layout.finite&&!layout.overflow&&layout.frontError<.001,'pursuit cue and physical foam fit '+name+': '+JSON.stringify(layout));

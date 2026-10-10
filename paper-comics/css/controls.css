@@ -10,6 +10,9 @@
 #app-container:not(.playing) #steer-pad,.fallen #steer-pad{display:none}
 #controls-screen{z-index:35;overflow-y:auto;align-items:flex-start;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));background:#103f58bf;overscroll-behavior:contain}
 #app-container:has(#controls-screen:not(.hidden)),#app-container:has(#pause-screen:not(.hidden)){touch-action:pan-y}
+#app-container:has(.screen:not(.hidden):not(#error-screen)),#app-container:not(.playing){touch-action:manipulation}
+.screen,.journey,.menu-screen{touch-action:manipulation}
+.screen button,.journey button,.menu-screen button{touch-action:manipulation;pointer-events:auto}
 #controls-screen,.pause-card{touch-action:pan-y}
 .controls-card{width:min(430px,100%);margin:auto;text-align:left;padding:26px 24px 22px;transform:none;background:#f4ead2;border:1px solid #e1d2b5;border-radius:16px;clip-path:none;filter:drop-shadow(0 6px 12px #103f5870)}
 .controls-card h2{font:26px/1.1 'Russo One',sans-serif;margin:8px 0 20px}
@@ -30,6 +33,11 @@
 .controls-card .yellow-button{display:block;width:100%;min-height:46px;font-size:17px}
 .title-screen .controls-open{position:absolute;left:max(18px,env(safe-area-inset-left));top:max(14px,env(safe-area-inset-top));bottom:auto;color:#234b54;font:14px/1.4 Rubik,sans-serif;min-height:44px;padding:10px 0}
 .pause-card{max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain}
+.pause-tips{margin:2px 0 8px;text-align:left;font:12px/1.45 Rubik,sans-serif;color:#32565d}
+.pause-tips summary{min-height:40px;display:list-item;align-content:center;cursor:pointer;font-weight:500;padding:9px 4px;touch-action:manipulation}
+.pause-tips p{margin:4px 4px 9px}
+.pause-card .pause-help{font-size:12px;line-height:1.5;margin:4px 0 12px}
+.pause-card .text-button{min-height:40px;align-content:center;padding:6px 8px;font-size:12px;touch-action:manipulation}
 .selection-footer .controls-open{display:block;margin:10px auto 0;font:13px/1.4 Rubik,sans-serif;min-height:36px;padding:8px;color:#234b54}
 .controls-card .yellow-button:disabled{opacity:.5;cursor:wait}
 .controls-card button:focus-visible,.controls-card input:focus-visible{outline:3px solid #df7848;outline-offset:3px}

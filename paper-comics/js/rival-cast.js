@@ -3,30 +3,34 @@ class RivalCast {
   constructor(game){
     this.game=game;this.run=0;
     this.profiles=[
-      {id:'grandma',name:'ЛОЛА',kind:'calm',color:0x268f83,height:3.45,line:'КОКТЕЙЛЬ НЕ РАСПЛЕСКАЙ!',soles:[[420,1243],[790,1402]]},
-      {id:'dj',name:'ДИЕГО',kind:'showoff',color:0xe9714e,height:3.25,line:'ЛОВИ РИТМ!',soles:[[298,1263],[750,1404]]},
-      {id:'blonde',name:'АЛИСА',kind:'showoff',color:0xf3c754,height:3.25,line:'ЛОВИ ВОЛНУ!',soles:[[400,1318],[770,1427]]},
-      {id:'couple',name:'МИША И НИКА',kind:'wobbly',color:0x338b8b,height:3.25,line:'МЫ НА ОДНОЙ ВОЛНЕ!',couple:true,soles:[[262,914],[690,940],[890,925],[1220,944]]}
+      {id:'grandma',file:'rival-grandma-v2.png',name:'ЛОЛА',kind:'calm',color:0xe6ddff,height:3.2,line:'КОКТЕЙЛЬ НЕ РАСПЛЕСКАЙ!',soles:[[438,1227],[829,1426]]},
+      {id:'dj',file:'rival-dj-v2.png',name:'ДИЕГО',kind:'showoff',color:0xffe5ce,height:3.5,line:'ЛОВИ РИТМ!',soles:[[331,1187],[790,1396]]},
+      {id:'blonde',name:'АЛИСА',kind:'showoff',color:0xfff3ce,height:3.25,line:'ЛОВИ ВОЛНУ!',soles:[[400,1318],[770,1427]]},
+      {id:'couple',file:'rival-couple-tandem-v4.png',name:'МИША И НИКА',kind:'wobbly',color:0xd7f3ee,height:3.2,line:'МЫ НА ОДНОЙ ВОЛНЕ!',couple:true,
+        parts:[{half:0,height:3.2,soles:[[242,825],[620,857]],deckX:-.17,deckY:-1},{half:1,height:3.55,soles:[[1275,824],[1544,858]],deckX:.17,deckY:1}]}
     ];
     const loader=new THREE.TextureLoader();
     this.ready=Promise.all(this.profiles.map(profile=>new Promise((resolve,reject)=>{
-      loader.load('assets/comics/rival-'+profile.id+'.png',texture=>{
+      loader.load('assets/comics/'+(profile.file||'rival-'+profile.id+'.png'),texture=>{
         texture.minFilter=THREE.LinearFilter;texture.generateMipmaps=false;
-        // Crop transparent padding in UV space; preserve the generated source PNG.
         const image=texture.image,canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;
         const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);const pixels=ctx.getImageData(0,0,image.width,image.height).data;
-        let left=image.width,right=0,top=image.height,bottom=0;
-        for(let y=0;y<image.height;y++)for(let x=0;x<image.width;x++)if(pixels[(y*image.width+x)*4+3]>40){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}
-        if(left>right){reject(Error('Пустой силуэт '+profile.id));return;}
-        const width=right-left+1,height=bottom-top+1;
-        texture.repeat.set(width/image.width,height/image.height);texture.offset.set(left/image.width,1-(bottom+1)/image.height);
-        profile.texture=texture;profile.width=profile.height*width/height;
-        const soles=profile.soles||[[left+width*.36,bottom-height*.045],[left+width*.66,bottom-height*.012]];
-        const sx=soles.reduce((n,s)=>n+s[0],0)/soles.length,sy=soles.reduce((n,s)=>n+s[1],0)/soles.length;
-        profile.foot=new THREE.Vector3(((sx-left)/width-.5)*profile.width,(.5-(sy-top)/height)*profile.height,0);
-        profile.contacts=soles.map(([x,y])=>new THREE.Vector3(((x-left)/width-.5)*profile.width,(.5-(y-top)/height)*profile.height,0).sub(profile.foot));
-        const a=soles[0],b=soles[soles.length-1];
-        profile.stance=new THREE.Vector3((b[0]-a[0])/width*profile.width,(a[1]-b[1])/height*profile.height,0);resolve();
+        // Both atlas columns and transparent margins are cropped only through UVs.
+        const cutouts=profile.parts||[profile];
+        for(const cutout of cutouts){
+          const from=cutout.half===undefined?0:Math.floor(cutout.half*image.width/2),to=cutout.half===undefined?image.width:Math.floor((cutout.half+1)*image.width/2);
+          let left=to,right=from,top=image.height,bottom=0;
+          for(let y=0;y<image.height;y++)for(let x=from;x<to;x++)if(pixels[(y*image.width+x)*4+3]>40){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}
+          if(left>right){reject(Error('Пустой силуэт '+profile.id));return;}
+          const width=right-left+1,height=bottom-top+1,crop=profile.parts?texture.clone():texture;
+          crop.repeat.set(width/image.width,height/image.height);crop.offset.set(left/image.width,1-(bottom+1)/image.height);crop.needsUpdate=true;
+          cutout.texture=crop;cutout.width=cutout.height*width/height;
+          const sx=cutout.soles.reduce((n,s)=>n+s[0],0)/2,sy=cutout.soles.reduce((n,s)=>n+s[1],0)/2;
+          cutout.foot=new THREE.Vector3(((sx-left)/width-.5)*cutout.width,(.5-(sy-top)/height)*cutout.height,0);
+          cutout.contacts=cutout.soles.map(([x,y])=>new THREE.Vector3(((x-left)/width-.5)*cutout.width,(.5-(y-top)/height)*cutout.height,0).sub(cutout.foot));
+        }
+        if(profile.parts)Object.assign(profile,{texture:cutouts[0].texture,width:cutouts[0].width,foot:cutouts[0].foot,contacts:cutouts[0].contacts});
+        resolve();
       },undefined,()=>reject(Error('Не удалось загрузить соперника '+profile.id)));
     })));
     this.ready.catch(()=>{});
@@ -41,34 +45,52 @@ class RivalCast {
   apply(r,profile){
     Object.assign(r,{id:profile.id,name:profile.name,kind:profile.kind,line:profile.line,couple:!!profile.couple});
     const rig=r.rig;rig.castProfile=profile;rig.board.material.color.setHex(profile.color);
-    rig.board.scale.set(profile.couple?5.2:2.7,profile.couple?1.9:1.25,1);
-    // On a steep crest, water would cut through the wide shared paper deck.
-    // Keep that collage layer visible under all four photographed feet.
-    rig.board.material.depthTest=!profile.couple;rig.board.material.depthWrite=!profile.couple;
-    rig.board.renderOrder=profile.couple?2:0;
-    for(const rim of rig.board.children){rim.material.depthTest=!profile.couple;rim.material.depthWrite=!profile.couple;rim.renderOrder=rig.board.renderOrder;}
-    rig.shadow.scale.set(profile.couple?1.6:1,1.5,1);
+    rig.board.scale.set(profile.couple?1.5:1.2,profile.couple?1.75:1.12,1);
+    // The deck belongs to the same paper layer as its riders: a curved wave
+    // must not slice the long tandem board underneath their visible feet.
+    rig.board.material.depthTest=false;rig.board.material.depthWrite=false;rig.board.renderOrder=1;
+    rig.shadow.scale.set(profile.couple?1.1:1,profile.couple?2.4:1.5,1);
     if(!profile.texture)return;
-    rig.card.geometry.dispose();rig.card.geometry=new THREE.PlaneGeometry(profile.width,profile.height);
-    rig.card.material.map=profile.texture;rig.card.material.depthWrite=false;rig.card.material.needsUpdate=true;rig.card.renderOrder=3;
+    if(profile.couple&&!rig.partner){
+      rig.partner=new THREE.Mesh(new THREE.PlaneGeometry(1,1),rig.card.material.clone());rig.group.add(rig.partner);
+    }
+    if(rig.partner)rig.partner.visible=!!profile.couple;
+    rig.castRiders=(profile.parts||[profile]).map((cutout,i)=>{
+      const card=i===0?rig.card:rig.partner;
+      card.geometry.dispose();card.geometry=new THREE.PlaneGeometry(cutout.width,cutout.height);
+      card.material.map=cutout.texture;card.material.depthWrite=false;card.material.depthTest=false;card.material.needsUpdate=true;card.renderOrder=3;
+      // A photograph's feet lie in its camera plane. Sorted paper layers keep
+      // water from cutting them off; their screen contacts are fitted to the 3D deck.
+      return {card,cutout,deckPoint:new THREE.Vector3(cutout.deckX||0,cutout.deckY||0,0)};
+    });
     rig.footAnchor=profile.foot.clone();
   }
   place(rig){
     if(!rig.footAnchor)return;
-    rig.card.scale.set(1,1,1);
-    const profile=rig.castProfile,camera=this.game.camera,right=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion),up=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
-    const contacts=profile.contacts.map(contact=>{const v=contact.clone().applyQuaternion(rig.card.quaternion);return {sx:v.dot(right),sy:v.dot(up)};});
-    const width=.43*rig.board.scale.x*.9,length=1.3*rig.board.scale.y*.9,base=rig.board.quaternion.clone();let best=Infinity,rotation=base;
-    for(let i=-7;i<=7;i++){
-      const yaw=i*.2,q=base.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),yaw));
+    const camera=this.game.camera,board=rig.board,base=board.quaternion.clone(),center=board.position.clone().add(rig.group.position);
+    const normal=new THREE.Vector3(0,0,1).applyQuaternion(base),width=.76*board.scale.x*.92,length=2.4*board.scale.y*.90;
+    let best=Infinity,rotation=base;
+    for(let i=-8;i<=8;i++){
+      const yaw=i*.06,q=base.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),yaw));
       const xAxis=new THREE.Vector3(1,0,0).applyQuaternion(q),yAxis=new THREE.Vector3(0,1,0).applyQuaternion(q);
-      const a=xAxis.dot(right),b=yAxis.dot(right),c=xAxis.dot(up),d=yAxis.dot(up),det=a*d-b*c;if(Math.abs(det)<.025)continue;
-      let score=yaw*yaw;
-      for(const {sx,sy} of contacts){const x=(sx*d-b*sy)/det,y=(a*sy-sx*c)/det,taper=1-Math.min(.55,(Math.abs(y)/length)**2*.55);score+=Math.max(0,Math.abs(x)/(width*taper)-1)**2*60+Math.max(0,Math.abs(y)/length-1)**2*60;}
+      let score=yaw*yaw*.35;
+      for(const rider of rig.castRiders){
+        const anchor=rider.deckPoint.clone().multiply(board.scale).applyQuaternion(q).add(center);
+        for(const contact of rider.cutout.contacts){
+          const point=contact.clone().applyQuaternion(rig.card.quaternion).add(anchor),ray=point.clone().sub(camera.position).normalize(),denom=ray.dot(normal);
+          if(Math.abs(denom)<.025){score+=1e6;continue;}
+          point.addScaledVector(ray,center.clone().sub(point).dot(normal)/denom).sub(center);
+          const x=point.dot(xAxis),y=point.dot(yAxis),taper=1-Math.min(.55,(Math.abs(y)/length)**2*.55);
+          score+=Math.max(0,Math.abs(x)/(width*taper)-1)**2*120+Math.max(0,Math.abs(y)/length-1)**2*120;
+        }
+      }
       if(score<best){best=score;rotation=q;}
     }
-    rig.board.quaternion.copy(rotation);
-    rig.card.position.copy(rig.board.position).sub(rig.footAnchor.clone().applyQuaternion(rig.card.quaternion));
+    board.quaternion.copy(rotation);
+    for(const {card,cutout,deckPoint} of rig.castRiders){
+      card.quaternion.copy(rig.card.quaternion);card.scale.set(1,1,1);
+      card.position.copy(deckPoint).multiply(board.scale).applyQuaternion(board.quaternion).add(board.position).sub(cutout.foot.clone().applyQuaternion(card.quaternion));
+    }
   }
   music(dt){
     const g=this.game,r=g.rivals.find(r=>r.id==='dj');

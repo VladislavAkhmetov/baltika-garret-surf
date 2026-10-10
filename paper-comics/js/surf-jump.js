@@ -120,6 +120,7 @@ class SurfJump {
           if(this.spinShot)Object.assign(this.spinShot,{word:'ПЛЮХ!',caption:'ПОЧТИ ПОЛУЧИЛОСЬ',priority:this.spinShot.priority-15});
           g.juice.pop('ПЛЮХ!',p.x,p.y+1.4,p.z,'bad');
           g.spill(clean<.4?.06:.025,'Неудачная посадка');p.speed*=clean<.4?.8:.92;g.balance.disturb(.25+(1-clean)*.42,'ЖЁСТКАЯ ПОСАДКА');}
+        g.setpiece?.onLanding(this.takeoffRamp,clean>.72);
         if(this.takeoffRamp)g.trickRoute.land(this.takeoffRamp,clean>.72);
         this.takeoffRamp=null;this.sideKick=0;this.clearSpin();
       }

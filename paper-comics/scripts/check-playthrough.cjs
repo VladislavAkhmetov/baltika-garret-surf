@@ -44,7 +44,7 @@ async function run(){
     });
     await page.waitForFunction(()=>game.p.z>=65,{timeout:180000,polling:100});await page.screenshot({path:path.join(review,'01-first-wave.png')});console.log('first wave');
     await page.waitForFunction(()=>game.p.airborne,{timeout:180000,polling:30});await page.screenshot({path:path.join(review,'02-jump.png')});console.log('jump');
-    const markers=[['03-wave-gap',365],['04-shark-chase',412],['05-jetski',625],['06-big-wave',980]];
+    const markers=[['03-rock-choice',280],['04-jetski',370],['05-shark-chase',665],['06-big-wave',1100]];
     for(const [name,z] of markers){
       await page.waitForFunction(z=>game.p.z>=z,{timeout:180000,polling:100},z);
       await page.screenshot({path:path.join(review,name+'.png')});
@@ -62,6 +62,6 @@ async function run(){
     fs.writeFileSync(path.join(review,'report.json'),JSON.stringify({result,restart,errors},null,2));
     console.log(JSON.stringify({state:result.state,seconds:result.seconds,caught:result.caught,beer:result.beer,jumps:result.jumps,escapes:result.escapes,frames:result.frames,comicEvents:result.events.length,restart},null,2));
     console.log('PASS: rendered mobile run, jumps via Space, shark encounters, all hazards and rivals, finish and replay UI.');
-  }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
+  }finally{if(browser)await browser.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 }
 run().catch(error=>{console.error(error);process.exitCode=1;});

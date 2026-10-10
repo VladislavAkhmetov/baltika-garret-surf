@@ -1,6 +1,12 @@
 {
   "scripts": {
     "dev": "node scripts/serve.js",
+    "test:serve": "node scripts/test-serve.cjs",
+    "test:race": "node paper-comics/scripts/test_race.cjs",
+    "test:rush": "node paper-comics/scripts/test_rush.cjs",
+    "test:setpiece": "node paper-comics/scripts/test_setpiece.cjs",
+    "test:beats": "node paper-comics/scripts/test_beats.cjs",
+    "test:sprint": "node paper-comics/scripts/test_sprint.cjs",
     "test:prototype": "node paper-comics/scripts/test_prototype.js",
     "test:controls": "node paper-comics/scripts/test_controls.cjs",
     "test:chapter": "node paper-comics/scripts/test_chapter.cjs",
@@ -21,7 +27,8 @@
     "test:action": "node paper-comics/scripts/test_action.cjs",
     "test:ribbon": "node paper-comics/scripts/test_ribbon.cjs",
     "test:maneuvers": "node paper-comics/scripts/test_maneuvers.cjs",
-    "test:rivals": "node paper-comics/scripts/test_rivals.cjs"
+    "test:rivals": "node paper-comics/scripts/test_rivals.cjs",
+    "test:cast-polish": "node paper-comics/scripts/test_cast-polish.cjs"
   },
   "dependencies": {
     "puppeteer-core": "^24.43.1"

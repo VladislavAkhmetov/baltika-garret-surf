@@ -11,7 +11,7 @@
     if (window.location.protocol.startsWith('http') && (window.location.pathname === '/' || window.location.pathname.endsWith('/index.html') || window.location.pathname === '')) {
       const p = new URLSearchParams(window.location.search);
       if (!p.has('legacy') && !p.has('debug')) {
-        window.location.replace('paper-comics/index.html' + window.location.search);
+        window.location.replace('/paper-comics/index.html' + window.location.search);
       }
     }
   </script>

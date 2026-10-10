@@ -109,6 +109,10 @@ class TrickRoute {
       line.stage=0;line.done=line.landed=false;line.flash=0;line.group.visible=false;
       if(window.DRIVE_TEST_MODE){line.z=DriveTest.layout.rampZ;line.x=-2.7;line.length=12;line.height=2.2;}
       else if(!window.FLOW_TEST_MODE&&line===this.lines[0]){line.z=226;line.x=-2.7;line.length=12;line.height=2.2;}
+      line.disabled=!window.FLOW_TEST_MODE&&line.id===5;
+      line.finale=!window.FLOW_TEST_MODE&&line.id===19;
+      if(!window.FLOW_TEST_MODE&&line.id===7){line.z=452;line.x=-2.2;}
+      if(line.finale){line.z=1110;line.x=0;line.length=14;line.height=3.1;}
       // Choose a clear footprint once. Ramps do not slide sideways with a changing recommendation.
       for(const h of this.game.world.hazards){
         if(line.type==='side'||h.type!=='buoy'||Math.abs(h.initialZ-line.z)>line.length+8)continue;
@@ -170,7 +174,7 @@ class TrickRoute {
     if(window.FLOW_TEST_MODE&&!window.DRIVE_TEST_MODE||p.fallen||p.recovering>0){this.riding=null;return surface;}
     if(p.airborne){this.riding=null;return surface;}
     if(!this.riding)for(const line of this.lines){
-      if(line.done)continue;
+      if(line.done||line.disabled)continue;
       const a=this.local(line,previous.x,previous.z),b=this.local(line,p.x,p.z);
       const forward=p.sideVelocity*line.fx+p.speed*Math.cos(p.heading)*line.fz;
       const sideEntry=line.type==='side'&&a.q<=.025&&b.q>.025&&b.q<.25&&b.t>.04&&b.t<.68&&p.sideVelocity*line.edgeSide>1.3;
@@ -210,6 +214,7 @@ class TrickRoute {
   }
   maneuverAt(z){
     return this.lines.find(line=>{
+      if(line.disabled)return false;
       const entry=line.entry,exit=line.exit;
       return z>=entry.z-52&&z<=exit.z+36;
     });
@@ -239,6 +244,8 @@ class TrickRoute {
     return THREE.MathUtils.lerp(a.x,b.x,at-i);
   }
   routePoint(z){
+    const sprint=this.game.setpiece?.finishPath(z);if(sprint!==null&&sprint!==undefined)return sprint;
+    const authored=this.game.setpiece?.path(z);if(authored!==null&&authored!==undefined)return authored;
     if(!window.FLOW_TEST_MODE&&z<214){
       const points=COMICS_COURSE.opening,last=points[points.length-1],smooth=this.game.wave.smooth;
       if(z<=last.z){
@@ -255,6 +262,7 @@ class TrickRoute {
     return this.maneuverPoint(z);
   }
   bypassPoint(z){
+    const authored=this.game.setpiece?.path(z,true);if(authored!==null&&authored!==undefined)return authored;
     if(z<174||z>324)return null;
     if(z<220)return THREE.MathUtils.lerp(.8,2.8,this.game.wave.smooth((z-174)/46));
     if(z<284)return 2.8;
@@ -270,6 +278,7 @@ class TrickRoute {
   }
   guidanceHeight(x,z){
     const line=this.lines.find(l=>{
+      if(l.disabled)return false;
       const at=this.local(l,x,z);
       return at.t>=0&&at.t<=1&&Math.abs(at.across)<this.widthAt(l,at.t)/2;
     });
@@ -282,7 +291,7 @@ class TrickRoute {
       sign.mesh.position.set(-sign.x,g.wave.height(sign.x,sign.z)+2.5,sign.z);
     }
     for(const line of this.lines){
-      line.group.visible=['playing','paused'].includes(g.state)&&line.z-p.z<135&&line.z-p.z>-16;
+      line.group.visible=!line.disabled&&['playing','paused'].includes(g.state)&&line.z-p.z<135&&line.z-p.z>-16;
       if(!line.group.visible)continue;
       const pos=line.top.geometry.attributes.position,cols=line.columns;
       for(let row=0;row<=n;row++)for(let col=0;col<=cols;col++){

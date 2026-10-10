@@ -10,7 +10,7 @@ async function run(){
   let browser;
   const errors=[],report={};
   try{
-    browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+    browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,userDataDir:fs.mkdtempSync(path.join(review,'chrome-')),args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
     const page=await browser.newPage();page.on('pageerror',error=>errors.push(error.message));
     await page.setViewport({width:393,height:852,isMobile:true,hasTouch:true});
     await page.goto('http://127.0.0.1:'+server.address().port,{waitUntil:'networkidle0'});
@@ -85,6 +85,16 @@ async function run(){
     assert.deepEqual(report.shark.windup,{phase:'windup',line:0,cue:true,hud:'windup'});
     assert.deepEqual(report.shark.lunge,{phase:'lunge',line:0,target:0});assert.equal(report.shark.airborne,true);
     assert.deepEqual(report.shark.escape,{escaped:true,beer:1,award:true,cue:false});assert.equal(report.shark.reset,true);
+    report.finiteShark=await page.evaluate(()=>{
+      const g=game;g.reset();g.state='playing';g.comics.trigger=()=>false;
+      const h=g.world.hazards.find(h=>h.type==='shark');h.activeAt=0;h.chasing=true;h.attackAt=6;
+      h.z=400;h.x=h.targetX=h.lungeX=0;g.p.z=420;g.p.x=5;g.time=9.21;g.world.stepChaser(h,.01);
+      const missed={done:h.done,escaped:h.escaped,threat:g.world.threat()};
+      g.reset();g.state='playing';h.activeAt=0;h.chasing=true;h.z=g.distance-8;g.p.z=g.distance;
+      g.finish();const finished={done:h.done,chasing:h.chasing,escaped:h.escaped,escapes:g.world.escapes},score=g.score;g.finish();
+      const duplicate=g.score-score;g.reset();g.state='paused';return {missed,finished,duplicate,reset:!h.done&&!h.chasing&&h.activeAt===null};
+    });
+    assert.deepEqual(report.finiteShark,{missed:{done:true,escaped:true,threat:null},finished:{done:true,chasing:false,escaped:true,escapes:1},duplicate:0,reset:true},'a missed committed lunge and reaching the dock end the chase exactly once');
 
     report.frames=[];
     for(const [name,width,height,mobile] of [['mobile',393,852,true],['small',360,640,true],['landscape',844,390,true],['desktop',1240,900,false]]){
@@ -155,6 +165,6 @@ async function run(){
     assert.deepEqual(report.longPress,{jumps:1,tricks:0,pointer:null,unhandled:0});
     assert.deepEqual(errors,[]);fs.writeFileSync(path.join(review,'report.json'),JSON.stringify({report,errors},null,2));
     console.log('PASS: earned flips, clean landing rewards, air transfers, jetski launches, committed shark lunges and Chrome touch holds.');
-  }finally{await browser?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+  }finally{try{await browser?.close();}finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}}
 }
 run().catch(error=>{console.error(error);process.exitCode=1;});

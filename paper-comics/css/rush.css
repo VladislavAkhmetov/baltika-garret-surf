@@ -1,0 +1,23 @@
+.rush-mode #rush-meter{position:absolute;z-index:6;top:17px;left:50%;transform:translateX(-50%) rotate(-2deg);width:86px;text-align:center;color:#173d47;pointer-events:none;background:#f7e9cbeF;clip-path:polygon(3% 5%,28% 0,49% 4%,74% 0,98% 6%,100% 93%,73% 100%,44% 94%,0 100%);padding:7px 6px 6px}
+#rush-meter{display:none}.playing.rush-mode #rush-meter{display:block}
+#rush-meter strong{display:block;font:900 13px/1.1 sans-serif;letter-spacing:.5px}
+#rush-meter span{display:flex;justify-content:center;gap:5px;padding:5px 0}
+#rush-meter i{width:12px;height:12px;border:1.5px solid #37505a;border-radius:50%;background:#c4c6b3;transition:background .12s}
+#rush-meter i.lit{background:#ffc530;border-color:#bd6629;box-shadow:0 0 4px #fff1af}
+#rush-meter small{font:700 10px/1.1 sans-serif}
+.in-rush #rush-meter{background:#ffcd47}.in-rush #rush-meter strong{color:#9d341f}
+.in-rush #rush-meter::after{content:'';position:absolute;bottom:0;left:0;width:100%;height:3px;background:#b95028;transform:scaleX(var(--rush-left));transform-origin:left}
+.rush-mode #arcade-chain .pursuit-cue{display:none}
+.rush-mode[data-signal]:not([data-signal=""]) #crab-callout,.rush-mode[data-signal]:not([data-signal=""]) .race-callout{visibility:hidden}
+.rush-mode #moment.coach-muted{opacity:1}
+.rush-mode #moment .moment-mult{display:none}
+.rush-mode.impact-message .sfx-word.trick,.rush-mode.impact-message .sfx-word.near{visibility:hidden}
+.rush-mode #ride-coach,.rush-mode #moment,.rush-mode #chain-toast{max-width:calc(100% - 32px)}
+#edge-spray{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden;opacity:var(--splash,0);display:none}
+.playing #edge-spray{display:block}
+#edge-spray i{position:absolute;bottom:calc(15% + var(--i) * 3.7%);left:calc(-7px + var(--d) * 8px);width:calc(12px + var(--d) * 7px);height:calc(26px + var(--d) * 9px);border-radius:70% 25% 60% 30%;background:#f4fbec;transform:rotate(-28deg);box-shadow:0 0 3px #c8f5ed}
+#edge-spray i:nth-child(even){left:auto;right:calc(-9px + var(--d) * 6px);transform:rotate(28deg)}
+.rush-mode:has(#pause-screen:not(.hidden)) #rush-meter,.rush-mode:has(#result-screen:not(.hidden)) #rush-meter{display:none}
+@media(max-width:370px){.rush-mode #rush-meter{top:12px;width:70px;padding:5px}.rush-mode #rush-meter strong{font-size:11px}}
+@media(orientation:landscape) and (max-height:520px){.rush-mode #rush-meter{top:12px}.rush-mode #arcade-chain{top:65px}}
+@media(prefers-reduced-motion:reduce){#edge-spray{display:none!important}#rush-meter i{transition:none}}

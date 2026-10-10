@@ -113,10 +113,10 @@ class PaperWave {
           float facing=clamp(dot(normal,view),0.0,1.0);
           float fresnel=.065+.52*pow(1.0-facing,4.0);
           float crest=smoothstep(-.1,4.8,vWaterWorld.y);
-          vec3 deep=vec3(.018,.255,.32),clear=vec3(.12,.58,.57);
+          vec3 deep=vec3(.025,.32,.44),clear=vec3(.15,.67,.66);
           vec3 water=mix(deep,clear,.22+crest*.65);
           water*=.78+.22*max(0.0,dot(normal,sun));
-          water*=.94+grain*.12;
+          water*=.88+grain*.24;
           water+=vec3(.045,.13,.09)*crest*(1.0-clamp(normal.y,0.0,1.0))*.55;
           vec3 reflected=reflect(-view,normal);
           vec3 sky=mix(vec3(.62,.78,.77),vec3(.24,.58,.67),clamp(reflected.y,0.0,1.0));
@@ -164,7 +164,7 @@ class PaperWave {
       w.size=i===0?.36:THREE.MathUtils.clamp(rhythm[(i+phase)%4]+(variation-.5)*.18,.07,1);
       if(i===1)w.size=Math.min(w.size,.55);
       w.height=1.1+w.size*4.0;
-      const centerZ=70+progress*(COMICS_COURSE.length-105);
+      const centerZ=70+progress*(COMICS_COURSE.actionLength-105);
       const length=84+w.height*9+this.hash(seed+i*53)*12;
       w.anchorFrom=centerZ-length/2;w.anchorTo=centerZ+length/2;
       w.centerX=(template.start+template.end)/2+(this.hash(seed+i*59)-.5)*1.6;
@@ -185,6 +185,9 @@ class PaperWave {
       height:3.7,size:.65,width:10,backWidth:15,centerX:-3,span:38,arc:0,bow:0,crestSlope:50,
       encounterTime:54/28,velocityX:.12,velocityZ:-.02,breakRate:.014,
       flowShape:[-3.6,-4.8,-3,-4.2],flowFace:[.34,.30,.48,.30]});
+    Object.assign(this.waves[this.waves.length-1],{anchorFrom:1048,anchorTo:1182,anchorStart:-5.2,anchorEnd:-3.6,
+      height:4.8,size:.92,width:11,backWidth:16,centerX:-4.4,span:36,arc:0,bow:0,crestSlope:50,
+      encounterTime:1110/33,velocityX:.12,velocityZ:-.02});
     this.time=0;this.lastPrintFrame=-1;
   }
 
@@ -299,8 +302,8 @@ class PaperWave {
       pos.setY(i, h);
       pos.setZ(i, z);
       const breakAmount=f.wave?this.breaking(f.wave,z):0;
-      const crestFoam=f.energy*Math.exp(-Math.pow((f.face-.04)/.07,2))*(.42+breakAmount*.48);
-      const wash=f.energy*breakAmount*.48*Math.exp(-Math.pow((f.face-.24)/.15,2));
+      const crestFoam=f.energy*Math.exp(-Math.pow((f.face-.055)/.11,2))*(.68+breakAmount*.65);
+      const wash=f.energy*breakAmount*.7*Math.exp(-Math.pow((f.face-.24)/.19,2));
       // Pursuing whitewater is a band behind the front; it thins out towards the camera.
       const front=this.peelFront,whitewater=front&&f.wave?.id===front.id&&f.face>-.15&&f.face<.92?f.energy*this.smooth((front.z+1.5-z)/5)*(1-this.smooth((front.z-5-z)/9))*(.45+.3*this.smooth(1-f.face)):0;
       foam.setX(i,Math.max(crestFoam,wash,whitewater));

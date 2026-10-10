@@ -31,18 +31,7 @@ class CrabCompanion {
       }
       this.setPose('rest');resolve();
     },undefined,()=>reject(Error('Не удалось загрузить Клешню'))));
-    const boardReady=new Promise((resolve,reject)=>loader.load('assets/comics/surfboard-paper-v1.png',texture=>{
-      // The deck's silhouette occupies a narrow strip in the portrait source.
-      texture.repeat.set(444/1024,1499/1536);texture.offset.set(289/1024,22/1536);
-      texture.minFilter=THREE.LinearMipmapLinearFilter;texture.magFilter=THREE.LinearFilter;
-      const board=game.player.board;
-      for(const child of [...board.children]){board.remove(child);child.material?.dispose();}
-      board.geometry.dispose();board.material.dispose();
-      board.geometry=new THREE.PlaneGeometry(1.52,4.8);
-      board.material=new THREE.MeshBasicMaterial({map:texture,transparent:true,alphaTest:.25,depthWrite:false,side:THREE.DoubleSide});
-      board.scale.set(1,1,1);board.renderOrder=1;this.boardTexture=texture;resolve();
-    },undefined,()=>reject(Error('Не удалось загрузить доску'))));
-    this.ready=Promise.all([crabReady,boardReady]);
+    this.ready=Promise.all([crabReady,game.boardReady]);
     this.ready.then(()=>{game.renderDirty=true;}).catch(()=>{});
     this.reset();
   }

@@ -1,5 +1,6 @@
 window.COMICS_COURSE = {
-  length:1200,
+  length:1360,
+  actionLength:1200,
   waveCount:21,
   opening:[{z:0,x:1.4},{z:35,x:-1.6},{z:80,x:1.5},{z:125,x:-1.4},{z:174,x:.8}],
   waves:[
@@ -17,14 +18,14 @@ window.COMICS_COURSE = {
     {from:380,to:620,title:'СМОТРИ ПОД ДОСКУ'},
     {from:620,to:880,title:'АКВАБАЙКИ НА ГОРИЗОНТЕ'},
     {from:880,to:1100,title:'ТВОЯ БОЛЬШАЯ ВОЛНА'},
-    {from:1100,to:1200,title:'БАР УЖЕ БЛИЗКО'}
+    {from:1100,to:1360,title:'ФИНИШНЫЙ СПРИНТ'}
   ],
   hazards:[
     {type:'buoy',x:1.4,z:35},
     {type:'buoy',x:-1.6,z:80},
     {type:'buoy',x:1.5,z:125},
-    {type:'shark',x:-5,z:430,phase:0,direction:1,mode:'chase'},
-    {type:'buoy',x:0,z:464},
+    {type:'jetski',x:-10,z:310,direction:1,mode:'cross'},
+    {type:'shark',x:-5,z:610,phase:0,direction:1,mode:'chase'},
     {type:'jetski',x:-10,z:658,direction:1,mode:'cross'},
     {type:'buoy',x:3.5,z:726},
     {type:'jetski',x:5.5,z:794,direction:1,mode:'overtake'},

@@ -7,7 +7,17 @@ class ComicsWorld {
     this.hazards=COMICS_COURSE.hazards.map((config,i)=>this.makeHazard(config,i));
     this.ready=Promise.all([new Promise((resolve,reject)=>{
       new THREE.TextureLoader().load('assets/comics/jetski-boris-v2.png',texture=>{
-        this.hazards.filter(h=>h.jetCard).forEach(h=>{h.jetCard.material.map.dispose();h.jetCard.material.map=texture.clone();h.jetCard.material.map.needsUpdate=true;});resolve();
+        // The generated atlas has unequal columns: equal thirds cut the craft in half.
+        const image=texture.image,canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;
+        const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);const pixels=ctx.getImageData(0,0,image.width,image.height).data;
+        this.jetViews=[[0,842],[842,1650],[1650,2172]].map(([from,to])=>{
+          let left=to,right=from,top=image.height,bottom=0;
+          for(let y=0;y<image.height;y++)for(let x=from;x<to;x++)if(pixels[(y*image.width+x)*4+3]>40){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}
+          const width=right-left+1,height=bottom-top+1,map=texture.clone();
+          map.repeat.set(width/image.width,height/image.height);map.offset.set(left/image.width,1-(bottom+1)/image.height);map.needsUpdate=true;
+          return {map,width:3*width/height,height:3,bounds:{left,right,top,bottom}};
+        });
+        this.hazards.filter(h=>h.jetCard).forEach(h=>{h.jetCard.material.map.dispose();h.jetView=-1;});resolve();
       },undefined,()=>reject(Error('Аквабайк недоступен')));
     }),...this.hazards.filter(h=>h.fin).map(h=>new Promise((resolve,reject)=>{
       new THREE.TextureLoader().load('assets/comics/shark-directions-sheet.png',texture=>{
@@ -59,19 +69,24 @@ class ComicsWorld {
     }else if(config.type==='shark'){
       fin=new THREE.Mesh(new THREE.PlaneGeometry(2.4,2.4),new THREE.MeshBasicMaterial({map:this.game.textures.shark_fin.clone(),transparent:true,alphaTest:.12,side:THREE.DoubleSide}));fin.material.map.userData={directionAtlas:true};fin.position.y=.8;group.add(fin);
     }else{
-      jetCard=new THREE.Mesh(new THREE.PlaneGeometry(4.5,4.5),new THREE.MeshBasicMaterial({map:this.jetskiTexture.clone(),transparent:true,alphaTest:.12,side:THREE.DoubleSide}));
-      jetCard.position.y=1.55;group.add(jetCard);
+      jetCard=new THREE.Mesh(new THREE.PlaneGeometry(4.5,3),new THREE.MeshBasicMaterial({map:this.jetskiTexture.clone(),transparent:true,alphaTest:.12,depthWrite:false,depthTest:false,side:THREE.DoubleSide}));
+      jetCard.renderOrder=3;jetCard.position.y=1.42;group.add(jetCard);
     }
     this.scene.add(group);
     const label=labelText?this.game.sprite(this.game.label(labelText,color),config.type==='jetski'?3.7:2.5,.7):null;
-    const wake=[];if(config.type==='jetski')for(let j=0;j<2;j++){const foam=this.game.wave.ribbon(0xf5ecd4,.23);foam.material.transparent=true;foam.material.depthWrite=false;wake.push(foam);}
+    const wake=[];if(config.type==='jetski')for(let j=0;j<2;j++){
+      const foam=this.game.wave.ribbon(0xf5ecd4,.23),uv=new Float32Array(81*2*2);
+      for(let i=0;i<=80;i++)for(let side=0;side<2;side++){uv[(i*2+side)*2]=i/80;uv[(i*2+side)*2+1]=side;}
+      foam.geometry.setAttribute('uv',new THREE.BufferAttribute(uv,2));
+      foam.material.map=this.game.wave.foamTexture;foam.material.needsUpdate=true;foam.material.transparent=true;foam.material.alphaTest=.04;foam.material.depthWrite=false;wake.push(foam);
+    }
     const attackCue=config.type==='shark'?this.game.wave.ribbon(0xf9ba54,.28):null;
     if(attackCue){attackCue.material.transparent=true;attackCue.material.opacity=.38;attackCue.material.depthWrite=false;attackCue.visible=false;}
     return {...config,initialX:config.x,initialZ:config.z,group,label,wake,attackCue,index,fin,jetCard,view:0};
   }
   reset(){
     this.wakeRides=this.escapes=0;
-    this.hazards.forEach(h=>{h.x=h.initialX;h.z=h.initialZ;h.activeAt=h.attackAt=null;h.attackPhase='chase';h.lungeX=h.x;h.airDodge=false;h.hit=h.warned=h.passed=h.done=h.chasing=h.escaped=h.airPass=false;h.endAt=null;h.targetX=h.x;h.chaseSpeed=30;h.encounterSide=0;h.crossed=false;h.nearestPass=Infinity;h.previousRelative=null;h.group.visible=h.type!=='shark';h.wake.forEach(w=>w.visible=false);if(h.attackCue)h.attackCue.visible=false;});
+    this.hazards.forEach(h=>{h.x=h.initialX;h.z=h.initialZ;h.activeAt=h.attackAt=null;h.motion=null;h.crossSpeed=h.forwardSpeed=0;h.attackPhase='chase';h.lungeX=h.x;h.airDodge=false;h.hit=h.warned=h.passed=h.done=h.chasing=h.escaped=h.airPass=false;h.endAt=null;h.targetX=h.x;h.chaseSpeed=30;h.encounterSide=0;h.crossed=false;h.nearestPass=Infinity;h.previousRelative=null;h.group.visible=h.type!=='shark';h.wake.forEach(w=>w.visible=false);if(h.attackCue)h.attackCue.visible=false;});
   }
   endChase(h,escaped=false){
     h.done=true;h.chasing=false;h.escaped=escaped;h.endAt=this.game.time;
@@ -85,6 +100,7 @@ class ComicsWorld {
     const g=this.game,p=g.p;
     if(h.done)return;
     if(h.activeAt===null){
+      if(g.setpiece?.canStartHazard(h)===false)return;
       if(p.z<h.initialZ-25||p.z>h.initialZ+70)return;
       h.activeAt=g.time;h.chasing=true;h.z=p.z-24;h.x=THREE.MathUtils.clamp(p.x-h.direction*3.5,-8,8);h.targetX=h.x;
       g.companion.react('shark',true);
@@ -102,7 +118,7 @@ class ComicsWorld {
     h.view=Math.abs(vx)>1.8?(vx<0?0:1):2;
     const gap=p.z-h.z;
     if(Math.abs(gap)<1.8&&Math.abs(p.x-h.x)<1.15&&p.airY>=.95){if(!h.airDodge)g.runComic.capture('shark','ХАП!','АКУЛА ОСТАЛАСЬ БЕЗ УЖИНА',95);h.airDodge=true;}
-    if((age>3&&gap>36)||gap< -6){this.endChase(h,true);return;}
+    if((age>3&&gap>36)||gap< -6||(h.attackAt!==null&&g.time-h.attackAt>3.2)){this.endChase(h,true);return;}
     if(Math.abs(gap)<1.8&&Math.abs(p.x-h.x)<1.15&&p.airY<.95&&g.impactCooldown===0){
       h.hit=true;g.spill(.13,'АКУЛА ЗАДЕЛА');p.speed*=.65;g.balance.disturb(.34,'АКУЛА ЗАДЕЛА');g.impactCooldown=2;g.emit(25,1.3);this.endChase(h);return;
     }
@@ -111,23 +127,42 @@ class ComicsWorld {
     const p=this.game.p;
     return this.hazards.filter(h=>h.chasing).map(h=>({shark:h,gap:p.z-h.z})).sort((a,b)=>Math.abs(a.gap)-Math.abs(b.gap))[0]||null;
   }
+  finish(){
+    // Reaching the dock ends any remaining encounter before banking the chain.
+    for(const h of this.hazards){
+      if(h.type!=='shark'||h.done)continue;
+      if(h.chasing)this.endChase(h,true);
+      else h.done=true;
+    }
+  }
   step(dt,hazards=this.hazards){
     const g=this.game,p=g.p;
     hazards.forEach(h=>{
       if(h.done)return;
       if(h.type==='shark'){this.stepChaser(h,dt);return;}
       if(h.type==='jetski'){
-        if(p.z>h.initialZ-65&&h.activeAt===null){h.activeAt=g.time;if(h.mode==='overtake')h.z=p.z-22;}
+        if(p.z>h.initialZ-65&&h.activeAt===null){
+          if(g.setpiece?.canStartHazard(h)===false)return;
+          h.activeAt=g.time;
+          if(h.mode==='overtake'){h.z=p.z-22;h.motion={x:0,z:1};}
+          else{
+            // Aim at the authored water line once, leaving 1.7 seconds to react.
+            const lane=THREE.MathUtils.clamp(g.trickRoute.routePoint(h.initialZ),-4,4);
+            h.forwardSpeed=12;h.crossSpeed=(lane-h.initialX)/1.7;
+            h.z=p.z+Math.max(22,(p.speed-h.forwardSpeed)*1.7);
+            const length=Math.hypot(h.crossSpeed,h.forwardSpeed);h.motion={x:h.crossSpeed/length,z:h.forwardSpeed/length};
+          }
+        }
         if(h.activeAt!==null){
           if(h.mode==='overtake'){h.z+=34*dt;h.x=h.initialX+Math.sin((g.time-h.activeAt)*.6)*.6;}
-          else h.x=h.initialX+(g.time-h.activeAt)*3.5*h.direction;
+          else {h.x+=h.crossSpeed*dt;h.z+=h.forwardSpeed*dt;}
         }
       }
       const ahead=h.z-p.z;
       if(h.type==='jetski'&&h.activeAt===null)return;
       const approaching=h.mode==='overtake'?ahead< -8&&ahead> -60:ahead<60&&ahead>8;
       if(!h.warned&&approaching&&h.type!=='buoy'){
-        h.warned=true;g.hint(h.type==='shark'?'ПЛАВНИК! ПЛАВНО СМЕНИ ЛИНИЮ':h.mode==='cross'?'АКВАБАЙК ПЕРЕСЕКАЕТ КУРС · ВПЕРЕДИ СЛЕД':'АКВАБАЙК ОБГОНЯЕТ · МОЖНО ПОЙМАТЬ СЛЕД',3);
+        h.warned=true;g.hint(h.mode==='cross'?'БОРИС ПЕРЕСЕКАЕТ КУРС':'ЛОВИ СЛЕД БОРИСА',1.25);
       }
       const radius=h.type==='jetski'?1.3:h.type==='shark'?1:.9;
       if(!h.hit&&Math.abs(ahead)<1.8&&Math.abs(h.x-p.x)<radius&&p.airY<1&&g.impactCooldown===0){
@@ -158,8 +193,8 @@ class ComicsWorld {
     });
   }
   wakeCoordinates(h,x,z){
-    const cross=h.mode==='cross';
-    return {behind:cross?(h.x-x)*h.direction:h.z-z,perp:cross?z-h.z:x-h.x};
+    const direction=h.motion||{x:h.mode==='cross'?h.direction:0,z:h.mode==='cross'?0:1};
+    return {behind:(h.x-x)*direction.x+(h.z-z)*direction.z,perp:(x-h.x)*direction.z-(z-h.z)*direction.x};
   }
   wakeQualityAt(x,z){
     let value=0;
@@ -202,13 +237,13 @@ class ComicsWorld {
     this.umbrellas.forEach(({group,offset},i)=>{const z=p.z-20+((offset-p.z*.5)%230+230)%230;group.position.set(-23-i%2*3,1,z);});
     this.hazards.forEach(h=>{
       const diving=h.type==='shark'&&h.endAt!==null?Math.min(1,(g.time-h.endAt)/.65):0;
-      const y=g.wave.height(h.x,h.z);h.group.position.set(-h.x,y+.18-diving*2,h.z);h.group.visible=Math.abs(h.z-p.z)<160&&(h.type!=='shark'||h.activeAt!==null&&diving<1);
+      const y=g.wave.height(h.x,h.z);h.group.position.set(-h.x,y+.18-diving*2,h.z);h.group.visible=Math.abs(h.z-p.z)<160&&(h.type!=='shark'||h.activeAt!==null&&diving<1)&&(h.type!=='jetski'||h.activeAt!==null);
       h.group.rotation.z=h.type==='shark'?Math.sin(g.time*2+h.index)*.05:0;
       if(h.fin){h.fin.quaternion.copy(g.camera.quaternion);const t=h.fin.material.map;if(t.image?.width>0&&t.userData.directionAtlas){t.repeat.set(h.view===1?-.5:.5,.5);t.offset.set(h.view===1?1:h.view%2*.5,(1-Math.floor(h.view/2))*.5);}}
       if(h.jetCard){
         h.group.rotation.y=0;h.jetCard.quaternion.copy(g.camera.quaternion);
-        const view=h.mode==='cross'?(h.direction>0?0:1):2,t=h.jetCard.material.map,eps=0.003;
-        t.repeat.set(1/3-eps*2,1);t.offset.set(view/3+eps,0);
+        const view=h.mode==='cross'?(h.direction>0?0:1):2,frame=this.jetViews?.[view];
+        if(frame&&h.jetView!==view){h.jetCard.geometry.dispose();h.jetCard.geometry=new THREE.PlaneGeometry(frame.width,frame.height);h.jetCard.material.map=frame.map;h.jetView=view;}
       }
       if(h.label){h.label.position.set(-h.x,y+2.6,h.z);h.label.visible=h.group.visible;}
       if(h.attackCue){
@@ -222,17 +257,16 @@ class ComicsWorld {
       }
       h.wake.forEach((foam,arm)=>{
         const active=h.activeAt!==null&&g.time-h.activeAt<9;foam.visible=h.group.visible&&active;
-        const pos=foam.geometry.attributes.position,sign=arm===0?-1:1;
+        const pos=foam.geometry.attributes.position,sign=arm===0?-1:1,direction=h.motion||{x:h.mode==='cross'?h.direction:0,z:h.mode==='cross'?0:1};
         for(let i=0;i<=80;i++){
           const behind=1+i/80*27,perp=sign*behind*.36;
           for(let side=0;side<2;side++){
-            const offset=perp+(side-.5)*.24*Math.sin(i/80*Math.PI);
-            const x=h.mode==='cross'?h.x-behind*h.direction:h.x+offset;
-            const z=h.mode==='cross'?h.z+offset:h.z-behind;
-            pos.setXYZ(i*2+side,-x,g.wave.height(x,z)+.04,z);
+            const offset=perp+(side-.5)*.48*Math.sin(i/80*Math.PI);
+            const x=h.x-behind*direction.x+offset*direction.z,z=h.z-behind*direction.z-offset*direction.x;
+            pos.setXYZ(i*2+side,-x,g.wave.height(x,z)+.09,z);
           }
         }
-        pos.needsUpdate=true;foam.material.opacity=active?Math.min(1,(9-g.time+h.activeAt)/2):0;
+        pos.needsUpdate=true;foam.material.opacity=active?.72*Math.min(1,(9-g.time+h.activeAt)/2):0;
       });
     });
   }
