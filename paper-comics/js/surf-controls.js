@@ -161,22 +161,32 @@ class SurfControlSettings {
     const pad=document.createElement('div');pad.id='steer-pad';pad.setAttribute('aria-hidden','true');pad.innerHTML='<i></i>';game.container.append(pad);
     for(const [parent,label] of [['start-screen','Управление'],['selection-footer','Управление'],['pause-card','Управление']]) {
       const button=document.createElement('button');button.type='button';button.className='text-button controls-open';button.textContent=label;
-      button.addEventListener('click',()=>this.open(button));
+      button.addEventListener('click',e=>{if(performance.now()-(window.__lastTouchTime||0)<350)return;this.open(button);});
       (document.getElementById(parent)||document.querySelector('.'+parent)).append(button);
     }
-    this.screen.querySelectorAll('[data-input]').forEach(b=>b.addEventListener('click',async()=>{
+    this.screen.querySelectorAll('[data-input]').forEach(b=>b.addEventListener('click',async e=>{
+      if(performance.now()-(window.__lastTouchTime||0)<350)return;
       const task=this.input.selectMode(b.dataset.input);this.render();await task;this.render();
     }));
-    this.screen.querySelectorAll('[data-jump-side]').forEach(b=>b.addEventListener('click',()=>{this.input.reset();game.jump.cancel();this.input.jumpSide=b.dataset.jumpSide;this.input.save();this.render();}));
+    this.screen.querySelectorAll('[data-jump-side]').forEach(b=>b.addEventListener('click',e=>{
+      if(performance.now()-(window.__lastTouchTime||0)<350)return;
+      this.input.reset();game.jump.cancel();this.input.jumpSide=b.dataset.jumpSide;this.input.save();this.render();
+    }));
     document.getElementById('control-sensitivity').addEventListener('input',e=>{this.input.sensitivity=Number(e.target.value);this.input.save();this.render();});
     document.getElementById('control-size').addEventListener('input',e=>{this.input.buttonSize=Number(e.target.value);this.input.save();this.render();});
-    document.getElementById('control-center').addEventListener('click',()=>{this.input.status=this.input.recenter()?'Нейтраль запомнили.': 'Подожди сигнал датчика и попробуй ещё раз.';this.render();});
-    document.getElementById('controls-close').addEventListener('click',()=>this.close());
+    document.getElementById('control-center').addEventListener('click',e=>{
+      if(performance.now()-(window.__lastTouchTime||0)<350)return;
+      this.input.status=this.input.recenter()?'Нейтраль запомнили.': 'Подожди сигнал датчика и попробуй ещё раз.';this.render();
+    });
+    document.getElementById('controls-close').addEventListener('click',e=>{
+      if(performance.now()-(window.__lastTouchTime||0)<350)return;
+      this.close();
+    });
     window.addEventListener('keydown',e=>{
       if(this.screen.classList.contains('hidden'))return;
       if(e.code==='Escape'){e.preventDefault();e.stopImmediatePropagation();this.close();}
       if(e.code==='Tab') {
-        const list=[...this.screen.querySelectorAll('button,input')].filter(el=>!el.disabled&&el.getClientRects().length),first=list[0],last=list.at(-1);
+        const list=[...this.screen.querySelectorAll('button,input')].filter(el=>!el.disabled&&el.getClientRects().length),first=list[0],last=list[list.length-1];
         if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
         else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
       }

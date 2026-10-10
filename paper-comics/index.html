@@ -72,8 +72,32 @@
       <h2 class="menu-title"><span>НИ</span> <span>КАПЛИ!</span></h2>
       <img class="menu-hero" src="assets/comics/hero-crest-close.png" alt="">
       <button id="start-button" class="yellow-button menu-play" data-primary>ИГРАТЬ</button>
-      <button id="quick-button" class="text-button menu-quick hidden">БЫСТРЫЙ ЗАЕЗД ↗</button>
+      <button id="quick-button" class="text-button menu-quick">БЫСТРЫЙ ЗАЕЗД ↗</button>
       <p id="daily-label" class="menu-daily"></p>
+      <script>
+        (function(){
+          function act(quick){
+            if(window.game){
+              if(quick||window.FLOW_TEST_MODE)window.game.start(true);
+              else if(window.game.journey)window.game.journey.open('setup');
+              else window.game.start(false);
+            }else{
+              window.__queuedStart=quick?'quick':'play';
+              var b=document.getElementById(quick?'quick-button':'start-button');
+              if(b&&!b.dataset.pending){b.dataset.pending='1';b.textContent='ЗАГРУЗКА…';}
+            }
+          }
+          var s=document.getElementById('start-button'),q=document.getElementById('quick-button');
+          if(s){
+            s.addEventListener('pointerup',function(e){if(e.pointerType!=='mouse')act(false);});
+            s.addEventListener('click',function(){act(false);});
+          }
+          if(q){
+            q.addEventListener('pointerup',function(e){if(e.pointerType!=='mouse')act(true);});
+            q.addEventListener('click',function(){act(true);});
+          }
+        })();
+      </script>
     </section>
     <section id="setup-screen" class="screen journey menu-screen selection-screen hidden" aria-label="Выбор персонажа и локации">
       <button class="menu-back" data-journey-back="start" aria-label="Вернуться в меню">←</button>

@@ -9,7 +9,7 @@
 .menu-title{position:absolute;left:12%;top:25%;z-index:2;margin:0;font-family:'Russo One',Impact,sans-serif;font-size:clamp(70px,9cqw,118px);line-height:.95;letter-spacing:-.055em;transform:rotate(-3deg)}
 .menu-title span{display:block}
 .menu-hero{position:absolute;height:82%;max-width:50%;right:8%;bottom:8%;object-fit:contain;pointer-events:none;filter:drop-shadow(3px 7px 4px #6f60471a)}
-.menu-play{position:absolute;left:12%;bottom:23%;width:29%;max-width:350px;z-index:3}
+.menu-play{position:absolute;left:12%;bottom:23%;width:29%;max-width:350px;z-index:25;touch-action:manipulation;cursor:pointer;pointer-events:auto}
 .menu-back{position:absolute;top:max(20px,env(safe-area-inset-top));left:4%;width:48px;height:48px;z-index:3;background:none;font-size:32px;line-height:1;color:#193b44}
 .selection-choices{display:grid;grid-template-columns:1fr 1fr;gap:9%;flex:1;min-height:0;width:82%;max-width:1050px;margin:70px auto 0;align-items:center}
 .selection-choice{display:grid;grid-template-rows:minmax(0,1fr) 60px;align-items:center;min-height:0;height:100%;max-height:640px}
@@ -35,8 +35,8 @@
 @media(orientation:portrait){
  .menu-title{left:0;right:0;top:7%;text-align:center;font-size:11.5cqw;letter-spacing:-.045em;white-space:nowrap;transform:rotate(-2deg)}
  .menu-title span{display:inline}
- .menu-hero{height:65%;max-width:94%;width:94%;right:3%;bottom:17%;object-position:center}
- .menu-play{width:80%;max-width:330px;left:50%;bottom:6%;transform:translateX(-50%) rotate(-1deg)!important}
+ .menu-hero{height:60%;max-width:94%;width:94%;right:3%;bottom:22%;object-position:center}
+ .menu-play{width:80%;max-width:330px;left:50%;bottom:max(22px,calc(env(safe-area-inset-bottom) + 12px));transform:translateX(-50%) rotate(-1deg)!important;z-index:25;touch-action:manipulation;cursor:pointer;pointer-events:auto}
  .selection-choices{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(0,32%);gap:20px;width:80%;margin-top:55px;align-items:stretch}
  .selection-choice{grid-template-rows:minmax(0,1fr) 46px;height:auto;max-height:none}
  .selection-hero{height:100%;max-height:none}

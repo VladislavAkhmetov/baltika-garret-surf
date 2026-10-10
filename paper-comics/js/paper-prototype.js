@@ -243,10 +243,24 @@ class PaperSurfGame {
     document.getElementById('resume-button').after(this.pauseTips);
     const rushTip=document.createElement('p');rushTip.textContent='Три разных чистых манёвра подряд — Кураж: поймай волну, обгони, прыгни или пройди вплотную. Между ними — не больше 6,5 секунды. Крышки показывают траекторию; удар сбрасывает Кураж.';this.pauseTips.append(rushTip);
     const bindTap=(id,handler)=>{
-      const el=document.getElementById(id);if(!el)return;
-      let touchHandled=0;
-      el.addEventListener('touchend',e=>{touchHandled=performance.now();handler(e);},{passive:true});
-      el.addEventListener('click',e=>{if(performance.now()-touchHandled<450)return;handler(e);});
+      const el=typeof id==='string'?document.getElementById(id):id;if(!el)return;
+      let localTouchTime=0;
+      const activate=(e)=>{
+        const isTouch=e.type==='touchend'||(e.type==='pointerup'&&e.pointerType!=='mouse');
+        const now=performance.now();
+        if(isTouch){
+          if(now-localTouchTime<350)return;
+          localTouchTime=now;
+          window.__lastTouchTime=now;
+          handler(e);
+        }else if(e.type==='click'){
+          if(now-(window.__lastTouchTime||0)<350)return;
+          handler(e);
+        }
+      };
+      el.addEventListener('pointerup',e=>{if(e.pointerType==='touch'||e.pointerType==='pen')activate(e);});
+      el.addEventListener('touchend',activate,{passive:true});
+      el.addEventListener('click',activate);
     };
     bindTap('start-button',()=>this.flowTest?this.start(false):this.journey.open('setup'));
     bindTap('replay-button',()=>this.start(false));
@@ -800,10 +814,29 @@ PaperSurfGame.trickWords={'КАРВИНГ':'ШШУХ!','КАТБЭК':'ВЖИК!
 
 function initPaperSurf() {
   if (window.game) return;
-  try { window.game = new PaperSurfGame(); }
+  try {
+    window.game = new PaperSurfGame();
+    if (window.__queuedStart) {
+      const mode = window.__queuedStart;
+      window.__queuedStart = null;
+      const s = document.getElementById('start-button'), q = document.getElementById('quick-button');
+      if (s) { s.textContent = 'ИГРАТЬ'; delete s.dataset.pending; }
+      if (q) { q.textContent = 'БЫСТРЫЙ ЗАЕЗД ↗'; delete q.dataset.pending; }
+      if (mode === 'quick' || window.FLOW_TEST_MODE) {
+        window.game.start(true);
+      } else if (window.game.journey) {
+        window.game.journey.open('setup');
+      } else {
+        window.game.start(false);
+      }
+    }
+  }
   catch(error) {
     const err = document.getElementById('error-screen');
-    if (err) err.classList.remove('hidden');
+    if (err) {
+      err.classList.remove('hidden');
+      err.textContent = 'Ошибка инициализации: ' + (error && error.message ? error.message : error);
+    }
     console.error(error);
   }
 }

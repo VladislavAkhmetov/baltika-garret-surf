@@ -21,9 +21,23 @@ class SurfJourney {
     this.story.flatMap(s=>s.panels).forEach(p=>this.loadComicImage(p.id).catch(()=>{}));
     const bindTap=(id,handler)=>{
       const el=typeof id==='string'?document.getElementById(id):id;if(!el)return;
-      let touchHandled=0;
-      el.addEventListener('touchend',e=>{touchHandled=performance.now();handler(e);},{passive:true});
-      el.addEventListener('click',e=>{if(performance.now()-touchHandled<450)return;handler(e);});
+      let localTouchTime=0;
+      const activate=(e)=>{
+        const isTouch=e.type==='touchend'||(e.type==='pointerup'&&e.pointerType!=='mouse');
+        const now=performance.now();
+        if(isTouch){
+          if(now-localTouchTime<350)return;
+          localTouchTime=now;
+          window.__lastTouchTime=now;
+          handler(e);
+        }else if(e.type==='click'){
+          if(now-(window.__lastTouchTime||0)<350)return;
+          handler(e);
+        }
+      };
+      el.addEventListener('pointerup',e=>{if(e.pointerType==='touch'||e.pointerType==='pen')activate(e);});
+      el.addEventListener('touchend',activate,{passive:true});
+      el.addEventListener('click',activate);
     };
     document.querySelectorAll('[data-cycle]').forEach(b=>bindTap(b,()=>this.cycle(b.dataset.cycle,Number(b.dataset.direction))));
     bindTap('setup-next',()=>{this.page=0;this.open('story');});
