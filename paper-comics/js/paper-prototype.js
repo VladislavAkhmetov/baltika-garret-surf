@@ -24,17 +24,17 @@ class PaperSurfGame {
       this.textures[key].minFilter = THREE.LinearMipmapLinearFilter;
     });
     this.coastReady=new Promise((resolve,reject)=>{
-      this.textures.bg_town_transparent=loader.load('assets/comics/coast-cape-v5.png',texture=>{
+      this.textures.bg_town_transparent=loader.load('assets/comics/coast-cape-v5.webp',texture=>{
         this.fitCoastTexture(texture);this.renderDirty=true;resolve();
       },undefined,()=>reject(Error('Берег недоступен')));
     });
     this.coastReady.catch(()=>{});
-    this.textures.shark_fin=loader.load('assets/comics/shark-directions-sheet.png');
+    this.textures.shark_fin=loader.load('assets/comics/shark-directions-sheet.webp');
     this.textures.shark_fin.userData={directionAtlas:true};
     this.textures.shark_fin.generateMipmaps=false;this.textures.shark_fin.minFilter=THREE.LinearFilter;
     this.wave = new PaperWave(this.scene);
     this.boardReady=new Promise((resolve,reject)=>{
-      this.surfboardTexture=loader.load('assets/comics/surfboard-paper-v1.png',texture=>{
+      this.surfboardTexture=loader.load('assets/comics/surfboard-paper-v1.webp',texture=>{
         texture.repeat.set(444/1024,1499/1536);texture.offset.set(289/1024,22/1536);
         texture.minFilter=THREE.LinearMipmapLinearFilter;texture.magFilter=THREE.LinearFilter;
         this.renderDirty=true;resolve();

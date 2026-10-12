@@ -94,14 +94,7 @@ class SurfJourney {
     const image=new Image();image.decoding='async';
     const ready=new Promise((resolve,reject)=>{
       let fallbackTried=false;
-      const done=()=>{
-        if(image.decode){
-          image.decode().then(()=>resolve(image),()=>resolve(image));
-        } else {
-          resolve(image);
-        }
-      };
-      image.onload=done;
+      image.onload=()=>resolve(image);
       image.onerror=()=>{
         if(!fallbackTried){
           fallbackTried=true;
@@ -111,6 +104,7 @@ class SurfJourney {
         }
       };
       image.src='assets/comics/comic-'+id+'-v4.webp';
+      if(image.complete && image.naturalWidth>0)resolve(image);
     });
     this.comicImages.set(id,ready);
     ready.catch(()=>{if(this.comicImages.get(id)===ready)this.comicImages.delete(id);});

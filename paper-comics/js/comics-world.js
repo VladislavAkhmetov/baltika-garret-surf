@@ -1,12 +1,12 @@
 class ComicsWorld {
   constructor(game) {
     this.game=game;this.scene=game.scene;
-    this.jetskiTexture=new THREE.TextureLoader().load('assets/comics/jetski-boris-v2.png');
+    this.jetskiTexture=new THREE.TextureLoader().load('assets/comics/jetski-boris-v2.webp');
     this.jetskiTexture.minFilter=THREE.LinearFilter;this.jetskiTexture.generateMipmaps=false;
     this.makeBeach();this.floatingProps=new FloatingProps(game);
     this.hazards=COMICS_COURSE.hazards.map((config,i)=>this.makeHazard(config,i));
     this.ready=Promise.all([new Promise((resolve,reject)=>{
-      new THREE.TextureLoader().load('assets/comics/jetski-boris-v2.png',texture=>{
+      new THREE.TextureLoader().load('assets/comics/jetski-boris-v2.webp',texture=>{
         // The generated atlas has unequal columns: equal thirds cut the craft in half.
         const image=texture.image,canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;
         const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);const pixels=ctx.getImageData(0,0,image.width,image.height).data;

@@ -22,8 +22,10 @@ class HeroAnimator {
     this.cameraRight=new THREE.Vector3();this.cameraUp=new THREE.Vector3();this.deckX=new THREE.Vector3();this.deckY=new THREE.Vector3();
     this.deckTurn=new THREE.Quaternion();this.deckBase=new THREE.Quaternion();this.deckBest=new THREE.Quaternion();
     this.ready=Promise.all(Object.entries(this.poseDefinitions).map(([key,definition])=>new Promise((resolve,reject)=>{
-      const image=new Image();image.onload=()=>resolve([key,image]);
-      image.onerror=()=>reject(new Error('Не удалось загрузить позу персонажа: '+key));image.src=definition.src;
+      const image=new Image();let fallbackTried=false;
+      image.onload=()=>resolve([key,image]);
+      image.onerror=()=>{if(!fallbackTried){fallbackTried=true;image.src=definition.src;}else reject(new Error('Не удалось загрузить позу персонажа: '+key));};
+      image.src=definition.src.replace(/\.png$/,'.webp');
     }))).then(entries=>this.buildAtlases(Object.fromEntries(entries)));
     const card=game.player.card;
     card.geometry.dispose();card.geometry=new THREE.PlaneGeometry(this.width,this.height);

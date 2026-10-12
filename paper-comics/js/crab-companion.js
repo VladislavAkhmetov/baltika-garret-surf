@@ -23,7 +23,7 @@ class CrabCompanion {
     this.boardUp=new THREE.Vector3();this.cameraUp=new THREE.Vector3();this.cameraRight=new THREE.Vector3();
     this.speechPoint=new THREE.Vector3();this.callout=document.getElementById('crab-callout');
     const loader=new THREE.TextureLoader();
-    const crabReady=new Promise((resolve,reject)=>loader.load('assets/comics/crab-kleshnya-sheet-v1.png',texture=>{
+    const crabReady=new Promise((resolve,reject)=>loader.load('assets/comics/crab-kleshnya-sheet-v1.webp',texture=>{
       texture.minFilter=texture.magFilter=THREE.LinearFilter;texture.generateMipmaps=false;
       this.image=texture.image;this.textures={};
       for(const name of ['rest','raised']){

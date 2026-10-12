@@ -11,7 +11,7 @@ class DolphinPod {
     this.drops.name='dolphin-water-drops';this.drops.frustumCulled=false;
     this.drops.instanceMatrix.setUsage(THREE.DynamicDrawUsage);game.scene.add(this.drops);
     this.dummy=new THREE.Object3D();this.reset();
-    this.ready=new Promise((resolve,reject)=>new THREE.TextureLoader().load('assets/comics/dolphin-paper-v3.png',texture=>{
+    this.ready=new Promise((resolve,reject)=>new THREE.TextureLoader().load('assets/comics/dolphin-paper-v3.webp',texture=>{
       texture.minFilter=THREE.LinearMipmapLinearFilter;texture.magFilter=THREE.LinearFilter;
       const aspect=texture.image.width/texture.image.height;
       for(const d of this.dolphins){
