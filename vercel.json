@@ -1,9 +1,21 @@
 {
+  "cleanUrls": true,
   "redirects": [
     { "source": "/", "destination": "/paper-comics/index.html", "permanent": false },
     { "source": "/index.html", "destination": "/paper-comics/index.html", "permanent": false },
     { "source": "/paper-comics", "destination": "/paper-comics/index.html", "permanent": false },
     { "source": "/paper-comics/", "destination": "/paper-comics/index.html", "permanent": false },
-    { "source": "/prototype.html", "destination": "/paper-comics/index.html", "permanent": false }
+    { "source": "/paper-comics/index", "destination": "/paper-comics/index.html", "permanent": false },
+    { "source": "/prototype.html", "destination": "/paper-comics/index.html", "permanent": false },
+    { "source": "/paper", "destination": "/paper-comics/index.html", "permanent": false },
+    { "source": "/paper/", "destination": "/paper-comics/index.html", "permanent": false },
+    { "source": "/paper/index", "destination": "/paper-comics/index.html", "permanent": false },
+    { "source": "/paper/index.html", "destination": "/paper-comics/index.html", "permanent": false },
+    { "source": "/paper/:match*", "destination": "/paper-comics/:match*", "permanent": false },
+    { "source": "/papet", "destination": "/paper-comics/index.html", "permanent": false },
+    { "source": "/papet/", "destination": "/paper-comics/index.html", "permanent": false },
+    { "source": "/papet/index", "destination": "/paper-comics/index.html", "permanent": false },
+    { "source": "/papet/index.html", "destination": "/paper-comics/index.html", "permanent": false },
+    { "source": "/papet/:match*", "destination": "/paper-comics/:match*", "permanent": false }
   ]
 }
