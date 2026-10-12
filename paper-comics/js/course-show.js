@@ -30,7 +30,7 @@ class CourseShow {
   cutout(file,parent,x,y,z,width,height){
     const material=new THREE.SpriteMaterial({transparent:true,alphaTest:.12,depthWrite:false,fog:true});
     const mesh=new THREE.Sprite(material);mesh.center.set(.5,0);mesh.position.set(x,y,z);mesh.scale.set(width,height,1);parent.add(mesh);
-    if(!this.textureCache.has(file))this.textureCache.set(file,new Promise((resolve,reject)=>new THREE.TextureLoader().load('assets/comics/'+file,resolve,undefined,()=>reject(Error('Не удалось загрузить декорацию '+file)))));
+    if(!this.textureCache.has(file))this.textureCache.set(file,new Promise((resolve,reject)=>new THREE.TextureLoader().load('assets/comics/'+file.replace(/\.png$/,'.webp'),resolve,undefined,()=>new THREE.TextureLoader().load('assets/comics/'+file,resolve,undefined,()=>reject(Error('Не удалось загрузить декорацию '+file))))));
     this.assets.push(this.textureCache.get(file).then(texture=>{material.map=texture;material.needsUpdate=true;this.game.renderDirty=true;}));
     return mesh;
   }

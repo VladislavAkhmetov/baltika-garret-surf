@@ -13,7 +13,7 @@ class SurfRush {
   }
   makeScenery(){
     const g=this.game,loader=new THREE.TextureLoader();
-    this.ready=new Promise((resolve,reject)=>loader.load('assets/comics/sea-stack-v10.png',texture=>{
+    this.ready=new Promise((resolve,reject)=>loader.load('assets/comics/sea-stack-v10.webp',texture=>{
       texture.minFilter=THREE.LinearMipmapLinearFilter;
       g.setpiece?.setRockTexture(texture);
       // These are shore boundaries outside the playable strip, never invisible obstacles.

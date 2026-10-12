@@ -8,7 +8,10 @@ class BeerDuel {
     this.mount();
     this.frame=new Image();
     this.ready=Promise.all([game.world.ready,new Promise((resolve,reject)=>{
-      this.frame.onload=resolve;this.frame.onerror=()=>reject(Error('Не удалось загрузить стакан Бориса'));this.frame.src='assets/comics/glass-paper-frame.png';
+      let fallbackTried=false;
+      this.frame.onload=resolve;
+      this.frame.onerror=()=>{if(!fallbackTried){fallbackTried=true;this.frame.src='assets/comics/glass-paper-frame.png';}else reject(Error('Не удалось загрузить стакан Бориса'));};
+      this.frame.src='assets/comics/glass-paper-frame.webp';
     })]).then(()=>{
       const card=this.boris.jetCard,view=game.world.jetViews[2];card.material.map=view.map;card.geometry.dispose();
       card.geometry=new THREE.PlaneGeometry(view.width*1.2,3.6);card.position.y=1.8;
