@@ -1,6 +1,6 @@
 /* Quiet paper menus. The illustration, selection and primary action carry the screen. */
 .menu-screen{background:#f1e7d0;color:#193b44;overflow:hidden;isolation:isolate}
-.menu-screen::before{background:url('../assets/comics/paper-panel-v2.png') center/cover;opacity:.32;mix-blend-mode:multiply;z-index:-1}
+.menu-screen::before{background:url('../assets/comics/paper-panel-v2.webp') center/cover;opacity:.32;mix-blend-mode:multiply;z-index:-1}
 .menu-screen button:focus-visible{outline:3px solid #236779;outline-offset:5px}
 .menu-screen .yellow-button{min-height:64px;font-size:21px;letter-spacing:1px;transform:rotate(-1deg);transition:filter .16s,translate .16s}
 .menu-screen .yellow-button:hover:not(:disabled){filter:brightness(1.05);translate:0 -2px}
@@ -18,7 +18,7 @@
 .selection-hero img{display:block;height:100%;width:100%;object-fit:contain}
 .selection-location{width:100%;aspect-ratio:1.35;max-height:400px;padding:9px;background:#faf2df;transform:rotate(2deg);clip-path:var(--paper-edge);filter:drop-shadow(2px 4px 2px #6f604721)}
 .location-picture{width:100%;height:100%;position:relative;overflow:hidden;container-type:size}
-.location-picture::before{content:'';position:absolute;width:max(100cqw,100cqh);height:max(100cqw,100cqh);left:50%;top:50%;transform:translate(-50%,-50%);background:url('../assets/comics/story-panels-v2.png') right bottom/200% 200%}
+.location-picture::before{content:'';position:absolute;width:max(100cqw,100cqh);height:max(100cqw,100cqh);left:50%;top:50%;transform:translate(-50%,-50%);background:url('../assets/comics/story-panels-v2.webp') right bottom/200% 200%}
 .selection-arrows{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:60px;margin:10px auto 0}
 .selection-arrows button{flex:0 0 46px;height:46px;background:none;font-family:Rubik,sans-serif;font-size:42px;font-weight:400;line-height:1;color:#53727a;transition:color .15s,translate .15s}
 .selection-arrows button:hover{color:#193b44}.selection-arrows button:active{translate:0 2px}

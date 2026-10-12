@@ -36,7 +36,7 @@
 #moment .moment-mult{display:none!important}
 #moment span{display:none!important}
 #moment.reward::before{content:none}
-#moment.big-reward{padding:8px 13px;background:#f4e9cd url('../assets/comics/paper-panel-v2.png') center/100% 100%;clip-path:var(--paper-edge)}
+#moment.big-reward{padding:8px 13px;background:#f4e9cd url('../assets/comics/paper-panel-v2.webp') center/100% 100%;clip-path:var(--paper-edge)}
 #moment.big-reward strong{color:#17444c;text-shadow:none;font-size:22px!important}
 #moment.big-reward .moment-points{color:#b45530;text-shadow:none;font-size:31px}
 #moment.bad strong{color:#ffcfb4;background:none}

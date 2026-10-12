@@ -80,7 +80,7 @@ async function run(){
     // An unavailable illustration must show a retry, never an empty blue panel.
     await page.setCacheEnabled(false);await page.setRequestInterception(true);
     let failComic=true;
-    const intercept=request=>(failComic&&request.url().endsWith('comic-crab-v4.png')?request.abort():request.continue()).catch(()=>{});
+    const intercept=request=>(failComic&&/comic-crab-v4\.(png|webp)$/.test(request.url())?request.abort():request.continue()).catch(()=>{});
     page.on('request',intercept);
     await page.goto(base,{waitUntil:'networkidle0'});await page.waitForFunction(()=>window.game);
     await page.click('#start-button');await page.click('#setup-next');

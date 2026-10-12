@@ -26,7 +26,7 @@
 .chase-row[data-level="1"] .chase-mult{color:var(--yellow)}
 .chase-row[data-level="2"] .chase-mult{color:var(--yellow);animation:pocket-pulse .5s steps(2,end) infinite}
 @keyframes pocket-pulse{50%{transform:scale(1.18) rotate(-4deg)}}
-.chain-row{display:none;position:relative;padding:7px 12px 10px;background:var(--cream) url('../assets/comics/paper-panel-v2.png') center/100% 100%;text-align:center;filter:drop-shadow(2px 3px 0 #17282c55)}
+.chain-row{display:none;position:relative;padding:7px 12px 10px;background:var(--cream) url('../assets/comics/paper-panel-v2.webp') center/100% 100%;text-align:center;filter:drop-shadow(2px 3px 0 #17282c55)}
 .arcade-chain.has-chain .chain-row{display:block}
 .chain-items{display:block;font:700 19px/1.05 Caveat,cursive;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chain-value{display:block;font:400 22px/1.15 'Russo One',sans-serif}

@@ -18,7 +18,6 @@ class SurfJourney {
       ]}
     ];
     this.comicImages=new Map();this.storyRender=0;
-    this.story.flatMap(s=>s.panels).forEach(p=>this.loadComicImage(p.id).catch(()=>{}));
     const bindTap=(id,handler)=>{
       const el=typeof id==='string'?document.getElementById(id):id;if(!el)return;
       let localTouchTime=0;
@@ -49,7 +48,7 @@ class SurfJourney {
     document.querySelectorAll('[data-home]').forEach(b=>bindTap(b,()=>this.home()));
     document.querySelectorAll('[data-setup]').forEach(b=>bindTap(b,()=>{this.home();this.open('setup');}));
     bindTap('comic-retry',()=>this.renderStory());
-    this.renderStory();this.renderSelection();
+    this.renderSelection();
     window.addEventListener('keydown',e=>{
       if(!document.getElementById('controls-screen').classList.contains('hidden'))return;
       if(game.state!=='start')return;
@@ -60,6 +59,11 @@ class SurfJourney {
       if(e.code==='Escape'&&this.screen!=='start')this.open(this.screen==='setup'?'start':'setup');
     });
     if(new URLSearchParams(window.location.search).has('comic'))this.open('story');
+  }
+  prefetchPage(pageIndex){
+    const s=this.story[pageIndex];
+    if(!s)return;
+    s.panels.forEach(p=>this.loadComicImage(p.id).catch(()=>{}));
   }
   cycle(type,direction){const list=type==='hero'?this.heroes:this.locations,key=type==='hero'?'heroIndex':'locationIndex';this[key]=(this[key]+direction+list.length)%list.length;this.renderSelection();}
   renderSelection(){
@@ -80,7 +84,8 @@ class SurfJourney {
     this.game.onboarding.clearHighlight();this.launchFailed=false;document.getElementById('story-error').classList.add('hidden');
     this.game.container.classList.remove('playing');this.hideAll();this.screen=name;
     document.getElementById(name+'-screen').classList.remove('hidden');
-    if(name==='story')this.renderStory();if(name==='setup')this.renderSelection();
+    if(name==='story')this.renderStory();
+    if(name==='setup'){this.renderSelection();this.prefetchPage(0);}
     (document.querySelector('#'+name+'-screen [data-primary]')||document.querySelector('#'+name+'-screen button'))?.focus({preventScroll:true});
   }
   home(){this.game.audio.stopBGM();this.game.reset();this.game.renderMenuMeta();['pause-screen','result-screen','share-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));this.open('start');}
@@ -88,9 +93,24 @@ class SurfJourney {
     if(this.comicImages.has(id))return this.comicImages.get(id);
     const image=new Image();image.decoding='async';
     const ready=new Promise((resolve,reject)=>{
-      image.onload=()=>image.decode().then(()=>resolve(image),reject);
-      image.onerror=()=>reject(Error('Не удалось загрузить кадр комикса'));
-      image.src='assets/comics/comic-'+id+'-v4.png';
+      let fallbackTried=false;
+      const done=()=>{
+        if(image.decode){
+          image.decode().then(()=>resolve(image),()=>resolve(image));
+        } else {
+          resolve(image);
+        }
+      };
+      image.onload=done;
+      image.onerror=()=>{
+        if(!fallbackTried){
+          fallbackTried=true;
+          image.src='assets/comics/comic-'+id+'-v4.png';
+        } else {
+          reject(Error('Не удалось загрузить кадр комикса'));
+        }
+      };
+      image.src='assets/comics/comic-'+id+'-v4.webp';
     });
     this.comicImages.set(id,ready);
     ready.catch(()=>{if(this.comicImages.get(id)===ready)this.comicImages.delete(id);});
@@ -102,6 +122,7 @@ class SurfJourney {
     const loading=document.getElementById('comic-loading'),retry=document.getElementById('comic-retry');
     loading.hidden=false;loading.querySelector('span').textContent='РИСУЕМ ВОЛНУ…';retry.hidden=true;
     book.setAttribute('aria-busy','true');
+    if(this.page+1<this.story.length)this.prefetchPage(this.page+1);
     const ready=s.panels.map(p=>{
       const panel=document.createElement('figure');panel.className='comic-panel comic-'+p.id;
       const bubble=document.createElement('p');bubble.className='comic-bubble';bubble.textContent=p.line;bubble.setAttribute('aria-label',p.speaker+': '+p.line.replace(/\n/g,' '));panel.append(bubble);

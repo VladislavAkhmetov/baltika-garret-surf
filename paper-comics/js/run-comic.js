@@ -2,7 +2,7 @@
 class RunComic {
   constructor(game){
     this.game=game;this.screen=document.getElementById('share-screen');this.image=document.getElementById('share-image');this.status=document.getElementById('share-status');
-    this.fallbacks=['tony','cup','crab'].map(id=>{const image=new Image();image.src='assets/comics/comic-'+id+'-v4.png';return image;});
+    this.fallbackIds=['tony','cup','crab'];this.fallbacks=null;
     document.getElementById('comic-button').addEventListener('click',()=>this.open());
     document.getElementById('challenge-button').addEventListener('click',()=>this.challenge());
     document.getElementById('share-button').addEventListener('click',()=>this.share());
@@ -48,6 +48,17 @@ class RunComic {
     // The strongest moment leads; the other two follow in ride order.
     const [lead,...rest]=chosen;return lead?[lead,...rest.sort((a,b)=>a.time-b.time)]:[];
   }
+  getFallbacks(){
+    if(!this.fallbacks){
+      this.fallbacks=this.fallbackIds.map(id=>{
+        const image=new Image();image.decoding='async';
+        image.onerror=()=>{image.src='assets/comics/comic-'+id+'-v4.png';};
+        image.src='assets/comics/comic-'+id+'-v4.webp';
+        return image;
+      });
+    }
+    return this.fallbacks;
+  }
   async compose(){
     if(this.card)return this.card;
     await Promise.all(['400 64px "Russo One"','700 40px Caveat','700 30px Rubik'].map(f=>document.fonts?.load(f).catch(()=>{})));
@@ -64,7 +75,7 @@ class RunComic {
       c.fillStyle=ink;c.fillRect(-9,-9,w+18,h+18);c.fillStyle='#fff6df';c.fillRect(-3,-3,w+6,h+6);
       c.save();c.beginPath();c.rect(0,0,w,h);c.clip();
       if(shot)this.drawCover(c,shot.canvas,w,h,shot.focusX??.5,shot.focusY??.55,i===0?1:1.4);
-      else{const art=this.fallbacks[i-1]||this.fallbacks[0];c.fillStyle='#2d8fad';c.fillRect(0,0,w,h);if(art.complete&&art.naturalWidth)this.drawCover(c,art,w,h,.5,.42,1);}
+      else{const fallbacks=this.getFallbacks(),art=fallbacks[i-1]||fallbacks[0];c.fillStyle='#2d8fad';c.fillRect(0,0,w,h);if(art.complete&&art.naturalWidth)this.drawCover(c,art,w,h,.5,.42,1);}
       c.restore();
       if(shot){
         this.burst(c,i===0?w-170:w-120,i===0?96:78,i===0?150:110,shot.word,i===0?72:50,i%2?coral:yellow);

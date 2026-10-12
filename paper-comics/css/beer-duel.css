@@ -40,7 +40,7 @@
  #app-container.beer-duel:has(#arcade-chain.has-chain){--message-top:197px}
 }
 @container mobile-screen (orientation:landscape) and (max-height:520px){
- .beer-duel .result-card{padding:32px 30px 30px 170px}
+ .beer-duel .result-card{padding:14px 30px 14px 170px}
  .beer-duel .hud{grid-template-columns:140px 140px minmax(80px,1fr) 40px}
  .beer-duel .duel-ticket{padding:8px 12px}.duel-ticket>strong{font-size:33px}.duel-ticket>span{font-size:9px}
  .duel-status{top:98px;left:18px;font-size:9px}.menu-wager{top:52%;font-size:12px}
