@@ -29,6 +29,7 @@ class SurfJump {
     this.trickKind=this.canSpecial?'flip':this.takeoffRamp?.type==='side'?'cork':'spin';this.spinStarted=true;this.spinRequest=0;
     this.spinDirection=this.trickKind==='flip'?-1:this.game.p.lean<0?-1:1;
     this.spinDuration=this.trickKind==='flip'?.86:this.game.assist?THREE.MathUtils.clamp(this.flightRemaining*.72,.20,.62):.68;
+    this.game.audio?.playSpin(this.spinDirection);this.game.audio?.playCrowdAwe();
   }
   release(){}
   launchRamp(line,surface,pop=false){
@@ -86,7 +87,6 @@ class SurfJump {
       this.lastHeight=Math.max(this.lastHeight,p.airY);
       if(!this.apexFired&&p.jumpVelocity<=0){
         this.apexFired=true;
-        if(p.airY>1.5&&g.audio)g.audio.playCrowdAwe();
         if(p.airY>3.2&&!this.spinStarted)g.runComic.capture('air','ОП-ПА!','ВЫШЕ ГРЕБНЯ',48);
       }
       if(p.jumpVelocity<0&&p.y<=surface.height){
@@ -99,6 +99,7 @@ class SurfJump {
         g.handBeer.impact(clean);g.emit(22+Math.round(impact*18),.9+impact*.65,true);g.landingSplash?.(impact);p.crouch=.85;
         if(g.audio)g.audio.playLanding(clean>.72,impact);
         if(clean>.72){
+          if(this.spinCompleted||this.takeoffRamp)g.audio?.playCrowdApplause(this.spinCompleted&&this.trickKind==='flip');
           if(!this.spinCompleted){g.juice.punch(1.4);g.juice.buzz(16);}
           if(g.assist)g.balance.immunity=Math.max(g.balance.immunity,.65);
           this.cleanLandings++;
@@ -121,6 +122,7 @@ class SurfJump {
           g.juice.pop('ПЛЮХ!',p.x,p.y+1.4,p.z,'bad');
           g.spill(clean<.4?.06:.025,'Неудачная посадка');p.speed*=clean<.4?.8:.92;g.balance.disturb(.25+(1-clean)*.42,'ЖЁСТКАЯ ПОСАДКА');}
         g.setpiece?.onLanding(this.takeoffRamp,clean>.72);
+        g.courseShow?.onLanding(this.takeoffSource,clean>.72);
         if(this.takeoffRamp)g.trickRoute.land(this.takeoffRamp,clean>.72);
         this.takeoffRamp=null;this.sideKick=0;this.clearSpin();
       }

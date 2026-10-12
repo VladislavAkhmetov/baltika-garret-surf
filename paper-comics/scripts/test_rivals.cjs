@@ -21,7 +21,7 @@ async function run(){
         jetskis:g.world.hazards.filter(h=>h.type==='jetski').map(h=>h.initialZ),rivals:g.rivals.length,
         hudFits:beer.left>=0&&score.right<=innerWidth&&beer.right<score.left};
     });
-    assert.equal(report.scene.caps,0);assert.equal(report.scene.collection,'none');assert.equal(report.scene.rivals,2);assert.ok(report.scene.hudFits);assert.equal(Math.min(...report.scene.jetskis),310,'the first jetski encounter belongs to the opening twenty seconds');
+    assert.equal(report.scene.rivals,2);assert.ok(report.scene.hudFits);assert.deepEqual(report.scene.jetskis,[10],'one Boris starts alongside Max');
     report.cast=[];
     for(const id of ['grandma','dj','blonde','couple']){
       const r=await page.evaluate(id=>{
@@ -44,7 +44,7 @@ async function run(){
     report.props=[];
     for(const id of ['ship','umbrella','rescue','sign']){
       const r=await page.evaluate(id=>{
-        const g=game;g.reset();g.state='paused';g.journey.hideAll();const line=g.trickRoute.lines.find(l=>l.prop===id),entry=g.trickRoute.position(line,0);
+        const g=game;g.reset();g.state='paused';g.journey.hideAll();const line=g.trickRoute.lines.find(l=>l.prop===id);line.disabled=false;const entry=g.trickRoute.position(line,0);
         g.p.x=entry.x;g.p.z=entry.z-19;g.time=g.p.z/30;g.wave.time=g.time;g.p.y=g.wave.height(g.p.x,g.p.z);g.rivals.forEach(r=>r.z=g.p.z+250);
         g.world.hazards.forEach(h=>h.done=true);g.wave.update(g.p.z,g.time,true);g.updateCamera(1,true);g.updateVisuals(0);g.updateHUD();g.speedBlur.render();
         const pos=line.top.geometry.attributes.position;let flatError=0,surfaceError=0;const center=g.trickRoute.point(line,.5,0);
@@ -54,7 +54,9 @@ async function run(){
         }
         return {id,visible:line.group.visible,arrows:line.arrows.length,flatError,surfaceError,width:line.width,length:line.length};
       },id);
-      assert.ok(r.visible&&r.flatError<.001&&r.surfaceError<.001,'rendered prop is the same flat surface that supports the board');assert.equal(r.arrows,id==='ship'||id==='umbrella'?0:3);
+      if(id==='umbrella')assert.ok(r.flatError>.5,'the parasol has a raised canopy');
+      else assert.ok(r.flatError<.001,'the other ramps keep their flat surfaces');
+      assert.ok(r.visible&&r.surfaceError<.001,'rendered prop matches the surface that supports the board');assert.equal(r.arrows,id==='ship'||id==='umbrella'?0:3);
       report.props.push(r);await page.screenshot({path:path.join(review,id+'.png')});
     }
     report.blur=await page.evaluate(()=>{

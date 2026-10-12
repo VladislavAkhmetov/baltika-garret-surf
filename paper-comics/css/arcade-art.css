@@ -83,7 +83,7 @@
 .catch-track{height:2px;width:52%;margin:5px auto 0;background:#edfff826}
 .catch-fill{background:#a7ffdd}
 
-@media(max-width:650px){
+@container mobile-screen (max-width:650px){
  #app-container{--ride-left:12px;--chain-top:87px;--message-top:89px;--ride-width:274px}
  #app-container:has(#arcade-chain.has-chain){--message-top:164px}
  #app-container.debug-mode:has(#arcade-chain.chasing){--message-top:194px}
@@ -99,7 +99,7 @@
  #jump-button{width:62px;height:62px;right:14px}
  #jump-button .jump-icon{width:43px;height:43px}
 }
-@media(orientation:landscape) and (max-height:520px){
+@container mobile-screen (orientation:landscape) and (max-height:520px){
  #app-container{--ride-left:15px;--chain-top:81px;--message-top:84px;--ride-width:245px}
  #app-container:has(#arcade-chain.has-chain){--message-top:154px}
  #app-container.debug-mode:has(#arcade-chain.chasing){--message-top:180px}

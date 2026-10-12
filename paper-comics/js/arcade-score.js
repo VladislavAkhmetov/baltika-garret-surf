@@ -74,7 +74,7 @@ class TrickChain {
     this.el.classList.toggle('has-chain',active);this.el.classList.toggle('held',active&&(p.airborne||g.trickRoute?.riding||g.waveRide?.caught||chase.level>0));
     const chasing=!!chase?.active;this.el.classList.toggle('chasing',chasing);
     this.el.classList.toggle('pursuing',chasing&&chase.pursuit&&chase.phase!=='intro');
-    this.pursuitCue.textContent=chase.critical?'ПЕНА ВПЛОТНУЮ · ПРЫГАЙ!':chase.rush>0?'ЕЩЁ ОШИБКА — ПЕНА БЛИЖЕ':'ПЕНА ЗА СПИНОЙ · ЛОВИ ВОЛНУ';
+    this.pursuitCue.textContent=chase.critical?'ПЕНА ВПЛОТНУЮ · ПРЫГАЙ!':chase.rush>0?'ЕЩЁ ОШИБКА — ПЕНА БЛИЖЕ':chase.reason==='pace'?'МАЛО СКОРОСТИ · ЛОВИ ВОЛНУ':'ПЕНА ЗА СПИНОЙ · ЛОВИ ВОЛНУ';
     if(chasing){
       this.chaseFill.style.transform='scaleX('+THREE.MathUtils.clamp(1-(chase.gap-1.1)/20.9,0,1)+')';
       this.chaseMult.textContent='×'+chase.multiplier;this.chaseEl.dataset.level=chase.level;

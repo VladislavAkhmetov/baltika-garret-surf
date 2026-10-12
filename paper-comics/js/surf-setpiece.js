@@ -43,7 +43,7 @@ class SurfSetpiece {
   setRockTexture(texture){
     // Sample the opaque limestone face of the existing collage, preserving its source alpha.
     const crop=texture.clone();crop.repeat.set(.30,.48);crop.offset.set(.30,.06);crop.needsUpdate=true;
-    const material=new THREE.MeshLambertMaterial({map:crop,color:0x949c9b,flatShading:true});
+    const material=this.game.paperToon.material(0xe5d4ad,{map:crop,printMix:.55});
     for(const rock of this.rocks){rock.mesh.material.dispose();rock.mesh.material=material;}
   }
   reset(){
@@ -95,8 +95,8 @@ class SurfSetpiece {
     if(g.beats?.nearRope())return false;
     if(h.type==='jetski'&&h.initialZ===310)return this.resolved&&p.z>=343;
     if(p.z<605)return false;
-    if(g.world.hazards.some(other=>other!==h&&other.activeAt!==null&&g.time-other.activeAt<2.5))return false;
-    return !g.world.hazards.some(other=>other!==h&&!other.done&&other.activeAt!==null&&(other.chasing||other.type==='jetski'&&Math.abs(other.z-p.z)<28));
+    if(g.world.hazards.some(other=>other!==h&&!other.duelControlled&&other.activeAt!==null&&g.time-other.activeAt<2.5))return false;
+    return !g.world.hazards.some(other=>other!==h&&!other.duelControlled&&!other.done&&other.activeAt!==null&&(other.chasing||other.type==='jetski'&&Math.abs(other.z-p.z)<28));
   }
   steerRival(r,x){
     if(!this.enabled||r.encounter?.phase==='exit'||r.z<266||r.z>350)return x;
@@ -131,7 +131,7 @@ class SurfSetpiece {
       this.resolved=true;this.exitAt=g.time;this.log('exit',{choice:this.choice,clean:this.clean});
       if(this.choice==='risk'&&this.clean){this.riskRewarded=true;g.awardTrick('УЗКИЙ ПРОХОД',250);g.race.boostTime=Math.max(g.race.boostTime,2.2);g.waveRide.momentum=Math.max(g.waveRide.momentum,5);}
     }
-    const jet=g.world.hazards.find(h=>h.type==='jetski'&&h.initialZ===310);
+    const jet=g.world.hazards.find(h=>h.type==='jetski'&&h.duelControlled);
     if(jet&&jet.activeAt!==null&&this.jetAt===null){this.jetAt=jet.activeAt;this.log('jetski',{lead:jet.z-p.z});}
     this.stage=p.z<264?'approach':!this.resolved?'fork':p.z<410?'wake':p.z<520?'jump':p.z<625?'chase':p.z<1065?'open':this.finaleLanded||p.z>1165?'home':'finale';
     // Existing actors leave before the finale; the last landing opens a quiet run-in.
@@ -144,7 +144,7 @@ class SurfSetpiece {
     const p=this.game.p;
     if(p.z>258&&p.z<294)return {id:'route',title:'← СРЕЗКА · ШИРОКИЙ ПУТЬ →',line:'Узкий проход сохраняет Кураж.'};
     if(p.z>294&&p.z<331&&Math.abs(p.x+1.5)<3.7)return {id:'danger',title:'СКАЛА · ВЫБЕРИ СТОРОНУ',line:''};
-    if(p.z>1060&&p.z<1098)return {id:'ramp',title:'ПОСЛЕДНИЙ ВЫЛЕТ',line:'Держи линию крышек — бар за волной.'};
+    if(p.z>1060&&p.z<1098)return {id:'ramp',title:'ПОСЛЕДНИЙ ВЫЛЕТ',line:'Обгони Бориса! Пиво на финише — бонус к очкам.'};
     return null;
   }
   update(){

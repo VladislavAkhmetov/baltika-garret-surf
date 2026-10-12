@@ -43,7 +43,7 @@
 #story-screen .story-error{position:absolute;z-index:6;top:70px;left:10%;right:10%;padding:24px;font:600 20px/1.25 Rubik,sans-serif;color:var(--comic-ink);text-align:center}
 .story-enter .comic-panel img{animation:comic-reveal .3s ease-out both}
 @keyframes comic-reveal{from{opacity:.3;transform:scale(1.02)}to{opacity:1;transform:scale(1)}}
-@media(min-width:700px) and (min-height:600px){
+@container mobile-screen (min-width:700px) and (min-height:600px){
  .comic-toolbar{max-width:920px;height:58px}
  .comic-book{width:min(100% - 36px,calc((100dvh - 154px)*1.12),900px)}
  .comic-page{grid-template-columns:43% 57%;grid-template-rows:48% 52%;}
@@ -64,14 +64,14 @@
  .comic-cup .comic-bubble{right:13%;top:3%;max-width:52%}
  .comic-crab .comic-sfx{font-size:clamp(24px,4.9cqw,43px);left:9%}
 }
-@media(max-width:699px) and (max-height:710px){
+@container mobile-screen (max-width:699px) and (max-height:710px){
  .comic-toolbar{height:48px;padding-top:2px;padding-bottom:2px}
  .comic-book{width:calc(100% - 12px);border-width:3px}
  .comic-bubble{font-size:20px;padding:9px 12px;border-width:2.5px}
  .comic-nav{padding-top:9px;padding-bottom:9px}
  .comic-nav #story-next{min-height:48px;font-size:20px}
 }
-@media(orientation:landscape) and (max-height:599px){
+@container mobile-screen (orientation:landscape) and (max-height:599px){
  .comic-toolbar{height:44px;padding:0 12px}.comic-toolbar button{min-height:40px}
  .comic-book{width:calc(100% - 20px);border-width:3px}
  .comic-page,.comic-page[data-comic-page="1"]{grid-template-columns:repeat(3,1fr);grid-template-rows:100%}

@@ -1,0 +1,14 @@
+{
+  "generator": "built-in image_gen",
+  "transparent_background": true,
+  "assets": [
+    {
+      "file": "promenade-v14.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent cutout scenery sprite for a Mediterranean paper-collage surfing videogame. Generate ONE continuous waterfront block: five tall closely packed Italian coastal town buildings, warm ochre plaster, faded coral pink, seafoam shutters, terracotta roofs, arched stone ground-floor promenade, striped ochre cafe awnings, cream balustrade, tiny cheerful adult spectators along bottom edge. Slight three-quarter view showing front facades and left sides, almost straight-on elevation, entire architecture fully visible with generous transparent margins. Rich photographic torn-paper travel-poster collage with realistic weathered masonry texture, subtle printed halftone shading, delicate irregular ivory cut edges; stylish sunny editorial collage, NOT low-poly, NOT cartoon vector. Buildings vary in height, a small bell tower toward one end. Base is a narrow stone quay, no water, no sky, no background scenery. Crisp readable large silhouettes for a mobile game. No lettering, no captions, no UI. Genuine transparent background. Horizontal approximately 3:2 composition."
+    },
+    {
+      "file": "bar-delivery-v14.png",
+      "prompt": "Use case: stylized-concept. Asset type: single transparent game scenery sprite, entire isolated beach-bar kiosk in an Italian Mediterranean torn-paper collage surfing game. Front view with a little depth, low wooden beach bar on a small weathered wooden deck. Warm cream and dark turquoise painted timber, terracotta-orange striped awning, ivory cut paper edges, colourful triangular bunting draped along roof, small gold trophy standing on the counter at right. Behind counter a cheerful middle-aged stocky Italian bartender wearing orange apron and white short sleeve shirt, raising one hand in greeting. A small group of three adult holiday spectators flank the kiosk smiling. Large sign across front of roof reads exactly \"TONY’S GARRET\" in dark navy worn bold letters on golden paper. Photographic editorial cut-paper travel poster style, realistic textured materials and people with subtle halftone, NOT vector, NOT low-poly, no sky, no sea, no background, no extra typography, no UI. The bar is the only subject, fully inside the image with generous transparent margins, camera facing the counter at standing eye level. Genuine transparent background. Wide 3:2 composition."
+    }
+  ]
+}

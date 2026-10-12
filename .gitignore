@@ -7,7 +7,8 @@ review/
 *.gif
 *.log
 playtest-*.png
-scratch_test_*.png
+scratch_*.png
+zoom_scratch_*.png
 
 # Temporary scratch & downloads
 downloaded_sounds/

@@ -112,8 +112,8 @@ class SurfRush {
   reward(name){
     if(!this.enabled||this.active>0)return;
     const family=['360°','КОСОЙ 360°','ПЕРЕВОРОТ!','ПРЯМОЙ ВЫЛЕТ','БОКОВОЙ ПЕРЕЛЁТ','МЯГКАЯ ПОСАДКА'].includes(name)?'air':
-      name==='ЧИСТЫЙ ОБГОН'?'pass':['ВПРИТЫК!','НАД БУЕМ!','РАЗОШЛИСЬ','НАД АКУЛОЙ!','УЗКИЙ ПРОХОД','НАД КАНАТОМ!'].includes(name)?'dodge':
-      ['КАТБЭК','КАРВИНГ','НА ХВОСТЕ','СЛАЛОМ'].includes(name)?'carve':name==='ПОЙМАЛ ВОЛНУ'?'wave':null;
+      name==='ЧИСТЫЙ ОБГОН'?'pass':['ВПРИТЫК!','НАД ПРЕДМЕТОМ!','РАЗОШЛИСЬ','НАД АКУЛОЙ!','УЗКИЙ ПРОХОД','НАД КАНАТОМ!'].includes(name)?'dodge':
+      ['КАТБЭК','КАРВИНГ','НА ХВОСТЕ','СЛАЛОМ'].includes(name)?'carve':['ПОЙМАЛ ВОЛНУ','ПОПУТНОЕ ТЕЧЕНИЕ'].includes(name)?'wave':null;
     if(!family||this.moves.has(family)||this.game.time-this.lastMove<.35)return;
     this.moves.add(family);this.window=6.5;this.lastMove=this.game.time;
     if(this.moves.size===3){

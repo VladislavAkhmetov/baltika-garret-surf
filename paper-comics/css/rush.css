@@ -18,6 +18,6 @@
 #edge-spray i{position:absolute;bottom:calc(15% + var(--i) * 3.7%);left:calc(-7px + var(--d) * 8px);width:calc(12px + var(--d) * 7px);height:calc(26px + var(--d) * 9px);border-radius:70% 25% 60% 30%;background:#f4fbec;transform:rotate(-28deg);box-shadow:0 0 3px #c8f5ed}
 #edge-spray i:nth-child(even){left:auto;right:calc(-9px + var(--d) * 6px);transform:rotate(28deg)}
 .rush-mode:has(#pause-screen:not(.hidden)) #rush-meter,.rush-mode:has(#result-screen:not(.hidden)) #rush-meter{display:none}
-@media(max-width:370px){.rush-mode #rush-meter{top:12px;width:70px;padding:5px}.rush-mode #rush-meter strong{font-size:11px}}
-@media(orientation:landscape) and (max-height:520px){.rush-mode #rush-meter{top:12px}.rush-mode #arcade-chain{top:65px}}
+@container mobile-screen (max-width:370px){.rush-mode #rush-meter{top:12px;width:70px;padding:5px}.rush-mode #rush-meter strong{font-size:11px}}
+@container mobile-screen (orientation:landscape) and (max-height:520px){.rush-mode #rush-meter{top:12px}.rush-mode #arcade-chain{top:65px}}
 @media(prefers-reduced-motion:reduce){#edge-spray{display:none!important}#rush-meter i{transition:none}}

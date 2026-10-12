@@ -1,7 +1,7 @@
 /* A replayable beat: catch, carry speed, choose a jump, land and cash the chain. */
 class DriveTest extends FlowTest {
   static layout={forkFrom:274,quietFrom:552,finish:680,rampZ:414,signZ:386};
-  static opening=COMICS_COURSE.opening;
+  static opening=[{z:0,x:1.4},{z:35,x:-1.6},{z:80,x:1.5},{z:125,x:-1.4},{z:174,x:.8}];
   static configureWaves(wave){
     FlowTest.configureWaves(wave);
     Object.assign(wave.waves[0],{anchorFrom:-72,anchorTo:180,encounterTime:54/28,
@@ -54,7 +54,7 @@ class DriveTest extends FlowTest {
     this.momentum=0;this.bestMomentum=0;this.banks=0;this.softErrors=0;this.hardErrors=0;
     this.firstCatchTime=null;
     this.choice='bypass';this.landedRamp=false;this.lastAward=null;this.awardAt=new Map();this.lastBank=0;
-    const buoys=g.world.hazards.filter(h=>h.type==='buoy').slice(0,3);
+    const buoys=g.world.hazards.filter(h=>h.type==='flotsam').slice(0,3);
     const placements=[{x:1.4,z:35},{x:-1.6,z:80},{x:1.5,z:125}];
     this.openingHazards=buoys;
     buoys.forEach((h,i)=>Object.assign(h,{...placements[i],initialX:placements[i].x,initialZ:placements[i].z,done:false}));
@@ -109,7 +109,7 @@ class DriveTest extends FlowTest {
     this.awardAt.set(source,g.time);
     g.chain.add(name,points);g.combo=g.chain.multiplier;
     this.lastAward=name;
-    if(['ВПРИТЫК!','НАД БУЕМ!','РАЗОШЛИСЬ'].includes(name)){
+    if(['ВПРИТЫК!','НАД ПРЕДМЕТОМ!','РАЗОШЛИСЬ'].includes(name)){
       this.momentum=Math.min(8,this.momentum+2);this.say(name+' · РАЗГОН!',1.1);
     }
     if(['360°','ПЕРЕВОРОТ!','ПРЯМОЙ ВЫЛЕТ','МЯГКАЯ ПОСАДКА'].includes(name)){
@@ -176,15 +176,15 @@ class DriveTest extends FlowTest {
     const {forkFrom,quietFrom,rampZ}=DriveTest.layout;
     this.stage.textContent=p.z<144?'01 / СЛАЛОМ':p.z<214?'02 / ЛОВИ ВОЛНУ':p.z<forkFrom?'03 / СВЯЗКА':p.z<rampZ-6?'04 / ВЫБОР':p.z<quietFrom?'05 / ВЫЛЕТ':'06 / ЗАЧЁТ';
     let text=this.cue.textContent;
-    const imminentBuoy=this.openingHazards.find(h=>h.type==='buoy'&&h.z-p.z>2&&h.z-p.z<60);
+    const imminentBuoy=this.openingHazards.find(h=>h.type==='flotsam'&&h.z-p.z>2&&h.z-p.z<60);
     if(imminentBuoy&&!p.airborne&&!p.recovering){
-      text=imminentBuoy.x>0?'← БУЙ СПРАВА · ОБОЙДИ ИЛИ ПРЫГНИ':'БУЙ СЛЕВА · ОБОЙДИ ИЛИ ПРЫГНИ →';
+      text=imminentBuoy.x>0?'← ПРЕДМЕТ СПРАВА · ОБОЙДИ ИЛИ ПРЫГНИ':'ПРЕДМЕТ СЛЕВА · ОБОЙДИ ИЛИ ПРЫГНИ →';
     }else if(g.time>=this.noticeUntil){
       if(p.airborne)text=g.jump.canSpecial?'ЕЩЁ НАЖАТИЕ — ПЕРЕВОРОТ':g.jump.canSpin?'ЕЩЁ НАЖАТИЕ — 360°':'ГОТОВЬ ПОСАДКУ';
       else if(g.trickRoute.riding)text='ПРЫЖОК — УСИЛЬ ВЫЛЕТ';
       else if(p.z<132){
-        const buoy=this.openingHazards.find(h=>h.type==='buoy'&&h.z-p.z>2);
-        text=buoy?(buoy.x>0?'← БУЙ СПРАВА · ОБОЙДИ ИЛИ ПРЫГНИ':'БУЙ СЛЕВА · ОБОЙДИ ИЛИ ПРЫГНИ →'):'ДЕРЖИ РАЗГОН';
+        const buoy=this.openingHazards.find(h=>h.type==='flotsam'&&h.z-p.z>2);
+        text=buoy?(buoy.x>0?'← ПРЕДМЕТ СПРАВА · ОБОЙДИ ИЛИ ПРЫГНИ':'ПРЕДМЕТ СЛЕВА · ОБОЙДИ ИЛИ ПРЫГНИ →'):'ДЕРЖИ РАЗГОН';
       }
       else if(p.z<182)text='ДЕРЖИ СКЛОН · ГОТОВЬ СВЯЗКУ';
       else if(p.z>=quietFrom)text=g.chain.count?'ОТПУСТИ ПОВОРОТ — ЗАЧТИ ЦЕПОЧКУ':'ДОВЕЗИ БОКАЛ';

@@ -5,7 +5,7 @@ class PaperWave {
     this._time = 0;
     // Route landmarks shape a denser wave train, rather than seven isolated walls.
     this.waves = Array.from({length:window.FLOW_TEST_MODE?3:COMICS_COURSE.waveCount},(_,id)=>({id}));
-    this.wakeField = null;
+    this.wakeField = null;this.currentField=null;
     this.peelFront = null;
     this.lastPrintFrame = -1;
     const loader=new THREE.TextureLoader();
@@ -69,7 +69,7 @@ class PaperWave {
 
   makeWaterMaterial(texture){
     const material=new THREE.ShaderMaterial({
-      uniforms:{uWaterPrint:{value:texture},uTime:this.waterTime,uFogColor:{value:new THREE.Color(0xc7d7c9)}},
+      uniforms:{uWaterPrint:{value:texture},uTime:this.waterTime,uFogColor:{value:new THREE.Color(0xc7d7c9)},uDeep:{value:new THREE.Color(.025,.32,.44)},uClear:{value:new THREE.Color(.15,.67,.66)}},
       side:THREE.DoubleSide,
       vertexShader:`
         attribute float waterFoam;
@@ -86,6 +86,8 @@ class PaperWave {
         uniform sampler2D uWaterPrint;
         uniform float uTime;
         uniform vec3 uFogColor;
+        uniform vec3 uDeep;
+        uniform vec3 uClear;
         varying vec3 vWaterWorld;
         varying vec3 vWaterNormal;
         varying float vWaterFoam;
@@ -113,7 +115,7 @@ class PaperWave {
           float facing=clamp(dot(normal,view),0.0,1.0);
           float fresnel=.065+.52*pow(1.0-facing,4.0);
           float crest=smoothstep(-.1,4.8,vWaterWorld.y);
-          vec3 deep=vec3(.025,.32,.44),clear=vec3(.15,.67,.66);
+          vec3 deep=uDeep,clear=uClear;
           vec3 water=mix(deep,clear,.22+crest*.65);
           water*=.78+.22*max(0.0,dot(normal,sun));
           water*=.88+grain*.24;
@@ -258,8 +260,9 @@ class PaperWave {
     const baseDz=(this.height(x,z+.15,this.time,false)-this.height(x,z-.15,this.time,false))/.3;
     const f=this.field(x,z);
     const waterVelocity=(this.height(x,z,this.time+.04,false)-this.height(x,z,this.time-.04,false))/.08;
+    const current=this.currentField?this.currentField(x,z):null;
     return {height:h,dx,dz,baseDx,baseDz,...f,waterVelocity,
-      flowX:f.wave?f.wave.velocityX*f.energy:0,flowZ:f.wave?f.wave.velocityZ*f.energy:0,
+      flowX:(f.wave?f.wave.velocityX*f.energy:0)+(current?.flowX||0),flowZ:(f.wave?f.wave.velocityZ*f.energy:0)+(current?.flowZ||0),
       crest:f.wave?Math.max(0,1-Math.abs(f.face)*2.8):0};
   }
 

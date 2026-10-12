@@ -75,8 +75,9 @@ class RunComic {
     c.textBaseline='alphabetic';
     c.fillStyle=ink;c.font='400 30px "Russo One"';c.fillText('СЧЁТ',60,1236);
     c.font='400 92px "Russo One"';c.fillText(Math.round(g.score).toLocaleString('ru-RU'),56,1320);
-    c.fillStyle=g.mug.level>=.3?'#125577':coral;c.font='400 70px "Russo One"';c.textAlign='right';c.fillText(Math.floor(g.mug.level*100)+'%',W-60,1262);
-    c.fillStyle=ink;c.font='700 34px Caveat';c.fillText(g.mug.level>=.3?'пива доехало до бара':'пива почти не осталось',W-60,1302);
+    const duel=g.duel.result;
+    c.fillStyle=duel?.outcome==='victory'?'#125577':coral;c.font='400 38px "Russo One"';c.textAlign='right';c.fillText((duel?.outcome==='tie'?'ФОТОФИНИШ':(duel?.place??1)+'-е МЕСТО')+' · ПИВО '+(duel?.max??Math.round(g.mug.level*100))+'%',W-60,1262);
+    c.fillStyle=ink;c.font='700 34px Caveat';c.fillText('Бонус за пиво +'+(duel?.beerBonus??g.deliveryBonus).toLocaleString('ru-RU'),W-60,1302);
     c.font='700 30px Caveat';c.fillText(summary.record?'НОВЫЙ РЕКОРД!':'Побей меня — ссылка в описании',W-60,1336);c.textAlign='left';
     this.card=canvas;
     this.blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
@@ -110,7 +111,7 @@ class RunComic {
     const url=new URL(location.href);url.search='';url.hash='';
     url.searchParams.set('vs',Math.round(this.game.score));url.searchParams.set('seed',this.game.meta.seed);return url.toString();
   }
-  shareText(){return 'Я довёз '+Math.floor(this.game.mug.level*100)+'% пива и набрал '+Math.round(this.game.score).toLocaleString('ru-RU')+' в «Ни капли!». Побьёшь?';}
+  shareText(){const r=this.game.duel.result;return (r?.outcome==='tie'?'Финишировал одновременно с Борисом':r?.place===1?'Обогнал Бориса':'Занял 2-е место')+', сохранил '+(r?.max??Math.round(this.game.mug.level*100))+'% пива и набрал '+Math.round(this.game.score).toLocaleString('ru-RU')+' в «Ни капли!». Побьёшь?';}
   async share(){
     await this.compose();
     const file=this.blob&&typeof File==='function'?new File([this.blob],this.fileName,{type:'image/png'}):null;

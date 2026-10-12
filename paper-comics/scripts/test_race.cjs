@@ -52,12 +52,12 @@ async function run(){
     report.rules=await page.evaluate(()=>{
       const g=game;g.reset();g.state='playing';g.race.begin(g.race.scenes[0]);
       const r=g.rivals[0],intent=r.encounter.to;g.p.x=8;g.race.step(.9);const fixedIntent=r.encounter.to===intent;
-      r.z=g.p.z-4;r.x=g.p.x+1.4;r.nearest=1.4;r.wasAhead=true;g.updateRivals(.01);const once=g.race.overtakes;
+      r.encounter.phase='move';r.encounter.age=1.2;r.z=g.p.z-4;r.x=g.p.x+1.4;r.nearest=1.4;r.wasAhead=true;g.updateRivals(.01);const once=g.race.overtakes;
       g.updateRivals(.01);const duplicate=g.race.overtakes-once;
       for(let i=0;i<30;i++)g.race.step(1/120);const boost=g.race.boost;
       g.spill(.025,'Удар');const cancelled=g.race.boostTime===0;
       g.reset();g.state='playing';const jumpScene=g.race.scenes.find(e=>e.id==='dj');g.race.begin(jumpScene);
-      const jumper=g.rivals[jumpScene.slot];g.p.x=jumper.x;g.p.z=jumper.z;g.p.airY=2.1;g.impactCooldown=0;g.updateRivals(.001);
+      const jumper=g.rivals[jumpScene.slot];jumper.encounter.phase='move';jumper.encounter.age=1.2;g.p.x=jumper.x;g.p.z=jumper.z;g.p.airY=2.1;g.impactCooldown=0;g.updateRivals(.001);
       const airborneSafe=!jumper.collided&&g.mug.level===1;
       g.state='paused';const cursor=g.race.cursor,age=jumper.encounter.age;g.updateVisuals(0);
       const paused=g.race.cursor===cursor&&jumper.encounter.age===age;
@@ -82,7 +82,7 @@ async function run(){
           g.container.classList.add('playing');
           g.onboarding.completed=new Set(['steer','wave','jump','landing','balance']);
           g.p.z=z;g.time=z/30;g.wave.time=g.time;g.p.x=0;g.p.y=g.wave.height(0,z);
-          g.race.begin(g.race.scenes.find(e=>e.id===id));const r=g.rivals.find(r=>r.id===id);r.z=z+9;r.x=-2.5;r.encounter.age=1.4;g.state='paused';
+          g.race.begin(g.race.scenes.find(e=>e.id===id));const r=g.rivals.find(r=>r.id===id);r.z=z+9;r.x=-2.5;r.encounter.age=1.4;r.encounter.phase='move';g.state='paused';
           const jet=g.world.hazards.find(h=>h.type==='jetski');jet.activeAt=g.time;jet.x=4.5;jet.z=z+9;jet.motion={x:.5,z:.866};
           g.chain.add('ЧИСТЫЙ ОБГОН',110);g.updateCamera(1,true);g.wave.update(z,g.time,true);g.updateVisuals(0);g.updateHUD();g.speedBlur.render();
           const chain=document.getElementById('arcade-chain').getBoundingClientRect(),stage=g.container.getBoundingClientRect();

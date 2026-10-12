@@ -40,6 +40,7 @@ class OceanLanes {
     this.cloudTexture = this.createPaperCloudTexture();
     this.sunTexture = this.createPaperSunTexture();
     this.rocksTexture = this.createPaperRockTexture();
+    this.seaplaneTexture = loader.load(window.SPRITE_ASSETS?.seaplane_garret || 'assets/sprites/seaplane_garret.png');
 
     // 1. Дальний океан (600 × 400 м, y = -0.15, цвет --ocean-deep, туман)
     this.initFarOcean();
@@ -605,6 +606,20 @@ class OceanLanes {
       this.scene.add(cMesh);
       this.clouds.push({ mesh: cMesh, x: c.x, y: c.y, zRel: c.zRel });
     });
+
+    // 5. Самолет-амфибия с рекламной растяжкой GARRET высоко в небе вдалеке впереди
+    const seaplaneW = 34, seaplaneH = 34 / 2.415;
+    const seaplaneMat = new THREE.MeshBasicMaterial({
+      map: this.seaplaneTexture,
+      transparent: true,
+      alphaTest: 0.15,
+      fog: false,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    this.seaplaneMesh = new THREE.Mesh(new THREE.PlaneGeometry(seaplaneW, seaplaneH), seaplaneMat);
+    this.seaplaneMesh.position.set(0, 25, 170);
+    this.scene.add(this.seaplaneMesh);
   }
 
   // Установка зоны поперечного крена волны (LEVEL1_SPEC §5.3, ocean.setTilt)
@@ -743,6 +758,19 @@ class OceanLanes {
     this.clouds.forEach((c) => {
       c.mesh.position.z = playerZ + c.zRel;
     });
+
+    // 6. Полет самолета-амфибии с растяжкой GARRET в небе
+    if (this.seaplaneMesh) {
+      const cruiseCycle = this.time * 0.13;
+      const cruiseX = Math.sin(cruiseCycle) * 34;
+      const cruiseY = 25 + Math.sin(this.time * 0.7) * 1.3;
+      const cruiseZ = playerZ + 155 + Math.cos(cruiseCycle) * 18;
+      this.seaplaneMesh.position.set(cruiseX, cruiseY, cruiseZ);
+      const vx = Math.cos(cruiseCycle);
+      this.seaplaneMesh.scale.x = vx >= 0 ? 1 : -1;
+      const paperFrame = Math.floor(this.time * 12);
+      this.seaplaneMesh.rotation.z = Math.sin(paperFrame * 0.16) * 0.04 - (vx >= 0 ? 0.025 : -0.025);
+    }
   }
 }
 

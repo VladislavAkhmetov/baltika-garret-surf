@@ -15,7 +15,7 @@
 .drive-baseline{position:absolute;left:10%;bottom:7%;font:500 12px Rubik,sans-serif;color:#24545c;padding:8px 0}
 .drive-test .flow-intro-copy .flow-help{max-width:410px}
 .drive-test .pause-card{max-height:calc(100dvh - 40px);overflow-y:auto}
-@media(max-width:650px){
+@container mobile-screen (max-width:650px){
  .drive-test .drive-hud{top:85px;left:13px;right:13px;gap:16px}
  .drive-hud strong{font-size:20px}.drive-hud small{font-size:8px;letter-spacing:.3px}
  .drive-pending{min-width:108px}.drive-beer{padding-top:0}.drive-beer strong{font-size:17px}.drive-beer small{font-size:7px}
@@ -25,13 +25,13 @@
  .drive-test .flow-result{padding:26px 20px}.drive-test .flow-result h2{font-size:24px}
  .drive-test .flow-stats{gap:16px 10px;margin:18px 0}.drive-test .flow-result>p{margin:8px 0 12px}
 }
-@media(max-width:370px){
+@container mobile-screen (max-width:370px){
  .drive-test .drive-hud{gap:10px}.drive-pending{min-width:100px}.drive-hud strong{font-size:17px}
  .drive-test .flow-intro .menu-play{bottom:10%}.drive-baseline{bottom:3%}
  .drive-test .flow-intro-copy p{margin:9px 0}.drive-test .flow-intro-copy .flow-help{margin-top:10px;line-height:1.45}
  .drive-test .flow-result h2{font-size:21px}.drive-test .flow-stats strong{font-size:28px}
 }
-@media(orientation:landscape) and (max-height:520px){
+@container mobile-screen (orientation:landscape) and (max-height:520px){
  .drive-test .drive-hud{top:70px;right:auto;gap:22px}.drive-hud strong{font-size:18px}.drive-beer{margin-left:0}
  .drive-test #sound-button{top:74px!important}.drive-test .flow-result{width:min(680px,95%);padding:12px 24px}
  .drive-test .flow-cue{bottom:94px}

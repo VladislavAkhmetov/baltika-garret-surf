@@ -16,5 +16,5 @@
 .race-mode:not(.playing) .race-callout{visibility:hidden}
 .race-mode.race-boost .route-track i{background:#fff1a6;box-shadow:0 0 8px #ffd26499}
 .race-mode:has(#pause-screen:not(.hidden)) .race-callout,.race-mode:has(#result-screen:not(.hidden)) .race-callout{visibility:hidden}
-@media(max-width:650px){.race-mode:has(#arcade-chain.has-chain){--message-top:136px}.race-mode #ride-coach{max-width:230px}}
-@media(orientation:landscape) and (max-height:520px){.race-mode:has(#arcade-chain.has-chain){--message-top:125px}.race-mode #ride-coach{max-width:240px}.race-callout{font-size:16px}}
+@container mobile-screen (max-width:650px){.race-mode:has(#arcade-chain.has-chain){--message-top:136px}.race-mode #ride-coach{max-width:230px}}
+@container mobile-screen (orientation:landscape) and (max-height:520px){.race-mode:has(#arcade-chain.has-chain){--message-top:125px}.race-mode #ride-coach{max-width:240px}.race-callout{font-size:16px}}

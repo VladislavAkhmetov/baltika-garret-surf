@@ -9,7 +9,7 @@ class WaveRide {
     this.momentum=0;this.firstCatchTime=null;
   }
   reward(name){
-    if(['ВПРИТЫК!','НАД БУЕМ!','РАЗОШЛИСЬ'].includes(name))this.momentum=Math.min(8,this.momentum+2);
+    if(['ВПРИТЫК!','НАД ПРЕДМЕТОМ!','РАЗОШЛИСЬ'].includes(name))this.momentum=Math.min(8,this.momentum+2);
     if(['360°','КОСОЙ 360°','ПЕРЕВОРОТ!','ПРЯМОЙ ВЫЛЕТ','БОКОВОЙ ПЕРЕЛЁТ','МЯГКАЯ ПОСАДКА'].includes(name))this.momentum=Math.min(8,this.momentum+(name==='ПЕРЕВОРОТ!'?5:3));
   }
   step(dt){

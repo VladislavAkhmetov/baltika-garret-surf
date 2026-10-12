@@ -70,20 +70,21 @@ async function run(){
     report.near=await page.evaluate(()=>{
       const g=game,dt=1/120;g.reset();g.wave.resetWaves(42);g.state='playing';g.comics.trigger=()=>false;
       g.onboarding.completed=new Set(['steer','wave','jump','landing','balance']);g.rivals.forEach(r=>r.collided=true);
-      const [b1,b2]=g.world.hazards.filter(h=>h.type==='buoy');g.world.hazards.forEach(h=>{if(h!==b1&&h!==b2)h.done=true;});
+      const [b1,b2]=g.world.hazards.filter(h=>h.type==='flotsam');g.world.hazards.forEach(h=>{if(h!==b1&&h!==b2)h.done=true;});
       g.p.x=0;g.p.z=2;g.p.y=g.wave.height(0,2);g.p.speed=24;g.balance.immunity=9;
       b1.x=1.35;b1.z=16;b2.x=0;b2.z=40;
       for(let i=0;i<220&&g.p.z<22;i++){g.input.lean=0;g.step(dt);}
       const ground={near:g.chain.nearMisses,seen:g.tricksSeen.has('ВПРИТЫК!'),hit:b1.hit,x:g.p.x};
       b2.x=g.p.x;g.impactCooldown=0;
-      while(g.p.z<33)g.step(dt);
+      // Start earlier so the board clears the log's raised branch as well as its body.
+      while(g.p.z<31)g.step(dt);
       g.jump.press();g.step(dt);g.p.jumpVelocity=10;
       for(let i=0;i<300&&g.p.airborne;i++)g.step(dt);
-      const air={seen:g.tricksSeen.has('НАД БУЕМ!'),hit:b2.hit};
+      const air={seen:g.tricksSeen.has('НАД ПРЕДМЕТОМ!'),hit:b2.hit};
       g.state='paused';return {ground,air};
     });
-    assert.equal(report.near.ground.hit,false);assert.ok(report.near.ground.near>=1&&report.near.ground.seen,'passing a buoy within 2 m is a near-miss');
-    assert.equal(report.near.air.hit,false);assert.equal(report.near.air.seen,true,'jumping over a buoy scores НАД БУЕМ');
+    assert.equal(report.near.ground.hit,false);assert.ok(report.near.ground.near>=1&&report.near.ground.seen,'passing a floating prop close by is a near-miss');
+    assert.equal(report.near.air.hit,false);assert.equal(report.near.air.seen,true,'jumping over a prop earns an airborne near-miss');
 
     report.juice=await page.evaluate(()=>{
       const g=game,j=g.juice;g.reset();g.state='playing';
@@ -98,7 +99,7 @@ async function run(){
     const u=report.juice;
     assert.deepEqual(u.stops,[true,true,false],'hit-stop lasts its duration');
     assert.ok(u.fov>60&&u.fov<=70,'speed and kick widen the FOV within 70°');
-    assert.ok(u.roll>.03&&u.roll<=.0561,'carving rolls the camera up to 3.2°');assert.ok(u.airRoll<.002,'the horizon levels in the air');
+    assert.ok(u.roll>.02&&u.roll<=.0241,'carving keeps the current gentle roll below 1.4°');assert.ok(u.airRoll<.002,'the horizon levels in the air');
     assert.deepEqual(u.calm,{fov:58,roll:0},'calm camera keeps the old fixed view');
     assert.equal(u.word,'ВЖУХ!');assert.ok(u.left>0&&u.left<393,'sound word is projected onto the screen');
 

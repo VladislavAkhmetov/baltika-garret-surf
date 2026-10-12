@@ -43,7 +43,7 @@
 .result-summary{display:flex;justify-content:center;align-items:center;gap:14px;margin:6px 0 8px}
 .result-summary>span{font:14px 'Russo One',sans-serif}.result-summary>strong{font:27px 'Russo One',sans-serif}
 .result-card .yellow-button{font-size:18px;min-height:46px;padding:11px 10px;margin:0 0 4px}
-@media(max-width:650px){
+@container mobile-screen (max-width:650px){
  .collection-ticket{min-height:64px}
  #app-container.playing .sound-button{right:53px;top:79px}
  .collection-ticket>span{font-size:20px}.collection-ticket{padding:10px 8px}
@@ -63,7 +63,7 @@
  .result-card #result-comment{font-size:14px}.result-companion span{font-size:18px}
  .result-summary{margin:6px 0}.result-companion canvas{width:60px;height:52px}
 }
-@media(orientation:landscape) and (max-height:520px){
+@container mobile-screen (orientation:landscape) and (max-height:520px){
  #app-container.playing .sound-button{right:67px;top:64px;width:40px;height:40px}
  .ride-coach{max-width:370px;padding:12px 22px}.ride-coach strong{font-size:17px}.ride-coach span{font-size:16px}
  .pause-card{width:min(660px,92%);padding:22px 26px 18px}

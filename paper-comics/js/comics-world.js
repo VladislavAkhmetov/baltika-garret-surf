@@ -3,7 +3,7 @@ class ComicsWorld {
     this.game=game;this.scene=game.scene;
     this.jetskiTexture=new THREE.TextureLoader().load('assets/comics/jetski-boris-v2.png');
     this.jetskiTexture.minFilter=THREE.LinearFilter;this.jetskiTexture.generateMipmaps=false;
-    this.makeBeach();
+    this.makeBeach();this.floatingProps=new FloatingProps(game);
     this.hazards=COMICS_COURSE.hazards.map((config,i)=>this.makeHazard(config,i));
     this.ready=Promise.all([new Promise((resolve,reject)=>{
       new THREE.TextureLoader().load('assets/comics/jetski-boris-v2.png',texture=>{
@@ -28,7 +28,7 @@ class ComicsWorld {
     this.ready.catch(error=>{this.error=error;});
     this.wakeRides=0;this.reset();
   }
-  material(color) {return new THREE.MeshLambertMaterial({color,side:THREE.DoubleSide});}
+  material(color) {return this.game.paperToon.material(color);}
   makeBeach() {
     const n=90,geometry=new THREE.BufferGeometry();
     geometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array((n+1)*2*3),3));
@@ -59,13 +59,10 @@ class ComicsWorld {
     }
   }
   makeHazard(config,index) {
-    const group=new THREE.Group();let labelText='',color='#ae533b',fin=null,jetCard=null;
-    const cream=this.material(0xf3e8cc),red=this.material(0xe66540),dark=this.material(0x153d4d);
-    if(config.type==='buoy'){
-      const base=new THREE.Mesh(new THREE.CylinderGeometry(.7,.95,.3,8),cream);group.add(base);
-      const top=new THREE.Mesh(new THREE.ConeGeometry(.58,1.15,6),red);top.position.y=.6;group.add(top);
-      const pole=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,1.8,4),dark);pole.position.y=.9;group.add(pole);
-      const flag=new THREE.Mesh(new THREE.PlaneGeometry(.75,.5),cream);flag.position.set(.35,1.7,0);group.add(flag);
+    const prop=config.type==='flotsam'?FloatingProps.definitions[config.prop]:null;
+    const group=prop?this.floatingProps.build(config.prop):new THREE.Group();let labelText='',color='#ae533b',fin=null,jetCard=null;
+    if(prop){
+      group.rotation.y=prop.yaw;
     }else if(config.type==='shark'){
       fin=new THREE.Mesh(new THREE.PlaneGeometry(2.4,2.4),new THREE.MeshBasicMaterial({map:this.game.textures.shark_fin.clone(),transparent:true,alphaTest:.12,side:THREE.DoubleSide}));fin.material.map.userData={directionAtlas:true};fin.position.y=.8;group.add(fin);
     }else{
@@ -82,7 +79,8 @@ class ComicsWorld {
     }
     const attackCue=config.type==='shark'?this.game.wave.ribbon(0xf9ba54,.28):null;
     if(attackCue){attackCue.material.transparent=true;attackCue.material.opacity=.38;attackCue.material.depthWrite=false;attackCue.visible=false;}
-    return {...config,initialX:config.x,initialZ:config.z,group,label,wake,attackCue,index,fin,jetCard,view:0};
+    return {...config,collisionRadius:prop?.radius,collisionDepth:prop?.depth,jumpClearance:prop?.clearance,
+      name:prop?.name,cause:prop?.cause,initialX:config.x,initialZ:config.z,group,label,wake,attackCue,index,fin,jetCard,view:0};
   }
   reset(){
     this.wakeRides=this.escapes=0;
@@ -138,7 +136,7 @@ class ComicsWorld {
   step(dt,hazards=this.hazards){
     const g=this.game,p=g.p;
     hazards.forEach(h=>{
-      if(h.done)return;
+      if(h.done||h.duelControlled)return;
       if(h.type==='shark'){this.stepChaser(h,dt);return;}
       if(h.type==='jetski'){
         if(p.z>h.initialZ-65&&h.activeAt===null){
@@ -161,15 +159,15 @@ class ComicsWorld {
       const ahead=h.z-p.z;
       if(h.type==='jetski'&&h.activeAt===null)return;
       const approaching=h.mode==='overtake'?ahead< -8&&ahead> -60:ahead<60&&ahead>8;
-      if(!h.warned&&approaching&&h.type!=='buoy'){
+      if(!h.warned&&approaching&&h.type==='jetski'){
         h.warned=true;g.hint(h.mode==='cross'?'БОРИС ПЕРЕСЕКАЕТ КУРС':'ЛОВИ СЛЕД БОРИСА',1.25);
       }
-      const radius=h.type==='jetski'?1.3:h.type==='shark'?1:.9;
-      if(!h.hit&&Math.abs(ahead)<1.8&&Math.abs(h.x-p.x)<radius&&p.airY<1&&g.impactCooldown===0){
-        const cause=h.type==='shark'?'АКУЛА ЗАДЕЛА':h.type==='jetski'?'УДАР ОБ АКВАБАЙК':'УДАР ОБ БУЙ';
+      const radius=h.collisionRadius??(h.type==='jetski'?1.3:1),depth=h.collisionDepth??1.8,clearance=h.jumpClearance??1;
+      if(!h.hit&&Math.abs(ahead)<depth&&Math.abs(h.x-p.x)<radius&&p.airY<clearance&&g.impactCooldown===0){
+        const cause=h.cause||(h.type==='shark'?'АКУЛА ЗАДЕЛА':'УДАР ОБ АКВАБАЙК');
         h.hit=true;g.spill(h.type==='shark'?.13:.10,cause);
         p.speed*=.65;g.balance.disturb(.34,cause);g.impactCooldown=2;g.emit(25,1.3);
-        g.juice.hitstop(.08);g.juice.pop('БАМ!',p.x,p.y+2,p.z,'bad');g.runComic.capture('hit','БАМ!',h.type==='jetski'?'ПРИВЕТ ОТ БОРИСА':'БУЙ ОКАЗАЛСЯ КРЕПЧЕ',45);
+        g.juice.hitstop(.08);g.juice.pop('БАМ!',p.x,p.y+2,p.z,'bad');g.runComic.capture('hit','БАМ!',h.type==='jetski'?'ПРИВЕТ ОТ БОРИСА':h.cause,45);
       }
       const relative={x:h.x-p.x,z:ahead},previous=h.previousRelative;
       if(!h.encounterSide&&Math.abs(ahead)>4)h.encounterSide=Math.sign(ahead);
@@ -177,7 +175,7 @@ class ComicsWorld {
         const dx=relative.x-previous.x,dz=relative.z-previous.z;
         const t=THREE.MathUtils.clamp(-(previous.x*dx+previous.z*dz)/(dx*dx+dz*dz||1),0,1);
         h.nearestPass=Math.min(h.nearestPass,Math.hypot(previous.x+t*dx,previous.z+t*dz));
-        if(previous.z*ahead<=0&&previous.z!==ahead){h.crossed=true;if(p.airY>1&&Math.abs(h.x-p.x)<1.6)h.airPass=true;}
+        if(previous.z*ahead<=0&&previous.z!==ahead){h.crossed=true;if(p.airY>=clearance&&Math.abs(h.x-p.x)<radius+.7)h.airPass=true;}
       }
       h.previousRelative=relative;
       // An overtaking craft starts behind us. Award only after an actual pass
@@ -186,7 +184,7 @@ class ComicsWorld {
         h.passed=true;
         if(!h.hit){
           g.score+=40;
-          if(h.type==='buoy'){if(h.airPass)g.nearMiss('НАД БУЕМ!',150,h.x,h.z,'ОП!');else if(h.nearestPass<2)g.nearMiss('ВПРИТЫК!',80,h.x,h.z);}
+          if(h.type==='flotsam'){if(h.airPass)g.nearMiss('НАД ПРЕДМЕТОМ!',150,h.x,h.z,'ОП!');else if(h.nearestPass<radius+1.1)g.nearMiss('ВПРИТЫК!',80,h.x,h.z);}
           else if(h.nearestPass<2.7){g.nearMiss('РАЗОШЛИСЬ',120,h.x,h.z,'ВЖУХ!',true);g.companion.react('dodge');g.comics.trigger('ФУХ!','БЫЛО БЛИЗКО. КРУЖКА ЦЕЛА.','save',2);}
         }
       }
@@ -199,7 +197,7 @@ class ComicsWorld {
   wakeQualityAt(x,z){
     let value=0;
     for(const h of this.hazards){
-      if(h.type!=='jetski'||h.activeAt===null||this.game.time-h.activeAt>9)continue;
+      if(h.type!=='jetski'||h.activeAt===null||h.duelControlled&&this.game.duel?.arrived||!h.duelControlled&&this.game.time-h.activeAt>9)continue;
       value=Math.max(value,this.wakeQualityFor(h,x,z));
     }
     return value;
@@ -213,7 +211,7 @@ class ComicsWorld {
   wakeSourceAt(x,z){
     let quality=0,hazard=null;
     for(const h of this.hazards){
-      if(h.type!=='jetski'||h.activeAt===null||this.game.time-h.activeAt>9)continue;
+      if(h.type!=='jetski'||h.activeAt===null||h.duelControlled&&this.game.duel?.arrived||!h.duelControlled&&this.game.time-h.activeAt>9)continue;
       const next=this.wakeQualityFor(h,x,z);if(next>quality){quality=next;hazard=h;}
     }
     return {quality,hazard};
@@ -237,13 +235,15 @@ class ComicsWorld {
     this.umbrellas.forEach(({group,offset},i)=>{const z=p.z-20+((offset-p.z*.5)%230+230)%230;group.position.set(-23-i%2*3,1,z);});
     this.hazards.forEach(h=>{
       const diving=h.type==='shark'&&h.endAt!==null?Math.min(1,(g.time-h.endAt)/.65):0;
-      const y=g.wave.height(h.x,h.z);h.group.position.set(-h.x,y+.18-diving*2,h.z);h.group.visible=Math.abs(h.z-p.z)<160&&(h.type!=='shark'||h.activeAt!==null&&diving<1)&&(h.type!=='jetski'||h.activeAt!==null);
+      const y=g.wave.height(h.x,h.z);h.group.position.set(-h.x,y+.18+(h.airY||0)-diving*2,h.z);h.group.visible=Math.abs(h.z-p.z)<160&&(h.type!=='shark'||h.activeAt!==null&&diving<1)&&(h.type!=='jetski'||h.activeAt!==null);
       h.group.rotation.z=h.type==='shark'?Math.sin(g.time*2+h.index)*.05:0;
+      if(h.type==='flotsam')this.floatingProps.update(h);
       if(h.fin){h.fin.quaternion.copy(g.camera.quaternion);const t=h.fin.material.map;if(t.image?.width>0&&t.userData.directionAtlas){t.repeat.set(h.view===1?-.5:.5,.5);t.offset.set(h.view===1?1:h.view%2*.5,(1-Math.floor(h.view/2))*.5);}}
       if(h.jetCard){
         h.group.rotation.y=0;h.jetCard.quaternion.copy(g.camera.quaternion);
+        if(h.duelControlled)h.jetCard.rotateZ(g.duel.roll);
         const view=h.mode==='cross'?(h.direction>0?0:1):2,frame=this.jetViews?.[view];
-        if(frame&&h.jetView!==view){h.jetCard.geometry.dispose();h.jetCard.geometry=new THREE.PlaneGeometry(frame.width,frame.height);h.jetCard.material.map=frame.map;h.jetView=view;}
+        if(!h.duelControlled&&frame&&h.jetView!==view){h.jetCard.geometry.dispose();h.jetCard.geometry=new THREE.PlaneGeometry(frame.width,frame.height);h.jetCard.material.map=frame.map;h.jetView=view;}
       }
       if(h.label){h.label.position.set(-h.x,y+2.6,h.z);h.label.visible=h.group.visible;}
       if(h.attackCue){
@@ -256,7 +256,7 @@ class ComicsWorld {
         pos.needsUpdate=true;h.attackCue.material.opacity=h.attackPhase==='windup'?.28+.16*Math.sin(g.time*18)**2:.32;
       }
       h.wake.forEach((foam,arm)=>{
-        const active=h.activeAt!==null&&g.time-h.activeAt<9;foam.visible=h.group.visible&&active;
+        const active=h.activeAt!==null&&(h.duelControlled?!g.duel?.arrived:g.time-h.activeAt<9);foam.visible=h.group.visible&&active&&(h.airY||0)<.3;
         const pos=foam.geometry.attributes.position,sign=arm===0?-1:1,direction=h.motion||{x:h.mode==='cross'?h.direction:0,z:h.mode==='cross'?0:1};
         for(let i=0;i<=80;i++){
           const behind=1+i/80*27,perp=sign*behind*.36;
@@ -266,7 +266,7 @@ class ComicsWorld {
             pos.setXYZ(i*2+side,-x,g.wave.height(x,z)+.09,z);
           }
         }
-        pos.needsUpdate=true;foam.material.opacity=active?.72*Math.min(1,(9-g.time+h.activeAt)/2):0;
+        pos.needsUpdate=true;foam.material.opacity=active?.72*(h.duelControlled?1:Math.min(1,(9-g.time+h.activeAt)/2)):0;
       });
     });
   }

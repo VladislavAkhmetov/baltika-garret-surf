@@ -2,7 +2,7 @@ window.COMICS_COURSE = {
   length:1360,
   actionLength:1200,
   waveCount:21,
-  opening:[{z:0,x:1.4},{z:35,x:-1.6},{z:80,x:1.5},{z:125,x:-1.4},{z:174,x:.8}],
+  opening:[{z:0,x:1.4},{z:35,x:-1.6},{z:70,x:-1.6},{z:105,x:1.5},{z:115,x:1.5},{z:150,x:-1.4},{z:160,x:-1.4},{z:194,x:.8}],
   waves:[
     {id:0,from:35,to:165,start:-4.4,end:-3.2,arc:2.2,height:2.6,width:10},
     {id:1,from:205,to:335,start:-1.7,end:-4.4,arc:-2.1,height:3.2,width:10.5},
@@ -21,16 +21,14 @@ window.COMICS_COURSE = {
     {from:1100,to:1360,title:'ФИНИШНЫЙ СПРИНТ'}
   ],
   hazards:[
-    {type:'buoy',x:1.4,z:35},
-    {type:'buoy',x:-1.6,z:80},
-    {type:'buoy',x:1.5,z:125},
-    {type:'jetski',x:-10,z:310,direction:1,mode:'cross'},
+    {type:'flotsam',prop:'flamingo',x:1.4,z:70},
+    {type:'flotsam',prop:'log',x:-1.6,z:115},
+    {type:'flotsam',prop:'barrel',x:1.5,z:160},
+    {type:'jetski',x:5,z:10,direction:1,mode:'duel'},
     {type:'shark',x:-5,z:610,phase:0,direction:1,mode:'chase'},
-    {type:'jetski',x:-10,z:658,direction:1,mode:'cross'},
-    {type:'buoy',x:3.5,z:726},
-    {type:'jetski',x:5.5,z:794,direction:1,mode:'overtake'},
+    {type:'flotsam',prop:'cooler',x:3.5,z:726},
     {type:'shark',x:3.5,z:955,phase:2.4,direction:-1,mode:'chase'},
-    {type:'buoy',x:0,z:976},
-    {type:'buoy',x:-4,z:1036}
+    {type:'flotsam',prop:'suitcase',x:0,z:976},
+    {type:'flotsam',prop:'ball',x:2.5,z:1036}
   ]
 };

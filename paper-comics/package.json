@@ -1,7 +1,17 @@
 {
   "scripts": {
     "dev": "node scripts/serve.js",
+    "test:audio": "node scripts/test_audio.cjs",
+    "test:audio:browser": "node scripts/test_audio_browser.cjs",
+    "test:course-show": "node scripts/test_course_show.cjs",
+    "test:obstacles": "node scripts/test_obstacles.cjs",
+    "test:course-fairness": "node scripts/test_course_fairness.cjs",
+    "test:demo": "node scripts/test_demo.cjs",
+    "test:dolphins": "node scripts/test_dolphins.cjs",
+    "test:race": "node scripts/test_beer_duel.cjs",
     "test:prototype": "node scripts/test_prototype.js",
+    "test:hero-grip": "node scripts/test_hero_grip.cjs",
+    "test:sky-flight": "node scripts/test_sky_advertiser.cjs",
     "test:controls": "node scripts/test_controls.cjs",
     "test:chapter": "node scripts/test_chapter.cjs",
     "test:playthrough": "node scripts/check-playthrough.cjs",
@@ -19,9 +29,12 @@
     "test:flow": "node scripts/test_flow.cjs",
     "test:drive": "node scripts/test_drive.cjs",
     "test:action": "node scripts/test_action.cjs",
+    "test:pace": "node scripts/test_pace.cjs",
     "test:ribbon": "node scripts/test_ribbon.cjs",
     "test:maneuvers": "node scripts/test_maneuvers.cjs",
-    "test:rivals": "node scripts/test_rivals.cjs"
+    "test:rivals": "node scripts/test_rivals.cjs",
+    "test:rival-visibility": "node scripts/test_rival_visibility.cjs",
+    "test:rival-geometry": "node scripts/test_rival_geometry.cjs"
   },
   "dependencies": {
     "puppeteer-core": "^24.43.1"

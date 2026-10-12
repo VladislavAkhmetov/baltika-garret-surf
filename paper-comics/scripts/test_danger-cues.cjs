@@ -15,7 +15,7 @@ async function run(){
     await page.goto('http://127.0.0.1:'+server.address().port+'/?seed=42',{waitUntil:'networkidle0'});
     await page.evaluate(async()=>{await game.start(false);game.state='paused';});
     report.trimRecovery=await page.evaluate(()=>{
-      const g=game;g.assist=true;g.reset();g.input.mode='keys';g.balance.disturb(.34,'УДАР ОБ БУЙ');
+      const g=game;g.assist=true;g.reset();g.input.mode='keys';g.balance.disturb(.34,'УДАР ОБ ФЛАМИНГО');
       dispatchEvent(new KeyboardEvent('keydown',{code:'ArrowDown',bubbles:true}));
       let falling=null;
       for(let i=0;i<720;i++){
@@ -44,16 +44,17 @@ async function run(){
     });
     for(const result of report.passedFoam)assert.deepEqual(result,{protection:result.protection,ended:true,wipes:0,beer:1},'passed foam cannot hit after '+result.protection+' protection expires');
     report.collisions={};
-    for(const type of ['buoy','jetski','shark','foam']){
+    for(const type of ['flotsam','jetski','shark','foam']){
       report.collisions[type]=await page.evaluate(type=>{
         const g=game;g.assist=false;g.reset();g.state='playing';g.journey.hideAll();g.container.classList.add('playing');g.input.mode='keys';
         g.onboarding.completed=new Set(['steer','wave','jump','landing','balance']);g.rivals.forEach(r=>r.collided=true);
         const h=g.world.hazards.find(h=>h.type===type);g.world.hazards.forEach(other=>{if(other!==h)other.done=true;});
         if(h){
           h.x=h.targetX=g.p.x;h.z=g.p.z+.5;
-          if(type==='jetski'){h.mode='cross';h.initialX=h.x;h.direction=0;h.activeAt=g.time;}
+          if(type==='jetski'){h.duelControlled=false;h.mode='cross';h.initialX=h.x;h.direction=0;h.activeAt=g.time;}
           if(type==='shark'){h.activeAt=g.time;h.chasing=true;}
           g.world.step(1/120);
+          if(type==='jetski')h.duelControlled=true;
         }else{
           const w=g.wave.waves.find(w=>w.height>=2.6&&w.anchorFrom>230);g.time=w.encounterTime;g.wave.time=g.time;
           g.p.z=(w.from+w.to)/2-14;g.p.x=g.wave.crestX(w,g.p.z)+w.width*.32;g.p.y=g.wave.height(g.p.x,g.p.z);g.p.speed=28;
@@ -66,7 +67,7 @@ async function run(){
         const fall={fallen:g.p.fallen,risk:g.p.balance,caption:document.querySelector('#wipeout-screen strong').textContent};
         g.state='paused';g.updateVisuals(0);g.updateHUD();g.renderer.render(g.scene,g.camera);g.renderDirty=false;return {impact,fall};
       },type);
-      const result=report.collisions[type],cause=type==='buoy'?'УДАР ОБ БУЙ':type==='jetski'?'УДАР ОБ АКВАБАЙК':type==='shark'?'АКУЛА ЗАДЕЛА':'НАКРЫЛО ПЕНОЙ';
+      const result=report.collisions[type],cause=type==='flotsam'?'УДАР ОБ ФЛАМИНГО':type==='jetski'?'УДАР ОБ АКВАБАЙК':type==='shark'?'АКУЛА ЗАДЕЛА':'НАКРЫЛО ПЕНОЙ';
       assert.deepEqual(result.impact,{hit:true,source:cause,mode:'recovery'});
       assert.ok(result.fall.fallen&&result.fall.risk>=1.05,'continued wrong steering causes a physical fall after '+type);
       assert.equal(result.fall.caption,cause,'fall retains the original '+type+' collision');

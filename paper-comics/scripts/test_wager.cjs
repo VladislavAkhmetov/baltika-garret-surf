@@ -54,18 +54,21 @@ async function run(){
       assert.equal(await page.evaluate(()=>game.companion.pose),'raised');await shot(name+'-tail-jump');
       await page.evaluate(()=>{const g=game;g.p.airborne=false;g.p.airY=0;g.p.y=g.wave.height(g.p.x,g.p.z);g.p.lean=.65;g.p.heading=.2;g.balance.roll=.3;g.updateVisuals(0);g.renderer.render(g.scene,g.camera);});
       assert.ok(Math.abs(await page.evaluate(()=>game.companion.card.rotation.z))>.01);await shot(name+'-tail-turn');
-      for(const [outcome,level] of [['victory',.30],['defeat',.299]]){
-        await page.evaluate(level=>{game.state='paused';game.mug.level=level;game.waveRide.totalCaught=0;game.finish();},level);
+      for(const [outcome,level] of [['victory',.31],['defeat',.99],['tie',.30]]){
+        await page.evaluate((level,outcome)=>{game.reset();game.state='paused';game.elapsed=40;game.p.z=game.distance;game.mug.level=level;
+          if(outcome!=='victory'){game.duel.arrived=true;game.duel.arrivalTime=outcome==='tie'?40:39;game.duel.deliveredBeer=.30;game.duel.liquid.level=.30;}
+          game.waveRide.totalCaught=0;game.finish();game.courseShow.endDelivery();},level,outcome);
         assert.equal(await page.$eval('#result-screen',el=>el.dataset.outcome),outcome);
-        assert.equal(await page.$eval('#result-beer',el=>el.textContent),outcome==='victory'?'30%':'29%');
+        assert.equal(await page.$eval('#result-beer',el=>el.textContent),Math.round(level*100)+'%');
+        assert.equal(await page.$eval('#result-beer-bonus',el=>el.textContent),'+'+Math.round(level*5000).toLocaleString('ru-RU'));
         const result=await page.evaluate(()=>{const c=document.querySelector('.result-card').getBoundingClientRect(),b=document.getElementById('replay-button').getBoundingClientRect();return {fits:b.top>=c.top&&b.bottom<=c.bottom,line:document.getElementById('result-crab-line').textContent,canvas:document.getElementById('result-crab').width};});
-        assert.ok(result.fits,name+' result CTA '+outcome);assert.ok(result.canvas>0);assert.ok(result.line.includes(outcome==='victory'?'Мы легенды':'рулю я'));await shot(name+'-'+outcome);
+        assert.ok(result.fits,name+' result CTA '+outcome);assert.ok(result.canvas>0);assert.ok(result.line.includes(outcome==='victory'?'Мы легенды':outcome==='tie'?'Ноздря в ноздрю':'рулю я'));await shot(name+'-'+outcome);
       }
     }
     const events=await page.evaluate(()=>{
       const g=game;g.reset();g.state='playing';
       g.spill(.04,'ТЕСТ');const spill=g.companion.heard.has('spill');
-      const h=g.world.hazards.find(h=>h.type==='shark');g.p.z=h.initialZ-10;g.world.stepChaser(h,1/120);
+      const h=g.world.hazards.find(h=>h.type==='shark');g.p.z=h.initialZ+1;g.world.stepChaser(h,1/120);
       const shark=g.companion.heard.has('shark'),priority=document.getElementById('crab-callout').dataset.event;
       const repeated=g.companion.react('shark',true);
       g.time+=4;g.world.endChase(h,true);const escape=g.companion.heard.has('escape');
@@ -94,7 +97,7 @@ async function run(){
     await page.goto(base+'/prototype.html',{waitUntil:'networkidle0'});await page.waitForFunction(()=>window.game);await page.evaluate(async()=>{await game.start(false);});assert.equal(await page.evaluate(()=>game.state),'playing');
     assert.deepEqual(errors,[]);assert.deepEqual(missing,[]);
     fs.writeFileSync(path.join(review,'verification.json'),JSON.stringify({layouts,events,imageRetry:true,keyboardNavigation:true,skip:true,errors,missing},null,2));
-    console.log('PASS: two-page comic with decoded artwork and readable in-panel dialogue in four viewports, image retry, keyboard/back/skip navigation, tail attachment, jump/turn poses, 30% win boundary, result CTA, event priorities/cooldowns, reset and prototype entry.');
+    console.log('PASS: two-page race comic and readable dialogue in four viewports, image retry, navigation, tail attachment, poses, victory/defeat/tie by arrival, beer bonus, result CTA, event priorities, reset and prototype entry.');
   }finally{if(browser)await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
 run().catch(e=>{console.error(e);process.exitCode=1;});

@@ -2,13 +2,8 @@
 class SurfRace {
   constructor(game){
     this.game=game;
-    this.scenes=[
-      {z:155,slot:0,id:'grandma',move:'sprint',line:'Дорогу молодым!',duration:3.4},
-      {z:520,slot:0,id:'couple',move:'gate',line:'Вместе повернём!',duration:3.6},
-      {z:625,slot:1,id:'dj',move:'weave',line:'Лови мой ритм!',duration:3.6},
-      {z:755,slot:0,id:'blonde',move:'cutback',line:'Догоняй!',duration:3.6},
-      {z:890,slot:1,id:'grandma',move:'sprint',line:'Я ещё ого-го!',duration:3.5}
-    ];
+    // The cast cruises outside the course; only Max and Boris contest the wager.
+    this.scenes=[];
     this.callouts=game.rivals.map(()=>{
       const el=document.createElement('div');el.className='race-callout';game.container.append(el);return el;
     });
@@ -21,19 +16,26 @@ class SurfRace {
     this.enabled=!this.game.flowTest;this.cursor=0;this.events=[];this.boost=this.boostTime=this.overtakes=0;
     this.game.container.classList.toggle('race-mode',this.enabled);
     this.game.container.classList.remove('race-boost');
-    this.game.rivals.forEach((r,i)=>{r.encounter=null;this.callouts[i].classList.remove('visible');this.cues[i].visible=false;if(this.enabled)r.z=-70-i*20;});
+    this.game.rivals.forEach((r,i)=>{
+      r.encounter=null;this.callouts[i].classList.remove('visible');this.cues[i].visible=false;
+      r.scenic=this.enabled;
+      if(r.scenic){r.x=i===0?-12:12;r.z=48+i*36;r.speed=26;r.lean=r.airY=0;}
+    });
   }
   begin(scene){
     const g=this.game,r=g.rivals[scene.slot],profile=g.rivalCast.profiles.find(p=>p.id===scene.id);
+    if(r.encounter||r.rig.group.visible&&g.rivalCast.inView(r))return false;
     g.rivalCast.apply(r,profile);
     const lane=THREE.MathUtils.clamp(g.trickRoute.routePoint(g.p.z+35),-4,4),side=scene.slot===0?-1:1;
     const from=THREE.MathUtils.clamp(lane+side*3.4,-7,7),to=THREE.MathUtils.clamp(lane-side*.9,-6,6);
-    Object.assign(r,{x:from,z:g.p.z+(scene.move==='sprint'?-7:22),speed:g.p.speed,lean:0,airY:0,
-      passed:false,wasAhead:scene.move!=='sprint',collided:false,chat:false,contactLocked:false,yieldTime:0,nearest:Infinity});
+    Object.assign(r,{x:from,speed:g.p.speed,lean:0,airY:0,freeEntry:false,scenic:false,
+      passed:false,wasAhead:false,collided:false,chat:false,contactLocked:false,yieldTime:0,nearest:Infinity});
+    if(!g.rivalCast.enterBehind(r))return false;
     r.x=g.rivalWaterLane(r,from);
-    r.encounter={...scene,age:0,phase:'approach',from:r.x,to,lane,baseSpeed:g.p.speed,spokenUntil:g.time+1.4};
-    this.callouts[scene.slot].textContent=scene.line;this.callouts[scene.slot].classList.add('visible');
-    this.events.push({id:scene.id,move:scene.move,z:g.p.z,at:g.time});
+    r.encounter={...scene,age:0,phase:'entry',entryGap:scene.move==='sprint'?-7:14,from:r.x,to,lane,baseSpeed:g.p.speed,spokenUntil:0};
+    this.callouts[scene.slot].textContent=scene.line;this.callouts[scene.slot].classList.remove('visible');
+    this.events.push({id:scene.id,move:scene.move,z:g.p.z,at:g.time,spawn:{x:r.x,z:r.z}});
+    return true;
   }
   step(dt){
     if(!this.enabled)return;
@@ -42,22 +44,28 @@ class SurfRace {
     this.boost+=( (this.boostTime>0?4.2:0)-this.boost)*(1-Math.exp(-dt*(this.boostTime>0?8:3)));
     g.container.classList.toggle('race-boost',this.boost>1);
     for(const r of g.rivals){
-      const e=r.encounter;if(!e)continue;e.age+=dt;
-      e.phase=e.age<.85?'approach':e.age<e.duration&&!r.passed?'move':'exit';
+      const e=r.encounter;if(!e)continue;
+      if(e.phase==='entry'&&e.duration>0){
+        if(r.z-g.p.z<e.entryGap)continue;
+        e.phase='approach';e.age=0;e.baseSpeed=g.p.speed;e.spokenUntil=g.time+1.4;
+      }
+      e.age+=dt;
+      e.phase=e.duration<=0?'exit':e.age<.85?'approach':e.age<e.duration&&!r.passed?'move':'exit';
       if(e.phase==='exit'&&e.exitAt===undefined)e.exitAt=e.age;
-      if(e.phase==='exit'&&(r.z-g.p.z>90||g.p.z-r.z>30||e.age-e.exitAt>2.6)){
-        r.encounter=null;r.z=g.p.z-80;this.callouts[r.index].classList.remove('visible');this.cues[r.index].visible=false;
+      if(e.phase==='exit'&&!g.rivalCast.inView(r)){
+        r.encounter=null;this.callouts[r.index].classList.remove('visible');this.cues[r.index].visible=false;
       }
     }
     const scene=this.scenes[this.cursor];
-    if(scene&&g.p.z>=scene.z&&!g.p.fallen&&!g.rivals[scene.slot].encounter&&g.setpiece?.canStartRival(scene)!==false){this.begin(scene);this.cursor++;}
+    if(scene&&g.p.z>=scene.z&&!g.p.fallen&&!g.rivals[scene.slot].encounter&&g.setpiece?.canStartRival(scene)!==false&&this.begin(scene))this.cursor++;
   }
   plan(r){
     const e=r.encounter;if(!this.enabled||!e)return null;
+    if(e.phase==='entry')return {x:e.from,speed:Math.min(58,this.game.p.speed+18),air:0};
     const t=Math.max(0,e.age-.85),s=this.game.wave.smooth(Math.min(1,t/1.15));
     let x=e.from,speed=e.baseSpeed-4,air=0;
-    if(e.phase==='exit'){x=(r.index===0?-1:1)*14;speed=e.baseSpeed-12;}
-    else if(e.move==='sprint'){
+    if(e.phase==='exit')return {x:r.x,speed:Math.max(0,this.game.p.speed-12),air:0};
+    if(e.move==='sprint'){
       const merge=this.game.wave.smooth(Math.max(0,Math.min(1,(e.age-1.25)/1.2)));
       x=THREE.MathUtils.lerp(e.from,e.to,merge);speed=e.age<2.65?e.baseSpeed+12:Math.min(27,e.baseSpeed-4);
     }else if(e.move==='weave'){
@@ -68,26 +76,25 @@ class SurfRace {
       x=THREE.MathUtils.lerp(e.from,e.lane-Math.sin(t*1.15)*2.4,s);speed=Math.min(29,e.baseSpeed-2);
       if(t>1.2&&t<2.1)air=Math.sin((t-1.2)/.9*Math.PI)*1.1;
     }
-    return {x:THREE.MathUtils.clamp(x,e.phase==='exit'?-15:-7.5,e.phase==='exit'?15:7.5),speed:THREE.MathUtils.clamp(speed,18,e.move==='sprint'?48:42),air};
+    return {x:THREE.MathUtils.clamp(x,-7.5,7.5),speed:THREE.MathUtils.clamp(speed,18,e.move==='sprint'?48:42),air};
   }
   onPass(r){
-    const e=r.encounter;if(!this.enabled||!e||r.collided)return;
+    const e=r.encounter;if(!this.enabled||!e||e.phase==='entry'||e.phase==='exit'||r.collided)return;
     this.overtakes++;this.game.awardTrick('ЧИСТЫЙ ОБГОН',110,true);
     this.callouts[r.index].textContent=r.id==='grandma'?'Ну, погоди!':r.id==='couple'?'Красиво прошёл!':'Вот это темп!';
     e.spokenUntil=this.game.time+1.2;this.callouts[r.index].classList.add('visible');
     this.game.juice.pop('ВЖУХ!',r.x,this.game.wave.height(r.x,r.z)+1.7,r.z,'near');
   }
   reward(name){
-    if(!this.enabled||!['ЧИСТЫЙ ОБГОН','ВПРИТЫК!','НАД БУЕМ!','РАЗОШЛИСЬ','НА ХВОСТЕ','360°','КОСОЙ 360°','ПЕРЕВОРОТ!','ПРЯМОЙ ВЫЛЕТ','БОКОВОЙ ПЕРЕЛЁТ','КАТБЭК','НАД АКУЛОЙ!'].includes(name))return;
+    if(!this.enabled||!['ЧИСТЫЙ ОБГОН','ВПРИТЫК!','НАД ПРЕДМЕТОМ!','РАЗОШЛИСЬ','НА ХВОСТЕ','360°','КОСОЙ 360°','ПЕРЕВОРОТ!','ПРЯМОЙ ВЫЛЕТ','БОКОВОЙ ПЕРЕЛЁТ','КАТБЭК','НАД АКУЛОЙ!'].includes(name))return;
     this.boostTime=Math.min(2.6,this.boostTime+1.15);this.game.juice.punch(2);this.game.juice.buzz(12);
   }
   update(){
     const g=this.game;
     g.rivals.forEach((r,i)=>{
       const e=r.encounter,el=this.callouts[i],cue=this.cues[i];
-      const opacity=e?.phase==='exit'?1-g.wave.smooth((e.age-e.exitAt-1.9)/.7):1;
-      for(const rider of r.rig.castRiders||[])rider.card.material.opacity=opacity;
-      r.rig.board.material.opacity=opacity;
+      for(const rider of r.rig.castRiders||[])rider.card.material.opacity=1;
+      r.rig.board.material.opacity=1;
       cue.visible=this.enabled&&!!e&&e.phase==='approach';
       if(cue.visible){
         const pos=cue.geometry.attributes.position;

@@ -131,7 +131,7 @@ async function test(){
     return {clean,hard,peak,cancelled,paused,activation,lag,fast,lunge,slow,dodge,reset,slopes};
   });
   const jc=jumpsAndChase;
-  assert.ok(jc.clean.charged===0&&jc.clean.launched&&jc.clean.landed,JSON.stringify(jc.clean));assert.ok(jc.clean.height>.4);assert.equal(jc.clean.landings,1);assert.equal(jc.clean.pose.state,'trim');assert.equal(jc.clean.pose.frame,2);
+  assert.ok(jc.clean.charged===0&&jc.clean.launched&&jc.clean.landed,JSON.stringify(jc.clean));assert.ok(jc.clean.height>.4);assert.equal(jc.clean.landings,1);assert.equal(jc.clean.pose.state,'air');assert.equal(jc.clean.pose.frame,0);
   assert.equal(jc.hard.landings,0);assert.ok(jc.hard.beer<jc.clean.beer-.04&&jc.hard.recovering>0);
   assert.ok(jc.peak.height>2&&jc.peak.landed);
   assert.deepEqual(jc.cancelled,{holding:false,requested:false,airborne:false});assert.deepEqual(jc.paused,{holding:false,requested:false});

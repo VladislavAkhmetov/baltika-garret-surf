@@ -17,11 +17,17 @@ class HandBeer {
     this.game=game;this.liquid=game.mug;this.roll=0;this.rollVelocity=0;this.drops=[];this.printFrame=-1;
     this.canvas=document.createElement('canvas');this.canvas.width=384;this.canvas.height=480;this.ctx=this.canvas.getContext('2d');
     this.texture=new THREE.CanvasTexture(this.canvas);this.texture.minFilter=THREE.LinearFilter;this.texture.generateMipmaps=false;
-    this.frame=new Image();this.frame.src='assets/comics/mug-paper-frame.png';this.frame.onload=()=>{this.draw();this.texture.needsUpdate=true;};
+    this.frame=new Image();
+    this.ready=new Promise((resolve,reject)=>{this.frame.onload=()=>{this.draw();this.texture.needsUpdate=true;resolve();};this.frame.onerror=()=>reject(new Error('Не удалось загрузить кружку'));});
+    this.ready.catch(()=>{});this.frame.src='assets/comics/mug-paper-frame.png';
     this.pivot=new THREE.Group();
     this.mesh=new THREE.Mesh(new THREE.PlaneGeometry(1.12,1.4),new THREE.MeshBasicMaterial({map:this.texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
-    // The handle, rather than the centre of the glass, stays in the character's hand.
-    this.mesh.position.set(.291,-.070,.035);this.mesh.renderOrder=4;this.pivot.add(this.mesh);game.player.card.add(this.pivot);
+    this.mesh.scale.set(1,1,1);
+    // Rear view: glass to the left of the right hand, handle to its right.
+    // Rotate at the gripped handle bar, not the centre of the glass.
+    this.gripCanvas={x:332,y:230};
+    this.mesh.position.set((.5-this.gripCanvas.x/384)*1.12,(this.gripCanvas.y/480-.5)*1.4,-.015);
+    this.mesh.renderOrder=2;this.pivot.add(this.mesh);game.player.card.add(this.pivot);
     this.liquid.addSpillListener((side,amount)=>this.emit(side,amount));
     this.reset();
   }
@@ -51,7 +57,7 @@ class HandBeer {
   update(){
     const anchor=this.game.heroAnimator.currentGrip||{x:.85,y:1.0};
     this.pivot.position.set(anchor.x,anchor.y,.01);
-    this.pivot.rotation.z=this.roll;
+    this.pivot.rotation.z=(anchor.angle||0)+this.roll;
     const frame=Math.floor(this.game.time*30);
     if(frame!==this.printFrame){this.printFrame=frame;this.draw();this.texture.needsUpdate=true;}
   }
@@ -64,7 +70,7 @@ class HandBeer {
     // Cream paper silhouette and a thick, translucent glass handle.
     c.lineCap='round';c.lineJoin='round';c.strokeStyle='#f6ebd3';c.lineWidth=25;
     if(!paper){
-    c.beginPath();c.moveTo(119,169);c.bezierCurveTo(30,152,34,292,125,300);c.stroke();
+    c.beginPath();c.moveTo(264,169);c.bezierCurveTo(353,152,349,292,258,300);c.stroke();
     c.strokeStyle='#244854';c.lineWidth=17;c.stroke();c.strokeStyle='#d9eeeb';c.lineWidth=11;c.stroke();c.strokeStyle='#ffffff';c.lineWidth=3;c.stroke();
     this.outline(c);c.strokeStyle='#f6ebd3';c.lineWidth=16;c.stroke();
     const glass=c.createLinearGradient(110,0,275,0);glass.addColorStop(0,'rgba(219,242,237,.7)');glass.addColorStop(.22,'rgba(255,255,239,.18)');glass.addColorStop(.7,'rgba(126,209,212,.10)');glass.addColorStop(1,'rgba(228,248,242,.72)');c.fillStyle=glass;c.fill();
@@ -81,7 +87,7 @@ class HandBeer {
     c.strokeStyle='#fff8de';c.lineWidth=foamHeight;c.stroke();c.fillStyle='#fffdf0';
     points.forEach((p,i)=>{c.beginPath();c.arc(p.x,p.y-foamHeight*.25,3.5+(i%3),0,Math.PI*2);c.fill();});
     c.restore();
-    if(paper){c.drawImage(this.frame,6,54,296,365);}else{
+    if(paper){c.save();c.translate(384,0);c.scale(-1,1);c.drawImage(this.frame,6,54,296,365);c.restore();}else{
     this.outline(c);c.strokeStyle='#294650';c.lineWidth=3;c.stroke();
     c.strokeStyle='rgba(255,255,247,.78)';c.lineWidth=7;c.beginPath();c.moveTo(139,121);c.lineTo(148,360);c.stroke();c.lineWidth=3;c.beginPath();c.moveTo(154,142);c.lineTo(158,354);c.moveTo(251,135);c.lineTo(241,362);c.stroke();
     c.fillStyle='rgba(233,247,234,.55)';c.beginPath();c.ellipse(192,391,60,10,0,0,Math.PI*2);c.fill();c.strokeStyle='#edf4da';c.lineWidth=4;c.beginPath();c.moveTo(137,396);c.quadraticCurveTo(190,410,253,398);c.stroke();

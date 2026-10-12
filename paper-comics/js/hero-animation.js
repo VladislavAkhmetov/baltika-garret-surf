@@ -1,64 +1,154 @@
-/* UV sprite animation: original generated sheets remain untouched. */
+/* Photographic key poses share measured grip and deck contacts. */
 class HeroAnimator {
   constructor(game){
-    this.game=game;this.width=2.7;this.height=3.6;this.state='trim';this.frame=0;this.clock=0;this.turnStage=0;this.turnDirection=0;this.releasing=false;
-    this.atlases={};this.framesSeen=new Set();
-    // grip = centre of the fingers, foot = stance centre. Coordinates in a 384x512 cell.
-    this.metadata={
-      trim:{grips:[[334,122],[352,143],[325,164],[312,111],[346,91],[350,136],[323,98],[320,99]],feet:[[230,495],[227,494],[213,491],[222,495],[273,476],[273,459],[235,475],[228,479]]},
-      left:{grips:[[332,116],[344,132],[354,142],[331,179],[336,145],[336,119],[312,107],[321,108]],feet:[[227,492],[235,489],[239,485],[234,484],[273,459],[244,467],[225,469],[222,469]]},
-      right:{grips:[[333,116],[352,126],[355,150],[345,175],[346,134],[342,101],[324,98],[321,101]],feet:[[233,487],[234,486],[232,478],[222,473],[251,452],[269,452],[247,454],[226,462]]},
-      recovery:{grips:[[329,111],[346,128],[323,152],[337,202],[343,104],[348,89],[339,90],[319,97]],feet:[[230,496],[251,494],[247,492],[215,493],[251,472],[259,470],[244,472],[220,472]]}
-    };
-    // Sole contact points, individually measured in each 384×512 photograph.
-    this.soles={
-      trim:[[[149,452],[292,480]],[[163,448],[280,480]],[[157,438],[257,475]],[[149,452],[288,481]],[[211,421],[321,458]],[[222,396],[316,443]],[[153,420],[302,457]],[[150,430],[300,462]]],
-      left:[[[150,454],[278,478]],[[166,439],[298,476]],[[187,425],[299,470]],[[191,422],[284,468]],[[225,399],[316,443]],[[202,419],[284,454]],[[158,432],[296,462]],[[152,431],[284,458]]],
-      right:[[[147,450],[293,475]],[[169,438],[286,472]],[[175,423],[299,468]],[[171,422],[296,457]],[[194,397],[295,438]],[[207,412],[322,441]],[[172,428],[320,444]],[[173,431],[320,451]]],
-      recovery:[[[141,455],[290,482]],[[174,449],[317,484]],[[178,439],[302,480]],[[155,450],[273,478]],[[199,426],[313,461]],[[201,422],[312,460]],[[174,418],[303,456]],[[146,421],[296,456]]]
+    this.game=game;this.height=3.6;this.width=this.height*1133/1388;this.state='trim';this.frame=0;this.clock=0;this.turnStage=0;this.turnDirection=0;this.releasing=false;
+    this.atlases={};this.actionAtlases={};this.framesSeen=new Set();this.sourcesSeen=new Set();
+    this.metadata={};this.soles={};
+    // The approved v6 silhouette keeps its natural extended arm and front ankle.
+    // Grip and sole contacts use the same 384×512 cell space
+    // used by the deck fit, finger overlay and animated grip attachment.
+    this.sourceGrip=[916/1133*384,210/1388*512];
+    this.sourceSoles=[[540/1133*384,1129/1388*512],[840/1133*384,1318/1388*512]];
+    this.poseDefinitions={
+      base:{src:'assets/comics/hero-rear-grip-v6.png',grip:[916,210],feet:[[540,1129],[840,1318]]},
+      left:{src:'assets/comics/hero-v7/carve-left.png',grip:[948,205],feet:[[610,1082],[955,1296]]},
+      right:{src:'assets/comics/hero-v7/carve-right.png',grip:[936,197],feet:[[585,1132],[870,1328]]},
+      compress:{src:'assets/comics/hero-v7/compress.png',grip:[945,320],feet:[[585,1122],[940,1298]]},
+      air:{src:'assets/comics/hero-v7/air.png',grip:[945,223],feet:[[610,1139],[925,1366]]},
+      trick:{src:'assets/comics/hero-v7/trick.png',grip:[983,266],feet:[[440,1088],[840,1297]],scale:.82},
+      landing:{src:'assets/comics/hero-v7/landing.png',grip:[958,268],feet:[[540,1178],[950,1314]]}
     };
     this.footAnchor=new THREE.Vector3();this.stance=new THREE.Vector3();this.deckAnchor=new THREE.Vector3();
     this.cameraRight=new THREE.Vector3();this.cameraUp=new THREE.Vector3();this.deckX=new THREE.Vector3();this.deckY=new THREE.Vector3();
     this.deckTurn=new THREE.Quaternion();this.deckBase=new THREE.Quaternion();this.deckBest=new THREE.Quaternion();
-    const files={trim:'hero-trim-rear-v2.png',left:'hero-carve-left-rear-v2.png',right:'hero-carve-right-rear-v2.png',recovery:'hero-recovery-rear-v2.png'};
-    const loader=new THREE.TextureLoader();
-    this.ready=Promise.all(Object.entries(files).map(([key,file])=>new Promise((resolve,reject)=>{
-      loader.load('assets/comics/'+file,texture=>{
-        texture.minFilter=THREE.LinearFilter;texture.magFilter=THREE.LinearFilter;texture.generateMipmaps=false;
-        texture.wrapS=texture.wrapT=THREE.ClampToEdgeWrapping;texture.repeat.set(.25,.5);this.atlases[key]=texture;resolve();
-      },undefined,()=>reject(new Error('Не удалось загрузить анимацию '+file)));
-    })));
+    this.ready=Promise.all(Object.entries(this.poseDefinitions).map(([key,definition])=>new Promise((resolve,reject)=>{
+      const image=new Image();image.onload=()=>resolve([key,image]);
+      image.onerror=()=>reject(new Error('Не удалось загрузить позу персонажа: '+key));image.src=definition.src;
+    }))).then(entries=>this.buildAtlases(Object.fromEntries(entries)));
     const card=game.player.card;
     card.geometry.dispose();card.geometry=new THREE.PlaneGeometry(this.width,this.height);
     card.material.depthWrite=false;card.renderOrder=3;
-    // Clip neighbouring torn fibres in UV space; preserve all source PNGs.
-    this.clip={value:new THREE.Vector2(0,1)};
-    card.material.onBeforeCompile=shader=>{
-      shader.uniforms.heroClip=this.clip;
-      shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vHeroLocalUv;').replace('#include <uv_vertex>','#include <uv_vertex>\nvHeroLocalUv=uv;');
-      shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vHeroLocalUv;\nuniform vec2 heroClip;').replace('#include <map_fragment>','if(vHeroLocalUv.x<heroClip.x&&vHeroLocalUv.y>heroClip.y)discard;\n#include <map_fragment>');
-    };
-    card.material.customProgramCacheKey=()=> 'hero-atlas-clean-v1';card.material.needsUpdate=true;
     const geometry=new THREE.PlaneGeometry(this.width*.09,this.height*.075);
     this.fingers=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({transparent:true,alphaTest:.25,depthWrite:false,side:THREE.DoubleSide}));
-    this.fingers.position.z=.085;this.fingers.renderOrder=6;card.add(this.fingers);
+    this.fingers.position.z=.085;this.fingers.renderOrder=6;this.fingers.visible=false;card.add(this.fingers);
     this.fingerTextures={};
     this.ready.then(()=>{for(const [key,t] of Object.entries(this.atlases)){this.fingerTextures[key]=t.clone();this.fingerTextures[key].needsUpdate=true;}this.apply('trim',0);}).catch(error=>{this.error=error;});
   }
-  reset(){this.state='trim';this.frame=0;this.clock=0;this.beginTurn(0);this.previousWeight=0;this.weightRelease=0;this.framesSeen.clear();if(this.atlases.trim)this.apply('trim',0);}
+  cleanCutout(image){
+    const canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;
+    const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);
+    const pixels=ctx.getImageData(0,0,canvas.width,canvas.height),data=pixels.data,n=canvas.width*canvas.height;
+    const labels=new Int32Array(n),queue=new Int32Array(n);let label=0,best=0,largest=0;
+    // Keep the connected person, removing detached generation debris. Cleaning
+    // alpha once at load time leaves skin, flower print and paper grain intact.
+    for(let seed=0;seed<n;seed++){
+      if(labels[seed]||data[seed*4+3]<32)continue;
+      let head=0,tail=1;queue[0]=seed;labels[seed]=++label;
+      while(head<tail){
+        const p=queue[head++],x=p%canvas.width;
+        const visit=q=>{if(q>=0&&q<n&&!labels[q]&&data[q*4+3]>=32){labels[q]=label;queue[tail++]=q;}};
+        if(x)visit(p-1);if(x<canvas.width-1)visit(p+1);visit(p-canvas.width);visit(p+canvas.width);
+      }
+      if(tail>largest){largest=tail;best=label;}
+    }
+    for(let i=0;i<n;i++)if(labels[i]!==best)data[i*4+3]=0;
+    ctx.putImageData(pixels,0,0);return canvas;
+  }
+  pose(state,frame){
+    if(state==='air')return {lean:Math.sin(frame*.8)*.09,crouch:.03+frame*.005};
+    if(state==='trick')return {lean:Math.sin(frame*.8)*.08,crouch:.04+Math.sin(frame*.45)*.025};
+    if(state==='landing')return {lean:(frame-3.5)*.012,crouch:Math.max(0,.16-frame*.023)};
+    if(state==='trim')return [
+      {lean:0,crouch:0},{lean:-.10,crouch:.23},{lean:-.16,crouch:.55},{lean:-.04,crouch:.08},
+      {lean:.13,crouch:.07},{lean:.24,crouch:.15},{lean:.04,crouch:.04},{lean:-.03,crouch:.09}
+    ][frame];
+    if(state==='recovery')return {lean:Math.sin(frame*Math.PI/4+.35)*.62,crouch:.20+Math.cos(frame*Math.PI/4)*.10};
+    const amount=[.04,.20,.38,.53,.66,.44,.18,.02][frame];
+    return {lean:amount*(state==='left'?-1:1),crouch:amount*.46};
+  }
+  deform(x,y,pose,source){
+    const feet=source?.feet||this.sourceSoles,footLockY=Math.min(...feet.map(p=>p[1]))-40;
+    const hipX=(feet[0][0]+feet[1][0])/2,hipY=footLockY-108;
+    const weight=THREE.MathUtils.clamp((footLockY-y)/120,0,1),a=pose.lean*.16;
+    const dx=x-hipX,dy=y-hipY,c=Math.cos(a),s=Math.sin(a);
+    let px=x+(dx*c-dy*s-dx+pose.lean*8)*weight;
+    const py=y+(dx*s+dy*c-dy+pose.crouch*54)*weight;
+    if(y>hipY&&y<footLockY){
+      const bend=Math.sin((y-hipY)/(footLockY-hipY)*Math.PI);
+      px+=(x<hipX?-1:1)*pose.crouch*12*bend;
+    }
+    return [px,py];
+  }
+  drawTriangle(ctx,image,source,target){
+    const [a,b,c]=source,[p,q,r]=target;
+    const det=(b[0]-a[0])*(c[1]-a[1])-(c[0]-a[0])*(b[1]-a[1]);
+    const ax=((q[0]-p[0])*(c[1]-a[1])-(r[0]-p[0])*(b[1]-a[1]))/det;
+    const bx=((r[0]-p[0])*(b[0]-a[0])-(q[0]-p[0])*(c[0]-a[0]))/det;
+    const ay=((q[1]-p[1])*(c[1]-a[1])-(r[1]-p[1])*(b[1]-a[1]))/det;
+    const by=((r[1]-p[1])*(b[0]-a[0])-(q[1]-p[1])*(c[0]-a[0]))/det;
+    ctx.save();ctx.beginPath();ctx.moveTo(...p);ctx.lineTo(...q);ctx.lineTo(...r);ctx.closePath();ctx.clip();
+    ctx.transform(ax,ay,bx,by,p[0]-ax*a[0]-bx*a[1],p[1]-ay*a[0]-by*a[1]);
+    ctx.drawImage(image,0,0,384,512);ctx.restore();
+  }
+  frameSource(state,frame){
+    if(state==='trim')return ['base','compress','compress','base','base','base','base','base'][frame];
+    if(state==='left'||state==='right')return frame>=2&&frame<=5?state:'base';
+    if(state==='recovery')return frame>=1&&frame<=6?'air':'base';
+    if(state==='landing')return frame<3?'landing':frame<6?'compress':'base';
+    return state;
+  }
+  buildAtlases(images){
+    this.poseSources={};
+    for(const [key,image] of Object.entries(images)){
+      const definition=this.poseDefinitions[key],clean=this.cleanCutout(image),canvas=document.createElement('canvas');
+      canvas.width=384;canvas.height=512;
+      // Uniform source-pixel scaling preserves anatomy even when ImageGen returns
+      // a different aspect ratio. The compact tuck is registered to the same head size.
+      const scale=Math.min(1133/image.width,1388/image.height)*(definition.scale||1);
+      const ox=(1133-image.width*scale)/2,oy=(1388-image.height*scale)/2;
+      const point=([x,y])=>[(x*scale+ox)/1133*384,(y*scale+oy)/1388*512];
+      canvas.getContext('2d').drawImage(clean,ox/1133*384,oy/1388*512,image.width*scale/1133*384,image.height*scale/1388*512);
+      this.poseSources[key]={canvas,grip:point(definition.grip),feet:definition.feet.map(point)};
+    }
+    for(const state of ['trim','left','right','recovery','air','trick','landing']){
+      const sheet=document.createElement('canvas');sheet.width=1536;sheet.height=1024;const ctx=sheet.getContext('2d');
+      const meta=this.metadata[state]={grips:[],angles:[],feet:[],keys:[]};this.soles[state]=[];
+      for(let frame=0;frame<8;frame++){
+        const key=this.frameSource(state,frame),source=this.poseSources[key],raw=this.pose(state,frame);
+        // Dedicated photographs supply the joint motion; only a small follow-through
+        // is added between exposures, with both feet excluded from the deformation.
+        const amount=key==='base'?1:.16,pose={lean:raw.lean*amount,crouch:raw.crouch*amount};
+        const grip=this.deform(...source.grip,pose,source),feet=source.feet.map(p=>this.deform(...p,pose,source));
+        meta.keys.push(key);meta.grips.push(grip);meta.angles.push(-pose.lean*.16);meta.feet.push([(feet[0][0]+feet[1][0])/2,(feet[0][1]+feet[1][1])/2]);this.soles[state].push(feet);
+        ctx.save();ctx.translate(frame%4*384,Math.floor(frame/4)*512);ctx.beginPath();ctx.rect(0,0,384,512);ctx.clip();
+        if(!pose.lean&&!pose.crouch)ctx.drawImage(source.canvas,0,0);
+        else for(let y=0;y<512;y+=16)for(let x=0;x<384;x+=16){
+          const a=[x,y],b=[x+16,y],c=[x,y+16],d=[x+16,y+16];
+          const points=[a,b,c,d].map(p=>this.deform(...p,pose,source));
+          this.drawTriangle(ctx,source.canvas,[a,b,c],[points[0],points[1],points[2]]);
+          this.drawTriangle(ctx,source.canvas,[b,d,c],[points[1],points[3],points[2]]);
+        }
+        ctx.restore();
+      }
+      const texture=new THREE.CanvasTexture(sheet);texture.minFilter=THREE.LinearFilter;texture.magFilter=THREE.LinearFilter;texture.generateMipmaps=false;
+      texture.wrapS=texture.wrapT=THREE.ClampToEdgeWrapping;texture.repeat.set(.25,.5);
+      (['air','trick','landing'].includes(state)?this.actionAtlases:this.atlases)[state]=texture;
+    }
+  }
+  reset(){this.state='trim';this.frame=0;this.clock=0;this.beginTurn(0);this.previousWeight=0;this.weightRelease=0;this.framesSeen.clear();this.sourcesSeen.clear();if(this.atlases.trim)this.apply('trim',0);}
   beginTurn(direction){this.turnDirection=direction;this.turnStage=0;this.turnClock=0;this.releasing=false;this.releaseMode=null;}
   apply(state,frame){
-    const texture=this.atlases[state];if(!texture)return;
+    const texture=this.atlases[state]||this.actionAtlases[state];if(!texture)return;
     this.state=state;this.frame=frame;this.framesSeen.add(state+':'+frame);
     texture.offset.set(frame%4/4,(1-Math.floor(frame/4))*.5);
-    this.clip.value.set(state==='recovery'&&frame===2?.065:0,.5);
     const meta=this.metadata[state],grip=meta.grips[frame],feet=this.soles[state][frame],foot=[(feet[0][0]+feet[1][0])/2,(feet[0][1]+feet[1][1])/2],card=this.game.player.card;
+    this.currentSource=meta.keys[frame];this.sourcesSeen.add(this.currentSource);
     card.material.map=texture;this.game.player.pose=state;
     this.footAnchor.set((foot[0]/384-.5)*this.width,(.5-foot[1]/512)*this.height,0);
     this.stance.set((feet[1][0]-feet[0][0])/384*this.width,(feet[0][1]-feet[1][1])/512*this.height,0);
     card.scale.set(1,1,1);
     this.placeOnBoard();
-    this.currentGrip={x:(grip[0]/384-.5)*this.width,y:(.5-grip[1]/512)*this.height};
+    this.currentGrip={x:(grip[0]/384-.5)*this.width,y:(.5-grip[1]/512)*this.height,angle:meta.angles[frame]};
     const fingers=this.fingerTextures[state];
     if(fingers){
       fingers.repeat.set(.09/4,.075/2);
@@ -97,8 +187,13 @@ class HeroAnimator {
   }
   update(dt){
     const p=this.game.p;this.clock+=dt;
-    if(p.airborne){this.beginTurn(0);this.apply('trim',2);return;}
-    if(this.game.jump.landingPulse>.15){this.beginTurn(0);this.apply('trim',this.game.jump.landingAge<.17?2:1);return;}
+    if(p.airborne){
+      this.beginTurn(0);const jump=this.game.jump;
+      if(jump.spinStarted&&!jump.spinCompleted)this.apply('trick',Math.min(7,Math.floor(jump.spinProgress*8)));
+      else this.apply('air',Math.min(7,Math.floor(jump.airTime*14)));
+      return;
+    }
+    if(this.game.jump.landingPulse>.15){this.beginTurn(0);this.apply('landing',Math.min(7,Math.floor(this.game.jump.landingAge/.04)));return;}
     if(p.recovering>0||p.fallen){this.beginTurn(0);this.apply('recovery',Math.floor(this.clock*10)%8);return;}
     if(this.game.jump.holding&&this.game.jump.charge>.1){this.beginTurn(0);this.apply('trim',this.game.jump.charge>.6?2:1);return;}
     const direction=Math.abs(p.lean)>.18?Math.sign(p.lean):0;

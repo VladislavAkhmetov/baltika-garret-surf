@@ -32,7 +32,7 @@ async function run(){
       const w=g.wave.waves[5];g.time=w.encounterTime;g.wave.time=g.time;g.p.z=(w.from+w.to)/2-36;g.p.x=g.wave.crestX(w,g.p.z)+w.width*.34;
       const z=g.p.z+26;g.ribbon.plan();const before=g.ribbon.routePoint(z),samplesBefore=[];
       for(let at=z-8;at<=z+8;at+=2)samplesBefore.push({z:at,x:g.ribbon.routePoint(at)});
-      const h=g.world.hazards.find(h=>h.type==='buoy');h.done=false;h.x=before??g.p.x;h.z=z;g.ribbon.plan();
+      const h=g.world.hazards.find(h=>h.type==='flotsam');h.done=false;h.x=before??g.p.x;h.z=z;g.ribbon.plan();
       const samples=[];for(let at=z-8;at<=z+8;at+=2)samples.push({z:at,x:g.ribbon.routePoint(at)});
       return {before,hazard:h.x,samplesBefore,samples};
     });

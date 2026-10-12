@@ -2,6 +2,8 @@
 class RivalCast {
   constructor(game){
     this.game=game;this.run=0;
+    this.viewFrustum=new THREE.Frustum();this.viewMatrix=new THREE.Matrix4();this.viewProjection=new THREE.Matrix4();
+    this.viewBounds=new THREE.Box3();this.shadowBounds=new THREE.Box3();this.viewShift=new THREE.Vector3();this.viewPoint=new THREE.Vector3();
     this.profiles=[
       {id:'grandma',file:'rival-grandma-v2.png',name:'ЛОЛА',kind:'calm',color:0xe6ddff,height:3.2,line:'КОКТЕЙЛЬ НЕ РАСПЛЕСКАЙ!',soles:[[438,1227],[829,1426]]},
       {id:'dj',file:'rival-dj-v2.png',name:'ДИЕГО',kind:'showoff',color:0xffe5ce,height:3.5,line:'ЛОВИ РИТМ!',soles:[[331,1187],[790,1396]]},
@@ -39,8 +41,41 @@ class RivalCast {
     const start=((Math.max(1,this.run)-1)%2)*2;
     this.game.rivals.forEach((r,i)=>{
       this.apply(r,this.profiles[start+i]);
-      Object.assign(r,{x:i===0?-3.5:4,z:i===0?46:84,speed:26,lean:0,airY:0,passed:false,chat:false,contactLocked:false,collided:false,yieldTime:0,yieldSide:0,nearest:Infinity});
+      Object.assign(r,{x:i===0?-3.5:4,z:i===0?46:84,speed:26,lean:0,airY:0,freeEntry:false,passed:false,chat:false,contactLocked:false,collided:false,yieldTime:0,yieldSide:0,nearest:Infinity});
     });
+  }
+  inView(r,margin=.15){
+    const g=this.game,camera=g.camera,box=this.viewBounds;
+    camera.updateMatrixWorld(true);
+    // Widen the actual camera frustum to cover roll, shake and the next frame.
+    this.viewProjection.copy(camera.projectionMatrix);
+    this.viewProjection.elements[0]/=1+margin;this.viewProjection.elements[5]/=1+margin;
+    this.viewMatrix.multiplyMatrices(this.viewProjection,camera.matrixWorldInverse);
+    this.viewFrustum.setFromProjectionMatrix(this.viewMatrix);
+    r.rig.group.updateMatrixWorld(true);r.rig.shadow.updateMatrixWorld(true);
+    box.setFromObject(r.rig.group);
+    // Physics can advance several times between rendered poses.
+    this.viewShift.set(-r.x-r.rig.group.position.x,g.wave.height(r.x,r.z)+r.airY-r.rig.group.position.y,r.z-r.rig.group.position.z);
+    box.translate(this.viewShift);
+    this.viewShift.set(-r.x-r.rig.shadow.position.x,g.wave.height(r.x,r.z)+.04-r.rig.shadow.position.y,r.z-.15-r.rig.shadow.position.z);
+    box.union(this.shadowBounds.setFromObject(r.rig.shadow).translate(this.viewShift));
+    for(let i=0;i<r.wake.length;i++){
+      const z=r.z-1-i*.65,x=r.x+Math.sin(i*2+g.time*4)*.2,radius=.4+i*.05,y=g.wave.height(x,z)+.06;
+      box.expandByPoint(this.viewPoint.set(-x-radius,y-radius,z-radius));
+      box.expandByPoint(this.viewPoint.set(-x+radius,y+radius,z+radius));
+    }
+    return this.viewFrustum.intersectsBox(box.expandByScalar(.5));
+  }
+  enterBehind(r){
+    const g=this.game;
+    r.z=Math.min(g.p.z-24,g.camera.position.z-12);
+    // Fit the entire current cast, tandem deck, shadow and wake outside the view.
+    for(let attempt=0;attempt<16;attempt++){
+      g.updateSurfer(r.rig,r.x,r.z,g.wave.height(r.x,r.z),0,0,0,Math.floor(g.time*12));
+      if(!this.inView(r))return true;
+      r.z-=8;
+    }
+    return false;
   }
   apply(r,profile){
     Object.assign(r,{id:profile.id,name:profile.name,kind:profile.kind,line:profile.line,couple:!!profile.couple});

@@ -13,7 +13,9 @@ class CrabCompanion {
       shark:['Зубы сзади!'],
       escape:['Не догонишь!'],
       dodge:['Все ноги на месте!'],
-      trick:['Неплохо, двуногий!']
+      trick:['Неплохо, двуногий!'],
+      wake:['Спасибо за волну, Борис!'],
+      home:['Вижу бар! Довези нас!']
     };
     this.card=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({transparent:true,alphaTest:.18,depthWrite:false,side:THREE.DoubleSide}));
     this.card.renderOrder=4;this.card.visible=false;game.player.group.add(this.card);
@@ -108,11 +110,12 @@ class CrabCompanion {
     const [x,y,w,h]=this.frames[name].rect;
     canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(this.image,x,y,w,h,0,0,w,h);
   }
-  showResult(success){
+  showResult(outcome){
+    const success=outcome===true||outcome==='victory',tie=outcome==='tie';
     this.draw(document.getElementById('result-crab'),success?'victory':'defeat');
     document.getElementById('result-crab').setAttribute('aria-label',success?'Клешня в солнечных очках сидит на бокале':'Расстроенный Клешня выжимает мокрую клешню');
-    document.getElementById('result-crab-line').textContent=success?'«Мы легенды!»':'«В следующий раз рулю я!»';
-    document.getElementById('result-screen').dataset.outcome=success?'victory':'defeat';
+    document.getElementById('result-crab-line').textContent=success?'«Мы легенды!»':tie?'«Ноздря в ноздрю!»':'«В следующий раз рулю я!»';
+    document.getElementById('result-screen').dataset.outcome=tie?'tie':success?'victory':'defeat';
     document.getElementById('crab-callout')?.classList.remove('visible');
   }
 }

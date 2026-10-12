@@ -8,12 +8,12 @@
 .steer-controls button.learn-control{background-color:#ffcf59;background-blend-mode:multiply}
 #jump-button.learn-control{background-color:#ffe383;scale:1.04}
 .story-error{position:absolute;left:6%;right:6%;top:80px;z-index:6;margin:0;padding:25px;color:#9a2c17;font-size:15px;line-height:1.4;text-align:center}
-@media(max-width:650px){
+@container mobile-screen (max-width:650px){
  .ride-coach{max-width:78%;padding:13px 21px}
  .ride-coach strong{font-size:13px}.ride-coach span{font-size:12px;margin-top:5px}
  .learn-control{outline-width:2px;outline-offset:3px}
 }
-@media(orientation:landscape) and (max-height:520px){
+@container mobile-screen (orientation:landscape) and (max-height:520px){
  .ride-coach{max-width:350px;padding:12px 20px}
  .ride-coach strong{font-size:13px}.ride-coach span{font-size:12px;margin-top:4px}
 }

@@ -2,13 +2,13 @@
 class TrickRoute {
   constructor(game){
     this.game=game;this.lines=[];this.completed=0;this.launches=0;
-    this.paperTexture=this.makePaperTexture();
+    this.paperTexture=game.paperToon.paper;
     this.ink=this.makeInk(0xd36c50);
-    this.edge=new THREE.MeshBasicMaterial({color:0xf6e9c9,side:THREE.DoubleSide});
+    this.edge=this.makeInk(0xf6e9c9);
     this.dark=new THREE.MeshBasicMaterial({color:0x244651});
     this.sideProps=[
       {prop:'ship',name:'ОБЛОМОК ПАЛУБЫ',length:22,width:4.2,height:2.5,forwardRise:1.2,arrows:false},
-      {prop:'umbrella',name:'ПЛЯЖНЫЙ ЗОНТ',length:20,width:4,height:2.7,forwardRise:1,arrows:false},
+      {prop:'umbrella',name:'ПЛЯЖНЫЙ ЗОНТ',length:12,width:9,height:2.7,forwardRise:1,arrows:false,dome:.65},
       {prop:'rescue',name:'СПАСАТЕЛЬНАЯ ДОСКА',length:24,width:3.6,height:2.4,forwardRise:1.4,arrows:true},
       {prop:'sign',name:'ПЛЯЖНЫЙ ЩИТ',length:19,width:4,height:2.65,forwardRise:1.1,arrows:true}
     ];
@@ -27,20 +27,8 @@ class TrickRoute {
     }));
     this.reset();
   }
-  makePaperTexture(){
-    const canvas=document.createElement('canvas');canvas.width=canvas.height=128;
-    const c=canvas.getContext('2d');c.fillStyle='#fff4d9';c.fillRect(0,0,128,128);
-    for(let y=0;y<128;y+=5)for(let x=0;x<128;x+=5){
-      c.fillStyle=(x+y)%3?'rgba(68,53,38,.055)':'rgba(255,255,255,.22)';
-      c.beginPath();c.arc(x+(y%2),y,.65,0,Math.PI*2);c.fill();
-    }
-    const texture=new THREE.CanvasTexture(canvas);texture.wrapS=texture.wrapT=THREE.RepeatWrapping;return texture;
-  }
   makeInk(color){
-    return new THREE.ShaderMaterial({side:THREE.DoubleSide,uniforms:{uInk:{value:new THREE.Color(color)},uPaper:{value:this.paperTexture}},
-      vertexShader:'varying vec3 paperNormal;varying vec2 paperUV;void main(){paperNormal=normal;paperUV=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-      fragmentShader:'uniform vec3 uInk;uniform sampler2D uPaper;varying vec3 paperNormal;varying vec2 paperUV;void main(){float light=dot(normalize(paperNormal),normalize(vec3(-.35,.9,-.2)));float band=light>.65?1.0:light>.1?.82:.62;vec3 print=texture2D(uPaper,paperUV*vec2(2.0,4.0)).rgb;gl_FragColor=vec4(uInk*band*(.86+.14*print),1.0);}'
-    });
+    return this.game.paperToon.material(color);
   }
   makeRamp(line){
     const n=16,geometry=new THREE.PlaneGeometry(line.width,line.length,line.columns,n);
@@ -60,14 +48,19 @@ class TrickRoute {
       const mesh=new THREE.Mesh(geo,this.edge);mesh.frustumCulled=false;line.group.add(mesh);return {t,mesh};
     });
     line.supports=[-1,1].map(side=>{
-      const mesh=new THREE.Mesh(new THREE.BoxGeometry(.22,1,.26),this.dark);line.group.add(mesh);return {side,mesh};
+      const mesh=new THREE.Mesh(new THREE.BoxGeometry(.22,1,.26),this.makeInk(0x244651));line.group.add(mesh);return {side,mesh};
     });
     if(line.prop==='umbrella'){
-      line.pole=new THREE.Mesh(new THREE.CylinderGeometry(.045,.055,1,6),new THREE.MeshBasicMaterial({color:0xe9d8ae}));line.group.add(line.pole);
+      line.pole=new THREE.Mesh(new THREE.CylinderGeometry(.085,.10,1,8),this.makeInk(0xe9d8ae));line.group.add(line.pole);
+      line.hub=new THREE.Mesh(new THREE.SphereGeometry(.19,10,6),this.edge);line.group.add(line.hub);
+      line.ribs=Array.from({length:8},(_,i)=>{
+        const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(9*3),3));
+        const mesh=new THREE.Line(geometry,new THREE.LineBasicMaterial({color:0xf5e8c5}));mesh.frustumCulled=false;line.group.add(mesh);return {mesh,angle:i*Math.PI/4};
+      });
     }
   }
   makePropMaterial(line){
-    const canvas=document.createElement('canvas');canvas.width=256;canvas.height=1024;const c=canvas.getContext('2d');
+    const canvas=document.createElement('canvas');canvas.width=256;canvas.height=line.prop==='umbrella'?256:1024;const c=canvas.getContext('2d');
     if(line.prop==='ship'){
       c.fillStyle='#8d5b37';c.fillRect(0,0,256,1024);
       for(let plank=0;plank<6;plank++){
@@ -78,14 +71,14 @@ class TrickRoute {
       }
       c.fillStyle='#ddd2ae';c.fillRect(0,82,256,18);c.fillRect(0,912,256,18);
     }else if(line.prop==='umbrella'){
-      c.fillStyle='#f2dfb4';c.fillRect(0,0,256,1024);
+      c.fillStyle='#f2dfb4';c.fillRect(0,0,256,256);
       const colors=['#e77853','#f4e4bc','#45a39f','#f4e4bc','#e77853','#f4e4bc','#45a39f','#f4e4bc'];
       for(let i=0;i<8;i++){
-        const a=i*Math.PI/4,b=(i+1)*Math.PI/4;c.fillStyle=colors[i];c.beginPath();c.moveTo(128,512);
-        c.lineTo(128+Math.cos(a)*180,512+Math.sin(a)*730);c.lineTo(128+Math.cos(b)*180,512+Math.sin(b)*730);c.closePath();c.fill();
-        c.strokeStyle='#d9cda6';c.lineWidth=3;c.beginPath();c.moveTo(128,512);c.lineTo(128+Math.cos(a)*180,512+Math.sin(a)*730);c.stroke();
+        const a=i*Math.PI/4,b=(i+1)*Math.PI/4;c.fillStyle=colors[i];c.beginPath();c.moveTo(128,128);
+        c.arc(128,128,190,a,b);c.closePath();c.fill();
+        c.strokeStyle='#d9cda6';c.lineWidth=2;c.beginPath();c.moveTo(128,128);c.lineTo(128+Math.cos(a)*180,128+Math.sin(a)*180);c.stroke();
       }
-      c.fillStyle='#f5ebcf';c.beginPath();c.arc(128,512,12,0,Math.PI*2);c.fill();
+      c.fillStyle='#f5ebcf';c.beginPath();c.arc(128,128,5,0,Math.PI*2);c.fill();
     }else if(line.prop==='rescue'){
       c.fillStyle='#da7944';c.fillRect(0,0,256,1024);c.fillStyle='#f3deaf';c.fillRect(12,0,18,1024);c.fillRect(226,0,18,1024);
       c.fillRect(75,170,106,32);c.fillRect(112,132,32,108);
@@ -98,7 +91,7 @@ class TrickRoute {
     // Printed wear belongs to the prop, not a photographic background plate.
     for(let y=0;y<1024;y+=13)for(let x=0;x<256;x+=11){c.fillStyle=(x+y)%3?'rgba(255,244,216,.12)':'rgba(55,45,29,.10)';c.fillRect(x,y,2,3);}
     const texture=new THREE.CanvasTexture(canvas);texture.anisotropy=Math.min(4,this.game.renderer.capabilities.getMaxAnisotropy());
-    return new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide});
+    return this.game.paperToon.material(0xffffff,{map:texture});
   }
   reset(){
     this.completed=this.launches=0;this.riding=null;this.route=[];
@@ -115,8 +108,9 @@ class TrickRoute {
       if(line.finale){line.z=1110;line.x=0;line.length=14;line.height=3.1;}
       // Choose a clear footprint once. Ramps do not slide sideways with a changing recommendation.
       for(const h of this.game.world.hazards){
-        if(line.type==='side'||h.type!=='buoy'||Math.abs(h.initialZ-line.z)>line.length+8)continue;
-        if(Math.abs(h.initialX-line.x)<line.width/2+1.8)line.x=THREE.MathUtils.clamp(h.initialX+(h.initialX>0?-1:1)*(line.width/2+2.1),-6.2,6.2);
+        if(line.type==='side'||h.type!=='flotsam'||Math.abs(h.initialZ-line.z)>line.length+8)continue;
+        const clearance=(h.collisionRadius??1)+.9;
+        if(Math.abs(h.initialX-line.x)<line.width/2+clearance)line.x=THREE.MathUtils.clamp(h.initialX+(h.initialX>0?-1:1)*(line.width/2+clearance+.3),-6.2,6.2);
       }
       if(line.type==='side'){
         line.side=-line.edgeSide;
@@ -136,7 +130,7 @@ class TrickRoute {
   }
   widthAt(line,t){
     const edge=Math.min(1,Math.max(0,Math.min(t,1-t))*6);
-    if(line.prop==='umbrella')return line.width*(.45+.55*edge);
+    if(line.prop==='umbrella')return line.width*Math.sqrt(Math.max(.0004,1-(2*t-1)**2));
     if(line.prop==='rescue')return line.width*(.6+.4*edge);
     if(line.prop==='ship')return line.width*(.94+.06*Math.cos(Math.round(t*16)*1.7));
     return line.width;
@@ -144,7 +138,8 @@ class TrickRoute {
   rise(line,t,across){
     if(line.type!=='side')return line.height*t*t;
     const q=across*line.edgeSide/line.width+.5;
-    return line.height*q+line.forwardRise*t;
+    const dome=line.dome?line.dome*Math.max(0,1-(2*across/line.width)**2-(2*t-1)**2):0;
+    return line.height*q+line.forwardRise*t+dome;
   }
   point(line,t,across=0){
     const along=(t-.5)*line.length;
@@ -165,7 +160,12 @@ class TrickRoute {
   }
   surface(line,x,z){
     const local=this.local(line,x,z),s=this.game.wave.sample(x,z),height=s.height+.12+this.rise(line,local.t,local.across);
-    if(line.type==='side')return {...s,height:this.point(line,local.t,local.across).y,dx:line.edgeSide*line.height/line.width,dz:line.forwardRise/line.length,ramp:line};
+    if(line.type==='side'){
+      const domed=line.dome&&(2*local.across/line.width)**2+(2*local.t-1)**2<1;
+      return {...s,height:this.point(line,local.t,local.across).y,
+        dx:line.edgeSide*line.height/line.width-(domed?8*line.dome*local.across/line.width**2:0),
+        dz:line.forwardRise/line.length-(domed?8*line.dome*(local.t-.5)/line.length:0),ramp:line};
+    }
     const rise=2*line.height*local.t/line.length;
     return {...s,height,dx:s.dx+rise*line.fx,dz:s.dz+rise*line.fz,ramp:line};
   }
@@ -185,9 +185,12 @@ class TrickRoute {
     }
     const line=this.riding;if(!line)return surface;
     const at=this.local(line,p.x,p.z);
-    if(at.t<0||at.t>1.04||Math.abs(at.across)>this.widthAt(line,at.t)/2+.1){this.riding=null;line.stage=0;return surface;}
+    // A round canopy narrows after its centre. Crossing that forward rim is
+    // the takeoff, even when the rider has not reached the outer side lip.
+    const canopyLip=line.prop==='umbrella'&&at.t>.55&&at.t<=1.04&&Math.abs(at.across)>=this.widthAt(line,at.t)/2-.12;
+    if(at.t<0||at.t>1.04||!canopyLip&&Math.abs(at.across)>this.widthAt(line,at.t)/2+.1){this.riding=null;line.stage=0;return surface;}
     const rampSurface=this.surface(line,p.x,p.z);
-    const atLip=line.type==='side'?at.q>=.91||at.t>=.96:at.t>=.94;
+    const atLip=canopyLip||(line.type==='side'?at.q>=.91||at.t>=.96:at.t>=.94);
     const popZone=line.type==='side'?at.q>.45:at.t>.35;
     if(atLip||(g.jump.requested&&popZone)){
       const pop=g.jump.requested;g.jump.requested=false;
@@ -209,8 +212,8 @@ class TrickRoute {
     }
   }
   hazardsAt(z){
-    return this.game.world.hazards.filter(h=>h.type==='buoy'&&Math.abs(h.initialZ-z)<10)
-      .map(h=>({x:h.initialX,z:h.initialZ,radius:2.5}));
+    return this.game.world.hazards.filter(h=>h.type==='flotsam'&&Math.abs(h.initialZ-z)<10)
+      .map(h=>({x:h.initialX,z:h.initialZ,radius:(h.collisionRadius??1)+1.5}));
   }
   maneuverAt(z){
     return this.lines.find(line=>{
@@ -296,7 +299,9 @@ class TrickRoute {
       const pos=line.top.geometry.attributes.position,cols=line.columns;
       for(let row=0;row<=n;row++)for(let col=0;col<=cols;col++){
         const point=this.point(line,row/n,(col/cols-.5)*this.widthAt(line,row/n));pos.setXYZ(row*(cols+1)+col,-point.x,point.y,point.z);
+        if(line.prop==='umbrella')line.top.geometry.attributes.uv.setXY(row*(cols+1)+col,.5+(col/cols-.5)*this.widthAt(line,row/n)/line.width,1-row/n);
       }
+      if(line.prop==='umbrella')line.top.geometry.attributes.uv.needsUpdate=true;
       pos.needsUpdate=true;line.top.geometry.computeVertexNormals();
       const skirt=line.skirt.geometry.attributes.position,outline=line.outline.geometry.attributes.position;let si=0,oi=0;
       const vertex=(attr,index,q,down=0)=>attr.setXYZ(index,-q.x,q.y-down,q.z);
@@ -313,6 +318,7 @@ class TrickRoute {
         vertex(outline,oi++,a);vertex(outline,oi++,b);
       }
       line.outline.geometry.setDrawRange(0,oi);skirt.needsUpdate=outline.needsUpdate=true;
+      line.skirt.geometry.computeVertexNormals();
       for(const arrow of line.arrows){
         const vertices=arrow.mesh.geometry.attributes.position;
         const points=[[-1.25,-.06],[0,.055],[0,.02],[-1.25,-.06],[0,.02],[-1.25,-.025],
@@ -320,7 +326,7 @@ class TrickRoute {
         points.forEach(([across,along],i)=>{
           const face=line.type==='side'?line.edgeSide*(line.width*.25+across*.32):across;
           const q=this.point(line,arrow.t+along,face);vertices.setXYZ(i,-q.x,q.y+.028,q.z);
-        });vertices.needsUpdate=true;
+        });vertices.needsUpdate=true;arrow.mesh.geometry.computeVertexNormals();
       }
       for(const {side,mesh} of line.supports){
         const q=this.point(line,line.type==='side'?(side<0?.18:.82):.86,line.type==='side'?line.edgeSide*(line.width/2+.1):side*(line.width/2-.25));
@@ -328,9 +334,18 @@ class TrickRoute {
         mesh.visible=line.prop!=='umbrella';
       }
       if(line.pole){
-        const face=this.point(line,.5,0),foot=this.point(line,.32,-line.edgeSide*line.width*.75);
-        const a=new THREE.Vector3(-face.x,face.y-.04,face.z),b=new THREE.Vector3(-foot.x,g.wave.height(foot.x,foot.z)-.15,foot.z),delta=a.clone().sub(b);
+        const face=this.point(line,.5,0),foot=this.point(line,-.18,-line.edgeSide*line.width*.25);
+        const a=new THREE.Vector3(-face.x,face.y-.04,face.z),b=new THREE.Vector3(-foot.x,g.wave.height(foot.x,foot.z)+.12,foot.z),delta=a.clone().sub(b);
         line.pole.position.copy(a).add(b).multiplyScalar(.5);line.pole.scale.y=delta.length();line.pole.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());
+        line.hub.position.set(-face.x,face.y+.12,face.z);
+        for(const {mesh,angle} of line.ribs){
+          const vertices=mesh.geometry.attributes.position;
+          for(let i=0;i<9;i++){
+            const radius=i/8,q=this.point(line,.5+Math.sin(angle)*radius*.5,Math.cos(angle)*radius*line.width/2);
+            vertices.setXYZ(i,-q.x,q.y+.04,q.z);
+          }
+          vertices.needsUpdate=true;
+        }
       }
     }
   }

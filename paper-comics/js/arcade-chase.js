@@ -1,4 +1,5 @@
-/* Whitewater returns after a mistake; its visible front is the actual contact line. */
+/* Whitewater pursues mistakes and sustained slow cruising. The visible front
+   always moves at its own speed and is the actual contact line. */
 class FoamChase {
   constructor(game){
     this.game=game;
@@ -38,6 +39,7 @@ class FoamChase {
     this.gap=Infinity;this.pocketTime=this.pocket2Time=this.wipes=this.chases=0;this.done=new Set();
     this.phase='idle';this.pursuit=false;this.age=this.cleanTime=this.rush=this.cooldown=this.strikes=this.escapes=0;
     this.lastMistake=-100;this.inWipe=false;
+    this.slowTime=0;this.paceChases=0;this.reason=null;
     this.game.wave.peelFront=null;
     this.spray.forEach(s=>{s.life=0;s.mesh.visible=false;});
     this.frontMesh.visible=this.crestFroth.visible=false;
@@ -72,13 +74,31 @@ class FoamChase {
     return w.height>=2.3&&g.onboarding.completed.has('wave')&&p.z>180&&w.to-p.z>15&&gap>1.1&&gap<65&&!this.done.has(w.id);
   }
   startIntro(){this.begin(this.game.wave.waves[0],{pursuit:true,intro:true});}
+  get paceSpeed(){return this.game.assist?28:31;}
+  nearbyWave(){
+    const g=this.game,p=g.p;
+    return g.wave.field(p.x,p.z).wave||g.wave.waves.reduce((a,b)=>Math.abs((a.from+a.to)/2-p.z)<Math.abs((b.from+b.to)/2-p.z)?a:b);
+  }
+  stepPace(dt){
+    const g=this.game,p=g.p;
+    // Protect the opening, recovery and the authored quiet approach to the bar.
+    if(g.flowTest||g.state!=='playing'||g.elapsed<6||p.z<180||p.z>1145||p.fallen||p.recovering>0||g.balance.immunity>0){this.slowTime=0;return;}
+    if(this.active||this.cooldown>0){this.slowTime=0;return;}
+    const wake=g.world.wakeQualityAt(p.x,p.z);
+    const powered=g.waveRide.caught||g.trickRoute.riding||wake>.3||g.rush.padBoost>1||p.airborne&&g.jump.takeoffRamp;
+    const slow=p.speed*Math.cos(p.heading)<this.paceSpeed-.5;
+    this.slowTime=slow&&!powered?this.slowTime+dt:Math.max(0,this.slowTime-dt*3);
+    if(this.slowTime<4)return;
+    this.begin(this.nearbyWave(),{pursuit:true,reason:'pace'});this.paceChases++;this.slowTime=0;
+    g.hint('МАЛО СКОРОСТИ · ПЕНА ДОГОНЯЕТ! ЛОВИ ВОЛНУ',2.4);
+  }
   onMistake(amount){
     const g=this.game;
     if(amount<.02||this.inWipe||g.p.fallen||g.state!=='playing'||g.time-this.lastMistake<.65||g.setpiece?.enabled&&g.p.z>1145)return;
     if(this.active&&this.phase==='intro'){this.end('intro');this.cooldown=0;}
     if(!this.active){
       if(this.cooldown>0)return;
-      this.begin(g.wave.field(g.p.x,g.p.z).wave||g.wave.waves.reduce((a,b)=>Math.abs((a.from+a.to)/2-g.p.z)<Math.abs((b.from+b.to)/2-g.p.z)?a:b),{pursuit:true});
+      this.begin(this.nearbyWave(),{pursuit:true});
       g.hint('ПЕНА ЗА СПИНОЙ · ЛОВИ ВОЛНУ И ДЕРЖИ КУРС',2.4);
     }else if(this.pursuit){
       this.strikes++;this.rush=Math.min(3,this.rush+1.6);this.cleanTime=0;
@@ -88,8 +108,8 @@ class FoamChase {
     this.lastMistake=g.time;
   }
   onTrick(name){
-    if(!this.active||!this.pursuit||this.phase==='intro')return;
-    if(['ПОЙМАЛ ВОЛНУ','ПЕРЕХОД','ВЫРУЛИЛ','ВПРИТЫК!','НАД БУЕМ!','РАЗОШЛИСЬ'].includes(name))this.cleanTime+=.7;
+    if(!this.active||!this.pursuit||this.phase==='intro'||this.reason==='pace')return;
+    if(['ПОЙМАЛ ВОЛНУ','ПЕРЕХОД','ВЫРУЛИЛ','ВПРИТЫК!','НАД ПРЕДМЕТОМ!','РАЗОШЛИСЬ'].includes(name))this.cleanTime+=.7;
     if(['360°','КОСОЙ 360°','ПЕРЕВОРОТ!','ПРЯМОЙ ВЫЛЕТ','БОКОВОЙ ПЕРЕЛЁТ','МЯГКАЯ ПОСАДКА'].includes(name))this.cleanTime+=1.6;
   }
   begin(w,options={}){
@@ -97,8 +117,9 @@ class FoamChase {
     const front=g.wave.frontAt(w);
     this.active=true;this.wave=w;this.z=front.z;this.gap=p.z-this.z;this.speed=front.speed;this.offWave=this.rideScore=0;
     this.pursuit=!!options.pursuit;this.phase=options.intro?'intro':this.pursuit?'warning':'chasing';
+    this.reason=options.intro?'intro':options.reason||'mistake';
     this.age=this.cleanTime=this.rush=0;this.strikes=options.intro?0:1;this.level=0;
-    if(this.pursuit){this.z=p.z-(options.intro?10:24);this.gap=p.z-this.z;this.speed=options.intro?18:20;}
+    if(this.pursuit){this.z=p.z-(options.intro?10:this.reason==='pace'?32:24);this.gap=p.z-this.z;this.speed=options.intro?18:20;}
     if(!options.intro)this.chases++;
   }
   end(reason){
@@ -110,7 +131,7 @@ class FoamChase {
       g.awardTrick('КАРМАН',Math.round((100+this.rideScore*45)/10)*10);
     }
     this.cooldown=reason==='wipe'?3.5:reason==='fall'?2.5:reason==='escape'?1.5:reason==='intro'?.35:0;
-    this.active=false;this.wave=null;this.level=0;this.phase='idle';this.gap=Infinity;g.wave.peelFront=null;
+    this.active=false;this.wave=null;this.level=0;this.phase='idle';this.gap=Infinity;this.slowTime=0;this.reason=null;g.wave.peelFront=null;
     this.frontMesh.visible=this.crestFroth.visible=false;
   }
   wipe(){
@@ -124,6 +145,7 @@ class FoamChase {
   step(dt){
     const g=this.game,p=g.p,s=g.wave.field(p.x,p.z);
     this.cooldown=Math.max(0,this.cooldown-dt);
+    this.stepPace(dt);
     if(!this.active)return;
     if(this.pursuit){this.stepPursuit(dt);return;}
     const onWave=s.wave?.id===this.wave.id&&s.face<1||p.airborne&&p.z<this.wave.to+10;
@@ -156,10 +178,11 @@ class FoamChase {
       if(this.age>=1.4){this.end('intro');return;}
     }else{
       this.phase=this.age<.9?'warning':'chasing';
-      this.speed=this.phase==='warning'?20:(g.assist?26:29)+(this.rush>0?7:0);
+      const cruise=this.reason==='pace'?this.paceSpeed:(g.assist?26:29);
+      this.speed=this.phase==='warning'?20:cruise+(this.rush>0?7:0);
       this.z+=this.speed*dt;this.gap=p.z-this.z;
-      if(this.phase==='chasing'&&p.recovering===0&&p.balance<.65&&g.time-this.lastMistake>.9)this.cleanTime+=dt;
-      if(this.gap>38||this.age>1.7&&this.cleanTime>=4.6){this.end('escape');return;}
+      if(this.reason!=='pace'&&this.phase==='chasing'&&p.recovering===0&&p.balance<.65&&g.time-this.lastMistake>.9)this.cleanTime+=dt;
+      if(this.gap>38||this.reason!=='pace'&&this.age>1.7&&this.cleanTime>=4.6){this.end('escape');return;}
       this.level=this.phase==='warning'||p.airborne?0:this.gap<5.5?2:this.gap<11?1:0;
       if(this.level){
         this.pocketTime+=dt;if(this.level===2)this.pocket2Time+=dt;

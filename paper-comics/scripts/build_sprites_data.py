@@ -29,7 +29,8 @@ sprites = [
     'seagull_2.png',
     'ref_foam_crest.png',
     'ref_left_steps.png',
-    'ref_flat_water.png'
+    'ref_flat_water.png',
+    'seaplane_garret.png'
 ]
 
 lines = ['window.SPRITE_ASSETS = {']

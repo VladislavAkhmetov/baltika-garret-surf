@@ -24,10 +24,11 @@ async function run(){
       const profile=w.faceProfile.bind(w),epsilon=.00001;
       const joinSlopeError=Math.abs((profile(.1)-profile(.1-epsilon))/epsilon-(profile(.1+epsilon)-profile(.1))/epsilon);
       const sizes=w.waves.map(v=>({height:v.height,width:v.width,speedX:v.velocityX,speedZ:v.velocityZ}));
-      // The introductory face is deliberately long and follows the opening route.
-      // Density and oblique-crest checks apply to the generated wave train after it.
-      const centers=w.waves.slice(1).map(v=>(v.anchorFrom+v.anchorTo)/2);
-      const crestTangents=w.waves.slice(1).map(v=>{const z=(v.anchorFrom+v.anchorTo)/2;return (w.crestX(v,z+1)-w.crestX(v,z-1))/2;});
+      // The opening and final faces are authored to follow their routes.
+      // Density and oblique-crest checks apply to the generated train between them.
+      const generated=w.waves.slice(1,-1);
+      const centers=generated.map(v=>(v.anchorFrom+v.anchorTo)/2);
+      const crestTangents=generated.map(v=>{const z=(v.anchorFrom+v.anchorTo)/2;return (w.crestX(v,z+1)-w.crestX(v,z-1))/2;});
       const maxGap=Math.max(...centers.slice(1).map((z,i)=>z-centers[i]));
       const visiblePeaks=centers.filter(z=>z>790&&z<990).length;
       w.resetWaves(42);const deterministic=JSON.stringify(sizes)===JSON.stringify(w.waves.map(v=>({height:v.height,width:v.width,speedX:v.velocityX,speedZ:v.velocityZ})));
@@ -86,7 +87,7 @@ async function run(){
     assert.equal(ride.freezeDrift,0,'comic freeze cannot make the camera creep towards the surfer');
     assert.ok(ride.jumped&&ride.spin&&ride.landings>=1&&ride.tricks>=1,'tap jump and optional trick work during an actual moving-wave ride, with additional ramp landings allowed');
     assert.ok(ride.minTop>=0&&ride.maxBottom<=1.03&&ride.maxX<1.05,'surfer remains framed during steering and a high jump: '+JSON.stringify([ride.minTop,ride.maxBottom,ride.maxX]));
-    assert.equal(ride.delivered,960);assert.equal(ride.duplicated,0,'delivery reward is applied only once');
+    assert.equal(ride.delivered,4000);assert.equal(ride.duplicated,0,'delivery reward is applied only once');
     // Render successive real simulation frames with the same damped camera.
     await page.evaluate(()=>{
       const g=game;g.reset();g.wave.resetWaves(42);g.journey.hideAll();document.getElementById('result-screen').classList.add('hidden');g.container.classList.add('playing');g.state='paused';g.input.mode='touch';g.onboarding.completed=new Set(['steer','wave','jump','landing','balance']);g.jump.tricks=1;
