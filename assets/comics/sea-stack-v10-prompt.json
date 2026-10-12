@@ -1,0 +1,6 @@
+{
+  "asset": "sea-stack-v10.png",
+  "tool": "image_gen",
+  "transparent_background": true,
+  "prompt": "Use case: stylized-concept. Asset type: transparent game scenery cutout, single isolated Mediterranean sea-stack cliff cluster for a mobile surfing game. A tall craggy limestone sea stack with a lower rocky shoulder, warm cream ochre sunlit face, dark navy charcoal shadow face, tiny sparse green scrub at its top. Single connected asymmetrical rocky silhouette, tall left summit and lower right shoulder. Entire object in frame with generous fully transparent margins and TRANSPARENT background. Low view from water level, slightly looking up, three-quarter perspective. Physical handmade editorial photocollage, ripped ivory paper edge, photographic stone fragments, coarse blue halftone print in shadow, tactile paper fibers. Warm sun from upper right. Rich contrast, simple strong readable masses at small size. Flat bottom where it meets water. Absolutely NO sea, water, foam, sky, ground plane, text, letters, border, watermark, frame, people or buildings. One cutout only, no sprite sheet. Output actual transparent alpha."
+}

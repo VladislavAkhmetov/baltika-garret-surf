@@ -1,11 +1,9 @@
 {
-  "rewrites": [
-    { "source": "/", "destination": "/paper-comics/index.html" },
-    { "source": "/paper-comics", "destination": "/paper-comics/index.html" },
-    { "source": "/paper-comics/", "destination": "/paper-comics/index.html" }
-  ],
   "redirects": [
+    { "source": "/", "destination": "/paper-comics/index.html", "permanent": false },
     { "source": "/index.html", "destination": "/paper-comics/index.html", "permanent": false },
+    { "source": "/paper-comics", "destination": "/paper-comics/index.html", "permanent": false },
+    { "source": "/paper-comics/", "destination": "/paper-comics/index.html", "permanent": false },
     { "source": "/paper-comics/index", "destination": "/paper-comics/index.html", "permanent": false },
     { "source": "/prototype.html", "destination": "/paper-comics/index.html", "permanent": false },
     { "source": "/paper", "destination": "/paper-comics/index.html", "permanent": false },
@@ -18,5 +16,11 @@
     { "source": "/papet/index", "destination": "/paper-comics/index.html", "permanent": false },
     { "source": "/papet/index.html", "destination": "/paper-comics/index.html", "permanent": false },
     { "source": "/papet/:match*", "destination": "/paper-comics/:match*", "permanent": false }
+  ],
+  "rewrites": [
+    { "source": "/assets/:match*", "destination": "/paper-comics/assets/:match*" },
+    { "source": "/css/:match*", "destination": "/paper-comics/css/:match*" },
+    { "source": "/js/:match*", "destination": "/paper-comics/js/:match*" },
+    { "source": "/libs/:match*", "destination": "/paper-comics/libs/:match*" }
   ]
 }
