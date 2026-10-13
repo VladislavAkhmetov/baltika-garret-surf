@@ -10,6 +10,7 @@
 .menu-title span{display:block}
 .menu-hero{position:absolute;height:82%;max-width:50%;right:8%;bottom:8%;object-fit:contain;pointer-events:none;filter:drop-shadow(3px 7px 4px #6f60471a)}
 .menu-play{position:absolute;left:12%;bottom:23%;width:29%;max-width:350px;z-index:25;touch-action:manipulation;cursor:pointer;pointer-events:auto}
+.boot-status{position:absolute;left:8%;right:8%;bottom:calc(max(22px,env(safe-area-inset-bottom) + 12px) + 72px);z-index:26;margin:0;padding:8px;background:#f1e7d0;text-align:center;font:500 13px/1.4 Rubik,Arial,sans-serif}
 .menu-back{position:absolute;top:max(20px,env(safe-area-inset-top));left:4%;width:48px;height:48px;z-index:3;background:none;font-size:32px;line-height:1;color:#193b44}
 .selection-choices{display:grid;grid-template-columns:1fr 1fr;gap:9%;flex:1;min-height:0;width:82%;max-width:1050px;margin:70px auto 0;align-items:center}
 .selection-choice{display:grid;grid-template-rows:minmax(0,1fr) 60px;align-items:center;min-height:0;height:100%;max-height:640px}

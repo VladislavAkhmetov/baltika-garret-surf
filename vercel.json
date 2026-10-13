@@ -1,4 +1,7 @@
 {
+  "buildCommand": "npm run build",
+  "outputDirectory": ".",
+  "framework": null,
   "redirects": [
     { "source": "/", "destination": "/paper-comics/index.html", "permanent": false },
     { "source": "/index.html", "destination": "/paper-comics/index.html", "permanent": false },

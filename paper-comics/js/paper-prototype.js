@@ -11,8 +11,8 @@ class PaperSurfGame {
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.Fog(0xc7d7c9, 100, 225);
     this.camera = new THREE.PerspectiveCamera(58, 1, .15, 1800);
-    this.renderer = new THREE.WebGLRenderer({canvas:document.getElementById('surf-canvas'), antialias:true, alpha:true, powerPreference:'high-performance'});
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.75));
+    this.renderer = new THREE.WebGLRenderer({canvas:document.getElementById('surf-canvas'), antialias:!this.input.mobile, alpha:true, powerPreference:'high-performance'});
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, this.input.mobile?1.25:1.75));
     this.renderer.setClearColor(0, 0);
     this.paperToon=new PaperToonMaterials(this);
     this.scene.add(new THREE.AmbientLight(0xfbf0d5, .9));
@@ -338,7 +338,11 @@ class PaperSurfGame {
       if(this.flowTest)calibrate=false;
       const needsCalibration=this.input.preferredMode==='gyro'&&(calibrate||this.input.mode!=='gyro');
       if(needsCalibration)button.textContent='ЗАПОМИНАЕМ НАКЛОН…';
-      await Promise.all([this.audio.ready,this.heroAnimator.ready,this.handBeer.ready,this.rivalCast.ready,this.comics.ready,this.world.ready,this.coastReady,this.wave.ready,this.companion.ready,this.rush.ready,this.courseShow.ready,this.demo.ready,this.duel.ready,this.skyAdvertiser.ready,needsCalibration?this.input.calibrate():Promise.resolve()]);
+      const assets=Promise.all([this.heroAnimator.ready,this.handBeer.ready,this.rivalCast.ready,this.comics.ready,this.world.ready,this.coastReady,this.wave.ready,this.companion.ready,this.rush.ready,this.courseShow.ready,this.demo.ready,this.duel.ready,this.skyAdvertiser.ready,needsCalibration?this.input.calibrate():Promise.resolve()]);
+      let loadTimer;
+      try {
+        await Promise.race([assets,new Promise((_,reject)=>{loadTimer=setTimeout(()=>reject(Error('Загрузка игры заняла слишком много времени')),45000);})]);
+      } finally {clearTimeout(loadTimer);}
       this.rivalCast.run++;
       this.reset();this.state='playing';this.container.classList.add('playing');
       this.journey?.hideAll();
@@ -346,7 +350,7 @@ class PaperSurfGame {
       document.getElementById('touch-guide').classList.remove('visible');document.getElementById('share-screen').classList.add('hidden');this.updateHUD();
       if(this.meta.challenge)this.hint('ВЫЗОВ: ПОБЕЙ '+this.meta.challenge.toLocaleString('ru-RU'),3.5);
       this.audio.startBGM();
-    } catch(error){console.error(error);this.journey?.showError('Не удалось загрузить изображения. Проверь соединение и попробуй ещё раз.');} finally {this.starting=false;const button=document.getElementById('start-button');button.disabled=false;button.textContent='ИГРАТЬ';}
+    } catch(error){console.error(error);this.journey?.showError('Игра не загрузилась. Проверь соединение и нажми «Повторить», чтобы загрузить её заново.');} finally {this.starting=false;const button=document.getElementById('start-button');button.disabled=false;button.textContent='ИГРАТЬ';}
   }
   pause() {
     if(this.state!=='playing')return;this.state='paused';this.input.reset();this.jump.cancel();this.audio.stopBGM();this.audio.stopJetski?.();
@@ -851,6 +855,7 @@ function initPaperSurf() {
   if (window.game) return;
   try {
     window.game = new PaperSurfGame();
+    window.__surfBootReady?.();
     if (window.__queuedStart) {
       const mode = window.__queuedStart;
       window.__queuedStart = null;
@@ -867,8 +872,9 @@ function initPaperSurf() {
     }
   }
   catch(error) {
+    if(window.__surfBootFailed)window.__surfBootFailed('init');
     const err = document.getElementById('error-screen');
-    if (err) {
+    if (err && !window.__surfBootFailed) {
       err.classList.remove('hidden');
       err.textContent = 'Ошибка инициализации: ' + (error && error.message ? error.message : error);
     }

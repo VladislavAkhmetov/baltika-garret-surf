@@ -1,5 +1,7 @@
 {
   "scripts": {
+    "build": "node scripts/build-game.cjs",
+    "test:startup": "node scripts/test-startup.cjs",
     "dev": "node scripts/serve.js",
     "test:serve": "node scripts/test-serve.cjs",
     "test:audio": "node paper-comics/scripts/test_audio.cjs",

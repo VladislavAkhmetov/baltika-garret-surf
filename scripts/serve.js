@@ -5,13 +5,16 @@ const root = path.resolve(__dirname, '..');
 const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.webp':'image/webp','.gif':'image/gif','.svg':'image/svg+xml','.json':'application/json','.mp3':'audio/mpeg','.wav':'audio/wav'};
 
 function createServer() {
+  require('./build-game.cjs').buildGame();
   return http.createServer((req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') {res.writeHead(405);res.end();return;}
     let pathname, url;
     try {url = new URL(req.url, 'http://localhost');pathname = decodeURIComponent(url.pathname);}
     catch (_) {res.writeHead(400);res.end();return;}
     // Keep the document and its relative CSS, scripts and assets in the same directory.
-    if (pathname === '/' || pathname === '/index.html' || /^\/(paper|papet|paper-comics)(\/index(\.html)?)?\/?$/.test(pathname)) {
+    if (pathname === '/' || pathname === '/index.html' ||
+        /^\/(paper|papet)(\/index(\.html)?)?\/?$/.test(pathname) ||
+        pathname === '/paper-comics' || pathname === '/paper-comics/index') {
       res.writeHead(302, {'Location':'/paper-comics/index.html' + url.search, 'Cache-Control':'no-cache'});
       res.end();return;
     }

@@ -79,20 +79,39 @@
       <button id="start-button" class="yellow-button menu-play" data-primary>ИГРАТЬ</button>
       <button id="quick-button" class="text-button menu-quick">БЫСТРЫЙ ЗАЕЗД ↗</button>
       <p id="daily-label" class="menu-daily"></p>
+      <p id="boot-status" class="boot-status" role="status" hidden></p>
       <script>
         (function(){
+          var failed=false,timer=null;
+          var status=document.getElementById('boot-status');
+          var s=document.getElementById('start-button'),q=document.getElementById('quick-button');
+          function restore(){
+            s.disabled=false;s.textContent='ИГРАТЬ';delete s.dataset.pending;
+            q.disabled=false;q.textContent='БЫСТРЫЙ ЗАЕЗД ↗';delete q.dataset.pending;
+          }
+          window.__surfBootFailed=function(reason){
+            if(window.game)return;
+            clearTimeout(timer);failed=true;window.__queuedStart=null;restore();
+            s.textContent='ПОВТОРИТЬ ЗАГРУЗКУ';status.hidden=false;
+            status.textContent=reason==='init'?'Не удалось запустить игру. Нажми, чтобы попробовать снова.':'Игра не загрузилась. Проверь соединение и повтори загрузку.';
+          };
+          window.__surfBootReady=function(){clearTimeout(timer);failed=false;status.hidden=true;restore();};
+          function watch(){
+            if(timer!==null)return;
+            timer=setTimeout(function(){window.__surfBootFailed('timeout');},30000);
+          }
           function act(quick){
             if(window.game){
-              if(quick||window.FLOW_TEST_MODE)window.game.start(true);
-              else if(window.game.journey)window.game.journey.open('setup');
-              else window.game.start(false);
+              return; // The game's UI owns taps once initialization finishes.
+            }else if(failed){
+              location.reload();
             }else{
               window.__queuedStart=quick?'quick':'play';
               var b=document.getElementById(quick?'quick-button':'start-button');
               if(b&&!b.dataset.pending){b.dataset.pending='1';b.textContent='ЗАГРУЗКА…';}
+              status.hidden=false;status.textContent='Загружаем игру…';watch();
             }
           }
-          var s=document.getElementById('start-button'),q=document.getElementById('quick-button');
           if(s){
             s.addEventListener('pointerup',function(e){if(e.pointerType!=='mouse')act(false);});
             s.addEventListener('click',function(){act(false);});
@@ -101,6 +120,9 @@
             q.addEventListener('pointerup',function(e){if(e.pointerType!=='mouse')act(true);});
             q.addEventListener('click',function(){act(true);});
           }
+          window.addEventListener('error',function(e){
+            if(e.filename&&e.filename.indexOf('game-bundle.js')!==-1)window.__surfBootFailed('init');
+          });
         })();
       </script>
     </section>
@@ -145,45 +167,6 @@
     <div id="error-screen" class="error-screen hidden" role="alert">Для игры нужен браузер с WebGL. Попробуй открыть её в Chrome, Edge или Safari.</div>
   </main>
   </div>
-  <script src="libs/three.min.js"></script>
-  <script src="js/sprites-data.js"></script>
-  <script src="js/config.js"></script>
-  <script src="js/mug.js"></script>
-  <script src="js/audio.js"></script>
-  <script src="js/comics-course.js"></script>
-  <script src="js/wave-ribbon.js"></script>
-  <script src="js/flow-test.js"></script>
-  <script src="js/drive-test.js"></script>
-  <script src="js/paper-wave.js"></script>
-  <script src="js/paper-toon.js"></script>
-  <script src="js/wave-ride.js"></script>
-  <script src="js/hero-animation.js?v=hero-poses-v7"></script>
-  <script src="js/crab-companion.js"></script>
-  <script src="js/hand-beer.js?v=hero-poses-v7"></script>
-  <script src="js/floating-props.js"></script>
-  <script src="js/comics-world.js"></script>
-  <script src="js/surf-jump.js"></script>
-  <script src="js/surf-balance.js"></script>
-  <script src="js/surf-onboarding.js"></script>
-  <script src="js/surf-journey.js"></script>
-  <script src="js/arcade-chase.js"></script>
-  <script src="js/arcade-score.js"></script>
-  <script src="js/arcade-juice.js"></script>
-  <script src="js/arcade-meta.js"></script>
-  <script src="js/run-comic.js"></script>
-  <script src="js/arcade-route.js"></script>
-  <script src="js/speed-blur.js"></script>
-  <script src="js/rival-cast.js"></script>
-    <script src="js/surf-race.js"></script>
-    <script src="js/surf-rush.js"></script>
-    <script src="js/surf-setpiece.js"></script>
-    <script src="js/surf-beats.js"></script>
-  <script src="js/surf-controls.js"></script>
-  <script src="js/course-show.js"></script>
-  <script src="js/dolphin-pod.js?v=paper-dolphins-v3"></script>
-  <script src="js/demo-setpieces.js?v=paper-dolphins-v3"></script>
-  <script src="js/beer-duel.js"></script>
-  <script src="js/sky-advertiser.js?v=sky-flight-v2"></script>
-  <script src="js/paper-prototype.js?v=sky-flight-v2"></script>
+  <script defer src="js/game-bundle.js" onerror="window.__surfBootFailed('network')"></script>
 </body>
 </html>

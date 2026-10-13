@@ -5,6 +5,7 @@ const root = path.resolve(__dirname, '..');
 const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.webp':'image/webp','.gif':'image/gif','.svg':'image/svg+xml','.json':'application/json','.mp3':'audio/mpeg','.wav':'audio/wav'};
 
 function createServer() {
+  require('../../scripts/build-game.cjs').buildGame();
   return http.createServer((req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') {res.writeHead(405);res.end();return;}
     let pathname;
