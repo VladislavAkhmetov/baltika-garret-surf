@@ -2,11 +2,12 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="refresh" content="0; url=/paper-comics/index.html">
+  <meta http-equiv="refresh" content="0; url=paper-comics/index.html">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GARRET — Ни капли! / Бумажные комиксы</title>
   <script>
-    window.location.replace('/paper-comics/index.html' + window.location.search);
+    var path = window.location.pathname.replace(/\/index\.html?$/, '').replace(/\/$/, '');
+    window.location.replace(path + '/paper-comics/index.html' + window.location.search);
   </script>
   <style>
     body { background: #103f58; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
@@ -14,6 +15,6 @@
   </style>
 </head>
 <body>
-  <p><a href="/paper-comics/index.html">Перейти к игре "Ни капли!" →</a></p>
+  <p><a href="paper-comics/index.html">Перейти к игре "Ни капли!" →</a></p>
 </body>
 </html>
