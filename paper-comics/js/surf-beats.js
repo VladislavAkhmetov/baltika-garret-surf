@@ -46,13 +46,12 @@ class SurfBeats {
     const markers=[-1,1].map(side=>{
       const mesh=new THREE.Mesh(rampBarrier?new THREE.SphereGeometry(.34,10,6):new THREE.ConeGeometry(.42,.9,6),this.flagMaterials[index%2]);g.scene.add(mesh);return {side,mesh};
     });
-    const sign=rampBarrier?null:g.sprite(g.label('ПРЫЖОК ↑','#b75d37',256,64),3.4,.85);
     const floats=Array.from({length:rampBarrier?18:10},(_,i)=>{
       const mesh=new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,rampBarrier?.48:.59,8),i%2?this.poleMaterial:this.flagMaterials[0]);
       mesh.rotation.z=Math.PI/2;mesh.visible=false;g.scene.add(mesh);return mesh;
     });
-    band.visible=false;if(sign)sign.visible=false;markers.forEach(m=>m.mesh.visible=false);
-    return {z,index,band,markers,sign,floats,rampBarrier,halfWidth:3.1};
+    band.visible=false;markers.forEach(m=>m.mesh.visible=false);
+    return {z,index,band,markers,floats,rampBarrier,halfWidth:3.1};
   }
   reset(){
     const g=this.game;this.enabled=!g.flowTest;this.events=[];this.passed=this.slaloms=this.cleared=this.hits=0;
@@ -69,7 +68,7 @@ class SurfBeats {
     }
     for(const r of this.ropes){
       if(r.ramp){r.z=r.ramp.exit.z+3;r.x=r.ramp.x;}else r.x=THREE.MathUtils.clamp(g.trickRoute.routePoint(r.z),-5,5);
-      r.done=false;r.result=null;r.band.visible=false;if(r.sign)r.sign.visible=false;
+      r.done=false;r.result=null;r.band.visible=false;
       r.markers.forEach(m=>m.mesh.visible=false);r.floats.forEach(m=>m.visible=false);
     }
     for(const f of this.flocks){f.at=null;f.done=false;f.x=THREE.MathUtils.clamp(g.trickRoute.routePoint(f.z),-5,5);f.birds.forEach(b=>b.visible=false);}
@@ -132,7 +131,7 @@ class SurfBeats {
         else if(p.airY>=.95){r.result='jump';this.cleared++;g.awardTrick('НАД КАНАТОМ!',180);
           g.juice.pop('ОП!',p.x,p.y+1.5,p.z,'near');g.juice.buzz(14);g.rush.splash(.4);}
         else{r.result='hit';this.hits++;
-          if(g.impactCooldown===0){g.spill(.025,'ЗАДЕЛ КАНАТ');p.speed*=.9;g.impactCooldown=.8;g.emit(18,.8,true);g.juice.hitstop(.04);}}
+          if(g.impactCooldown===0){g.spill(.025,'ЗАДЕЛ КАНАТ',true);p.speed*=.9;g.impactCooldown=.8;g.emit(18,.8,true);g.juice.hitstop(.04);}}
         this.log('rope',{index:r.index,result:r.result});
       }else if(p.z>r.z+3){r.done=true;r.result='miss';}
     }
@@ -164,7 +163,7 @@ class SurfBeats {
     }
     for(const r of this.ropes){
       const visible=this.enabled&&(r.rampBarrier?!r.ramp.disabled:!r.done)&&r.z-p.z>(r.rampBarrier?-8:-3)&&r.z-p.z<85;
-      r.band.visible=visible;if(r.sign)r.sign.visible=visible;r.markers.forEach(m=>m.mesh.visible=visible);
+      r.band.visible=visible;r.markers.forEach(m=>m.mesh.visible=visible);
       r.floats.forEach(m=>m.visible=visible);
       if(!visible)continue;
       const pos=r.band.geometry.attributes.position;
@@ -182,7 +181,6 @@ class SurfBeats {
         mesh.position.set(-x,g.wave.height(x,r.z)+(r.rampBarrier?.22:.43),r.z);
         mesh.rotation.z=Math.PI/2+Math.atan((g.wave.height(x+.2,r.z)-g.wave.height(x-.2,r.z))/.4);
       });
-      if(r.sign)r.sign.position.set(-r.x,g.wave.height(r.x,r.z)+2.1,r.z);
     }
     for(const f of this.flocks){
       const age=f.at===null?-1:g.time-f.at;

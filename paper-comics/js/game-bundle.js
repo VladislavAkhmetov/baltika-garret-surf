@@ -856,6 +856,7 @@ class SurfAudio {
     try { this.isMuted = localStorage.getItem('garret-paper-muted') === 'true'; } catch (_) {}
     this.bgmPlaying = false;
     this.masterGain = null;
+    this.sceneGain = null;
     this.sfxGain = null;
     this.ambientGain = null;
     this.bgmGain = null;
@@ -865,7 +866,12 @@ class SurfAudio {
     this.soundTimes = new Map();
     this.crowdVoice = null;
     this.crowdTimes = new Map();
+    this.flightCrowdNames = ['crowd_awe','crowd_awe_2','crowd_awe_3'];
+    this.flightCrowdBag = [];
+    this.lastFlightCrowd = null;
     this.musicDuckUntil = 0;
+    this.rampFlight = false;
+    this.acceleratorVoice = null;
     this.ready = Promise.resolve();
     
     // HTML5 BGM Audio element
@@ -903,8 +909,12 @@ class SurfAudio {
       seagull_1: 'seagull_1.wav',
       seagull_2: 'seagull_2.wav',
       seagull_distant: 'seagull_distant.wav',
-      crowd_applause: 'crowd_applause.wav',
-      crowd_awe: 'crowd_awe.wav',
+      crowd_applause: 'crowd_applause_female.wav',
+      crowd_applause_big: 'crowd_cheer_female.wav',
+      crowd_awe: 'crowd_flight_happy.wav',
+      crowd_awe_2: 'crowd_flight_group.wav',
+      crowd_awe_3: 'crowd_flight_bonus.wav',
+      crowd_shark_hit: 'crowd_awe.wav',
       jetski_loop: 'jetski_loop.wav',
       surf_wipeout: 'surf_wipeout.wav',
       landing_clean: 'landing_clean.wav',
@@ -929,18 +939,23 @@ class SurfAudio {
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.85, this.ctx.currentTime);
       this.masterGain.connect(this.ctx.destination);
+
+      // Spectators bypass this bus, so a ramp flight can soften the entire world.
+      this.sceneGain = this.ctx.createGain();
+      this.sceneGain.gain.setValueAtTime(1, this.ctx.currentTime);
+      this.sceneGain.connect(this.masterGain);
       
       this.sfxGain = this.ctx.createGain();
       this.sfxGain.gain.setValueAtTime(0.94, this.ctx.currentTime);
-      this.sfxGain.connect(this.masterGain);
+      this.sfxGain.connect(this.sceneGain);
       
       this.ambientGain = this.ctx.createGain();
       this.ambientGain.gain.setValueAtTime(0, this.ctx.currentTime);
-      this.ambientGain.connect(this.masterGain);
+      this.ambientGain.connect(this.sceneGain);
       
       this.bgmGain = this.ctx.createGain();
       this.bgmGain.gain.setValueAtTime(0.35, this.ctx.currentTime);
-      this.bgmGain.connect(this.masterGain);
+      this.bgmGain.connect(this.sceneGain);
 
       this.crowdGain = this.ctx.createGain();
       this.crowdGain.gain.setValueAtTime(0.55, this.ctx.currentTime);
@@ -1110,6 +1125,7 @@ class SurfAudio {
       nodes.forEach(node => node.disconnect());
       this.oneShots.delete(voice);
       if (this.crowdVoice === voice) this.crowdVoice = null;
+      if (this.acceleratorVoice === voice) this.acceleratorVoice = null;
     };
     return voice;
   }
@@ -1120,6 +1136,7 @@ class SurfAudio {
     }
     this.oneShots.clear();
     this.crowdVoice = null;
+    this.acceleratorVoice = null;
   }
 
   resetRide() {
@@ -1129,6 +1146,7 @@ class SurfAudio {
     this.soundTimes.clear();
     this.crowdTimes.clear();
     this.musicDuckUntil = this.seagullTimer = 0;
+    this.endRampFlight(true);
     this.nextSeagullTime = 6 + Math.random() * 8;
     if (this.ctx && this.bgmGain) {
       this.bgmGain.gain.cancelScheduledValues(this.ctx.currentTime);
@@ -1144,6 +1162,24 @@ class SurfAudio {
     this.bgmGain.gain.cancelScheduledValues(this.ctx.currentTime);
     this.bgmGain.gain.setTargetAtTime(0.20, this.ctx.currentTime, 0.025);
     this.bgmGain.gain.setTargetAtTime(0.35, this.musicDuckUntil, 0.18);
+  }
+
+  beginRampFlight() {
+    this.rampFlight = true;
+    if (!this.ctx || !this.sceneGain) return;
+    const t = this.ctx.currentTime;
+    this.sceneGain.gain.cancelScheduledValues(t);
+    this.sceneGain.gain.setTargetAtTime(0.48, t, 0.045);
+  }
+
+  endRampFlight(immediate = false) {
+    const active = this.rampFlight;
+    this.rampFlight = false;
+    if (!this.ctx || !this.sceneGain || (!active && !immediate)) return;
+    const t = this.ctx.currentTime;
+    this.sceneGain.gain.cancelScheduledValues(t);
+    if (immediate) this.sceneGain.gain.setValueAtTime(1, t);
+    else this.sceneGain.gain.setTargetAtTime(1, t + 0.18, 0.22);
   }
 
   // --- Dynamic Background Music ---
@@ -1193,6 +1229,7 @@ class SurfAudio {
   stopBGM() {
     this.bgmPlaying = false;
     this.rideActive = false;
+    this.endRampFlight(true);
     this.stopOneShots();
     this.stopJetski();
     if (this.ambientGain) this.ambientGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.04);
@@ -1263,8 +1300,12 @@ class SurfAudio {
     this.waveGain.gain.setTargetAtTime(targetGain, t, 0.12);
   }
 
-  updateRide({speed = 0, lean = 0, energy = 0, airborne = false, fallen = false, foamPressure = 0} = {}) {
+  updateRide({speed = 0, lean = 0, energy = 0, airborne = false, fallen = false, foamPressure = 0, padTime = 0, padStrength = 0, rampFlight = false} = {}) {
     if (!this.ctx || !this.rideActive) return;
+    // Pause/resume and an interrupted landing also restore the correct mix.
+    if (rampFlight && !fallen) {if (!this.rampFlight) this.beginRampFlight();}
+    else if (this.rampFlight) this.endRampFlight();
+    this.updateAccelerator(fallen ? 0 : padTime, padStrength, speed);
     const t = this.ctx.currentTime, pace = Math.max(0, Math.min(1.5, speed / 32));
     const turn = Math.min(1, Math.abs(lean)), swell = Math.max(0, Math.min(1, energy));
     this.updateWave(pace, fallen, foamPressure, swell);
@@ -1290,7 +1331,7 @@ class SurfAudio {
     if(!this.ctx||this.isMuted||!this.bgmPlaying||distance>=42){this.stopRivalMusic();return;}
     if(!this.rivalMusicGain){
       this.rivalMusicGain=this.ctx.createGain();this.rivalMusicGain.gain.value=0;
-      this.rivalMusicPan=this.ctx.createStereoPanner();this.rivalMusicGain.connect(this.rivalMusicPan);this.rivalMusicPan.connect(this.masterGain);
+      this.rivalMusicPan=this.ctx.createStereoPanner();this.rivalMusicGain.connect(this.rivalMusicPan);this.rivalMusicPan.connect(this.sceneGain);
     }
     const t=this.ctx.currentTime,volume=.17*(1-distance/42)**2;
     this.rivalMusicGain.gain.setTargetAtTime(volume,t,.08);this.rivalMusicPan.pan.setTargetAtTime(Math.max(-1,Math.min(1,pan)),t,.08);
@@ -1322,7 +1363,7 @@ class SurfAudio {
   // --- Dynamic Jetski Motor Engine ---
 
   updateJetski(distance, wakeQuality = 0, lateralOffset = 0) {
-    if (!this.ctx || this.isMuted) return;
+    if (!this.ctx || this.isMuted || !this.rideActive) return;
     
     if (distance < 45) {
       if (!this.jetskiSource && this.buffers['jetski_loop']) {
@@ -1380,28 +1421,44 @@ class SurfAudio {
 
   // --- A single short crowd voice per reaction; applause can follow a gasp. ---
 
-  playCrowdReaction(name, {volume, duration, cooldown}) {
+  playCrowdReaction(name, {volume, duration, cooldown, replace = false, replaceFade = 0.10, filterFreq = 5200, group = name}) {
     if (!this.ctx || this.isMuted) return null;
     const t = this.ctx.currentTime;
-    if (t - (this.crowdTimes.get(name) ?? -Infinity) < cooldown) return null;
-    // A landing replaces the flight gasp, so spectators never stack over the splash.
+    if (t - (this.crowdTimes.get(group) ?? -Infinity) < cooldown) return null;
+    // Crossfade replaced reactions so the crowd does not get cut off at touchdown.
     if (this.crowdVoice && this.crowdVoice.endsAt > t) {
-      if (name === 'crowd_awe') return null;
+      if (group === 'flight' && !replace) return null;
       const previous = this.crowdVoice;
       previous.gain.gain.cancelScheduledValues(t);
-      previous.gain.gain.setTargetAtTime(0, t, 0.025);
-      previous.source.stop(t + 0.10);
+      previous.gain.gain.setTargetAtTime(0, t, replaceFade / 4);
+      previous.source.stop(t + replaceFade);
     }
-    const voice = this.playSound(name, {volume, duration, output:this.crowdGain, fadeIn:0.035, fadeOut:0.35, filterFreq:5200});
+    const voice = this.playSound(name, {volume, duration, output:this.crowdGain, fadeIn:0.035, fadeOut:0.35, filterFreq});
     if (voice) {
       this.crowdVoice = voice;
-      this.crowdTimes.set(name, t);
+      this.crowdTimes.set(group, t);
     }
     return voice;
   }
 
-  playCrowdAwe() {
-    return this.playCrowdReaction('crowd_awe', {volume:0.42, duration:1.35, cooldown:3.5});
+  playCrowdAwe(ramp = false) {
+    if (!this.ctx || this.isMuted) return null;
+    if (!this.flightCrowdBag.length) {
+      const bag=this.flightCrowdNames.filter(name=>this.buffers[name]);
+      for(let i=bag.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]];}
+      if(bag.length>1&&bag[0]===this.lastFlightCrowd)[bag[0],bag[1]]=[bag[1],bag[0]];
+      this.flightCrowdBag=bag;
+    }
+    const name=this.flightCrowdBag[0];if(!name)return null;
+    if(name===this.lastFlightCrowd){this.flightCrowdBag=[];return null;}
+    const voice=this.playCrowdReaction(name, {volume:ramp ? 0.76 : 0.64, duration:ramp ? 1.8 : 1.5, cooldown:ramp ? 0 : 3.5, replace:ramp, filterFreq:6000, group:'flight'});
+    if(voice){this.lastFlightCrowd=name;this.flightCrowdBag.shift();}
+    return voice;
+  }
+
+  playCrowdSharkHit() {
+    // Disappointment replaces any celebration only after an actual shark hit.
+    return this.playCrowdReaction('crowd_shark_hit', {volume:0.50, duration:1.4, cooldown:1.5, replace:true});
   }
 
   playCrowdCheer(huge = false) {
@@ -1412,8 +1469,9 @@ class SurfAudio {
     this.playCrowdCheer(false);
   }
 
-  playCrowdApplause(special = false) {
-    return this.playCrowdReaction('crowd_applause', {volume:special ? 0.50 : 0.38, duration:special ? 2.1 : 1.6, cooldown:3.5});
+  playCrowdApplause(special = false, ramp = false) {
+    const sound=special?'crowd_applause_big':'crowd_applause';
+    return this.playCrowdReaction(sound, {volume:special || ramp ? 0.55 : 0.43, duration:special ? 2.1 : ramp ? 1.9 : 1.6, cooldown:ramp ? 0 : 3.5, replaceFade:ramp ? 0.72 : 0.10, filterFreq:8000});
   }
 
   playTrickTriumph(volume = 0.85) {
@@ -1424,6 +1482,24 @@ class SurfAudio {
   playFanfareWin() {
     if (!this.ctx || this.isMuted) return;
     this.playSound('fanfare_win', { volume: 0.55, rate: 1.0 });
+  }
+
+  playStartHorn() {
+    if (!this.ctx || this.isMuted || !this.sfxGain) return;
+    const ctx=this.ctx,t=ctx.currentTime,duration=.88,filter=ctx.createBiquadFilter(),envelope=ctx.createGain();
+    filter.type='lowpass';filter.frequency.setValueAtTime(1800,t);filter.Q.setValueAtTime(.7,t);
+    envelope.gain.setValueAtTime(.0001,t);envelope.gain.linearRampToValueAtTime(.62,t+.055);
+    envelope.gain.setValueAtTime(.62,t+.58);envelope.gain.exponentialRampToValueAtTime(.001,t+duration);
+    filter.connect(envelope);envelope.connect(this.sfxGain);
+    const partials=[{frequency:233.08,type:'sawtooth',level:.34},{frequency:466.16,type:'sawtooth',level:.17},{frequency:699.23,type:'square',level:.08}];
+    const nodes=[filter,envelope];let first=null;
+    for(const partial of partials){
+      const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type=partial.type;
+      osc.frequency.setValueAtTime(partial.frequency*.94,t);osc.frequency.exponentialRampToValueAtTime(partial.frequency,t+.08);
+      gain.gain.setValueAtTime(partial.level,t);osc.connect(gain);gain.connect(filter);osc.start(t);osc.stop(t+duration);
+      nodes.push(osc,gain);if(!first)first=osc;
+    }
+    this.duckMusic(.8);this.trackSource(first,nodes,{gain:envelope,filter,endsAt:t+duration});
   }
 
   // --- Gameplay SFX ---
@@ -1504,6 +1580,24 @@ class SurfAudio {
     this.playSound('spill_scratch', { volume: 0.32, rate: 1.0, cooldown:0.65 });
   }
 
+  playImpact(strength = .7) {
+    if (!this.ctx || this.isMuted) return;
+    const t=this.ctx.currentTime;
+    if(t-(this.soundTimes.get('obstacle_impact')??-Infinity)<.18)return;
+    this.soundTimes.set('obstacle_impact',t);
+    strength=Math.max(0,Math.min(1,strength));
+    this.duckMusic(.25);
+    // The landing plop supplies the body; a short, dark attack sounds like wet wood.
+    this.playWaterPlop(strength,false);
+    this.playSound('landing_hard',{volume:.38+strength*.18,rate:.82,duration:.24,filterFreq:900,fadeIn:.003,fadeOut:.16});
+    const osc=this.ctx.createOscillator(),gain=this.ctx.createGain(),filter=this.ctx.createBiquadFilter();
+    osc.type='triangle';osc.frequency.setValueAtTime(240,t);osc.frequency.exponentialRampToValueAtTime(95,t+.075);
+    filter.type='lowpass';filter.frequency.setValueAtTime(750,t);
+    gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(.12+strength*.1,t+.003);gain.gain.exponentialRampToValueAtTime(.001,t+.105);
+    osc.connect(filter);filter.connect(gain);gain.connect(this.sfxGain);osc.start(t);osc.stop(t+.12);
+    this.trackSource(osc,[osc,filter,gain]);
+  }
+
   playSlam() {
     if (!this.ctx || this.isMuted) return;
     this.playLanding(false, 0.7);
@@ -1512,6 +1606,46 @@ class SurfAudio {
   playRush() {
     if (!this.ctx || this.isMuted) return;
     this.playSound('surf_carve_deep', { volume: 0.9, rate: 1.15 });
+  }
+
+  playAccelerator(strength = 12) {
+    if (!this.ctx || this.isMuted) return;
+    this.stopAccelerator();
+    this.duckMusic(0.45);
+    // A quick rising, rounded tick marks contact before the sustained whoosh.
+    const t=this.ctx.currentTime,osc=this.ctx.createOscillator(),gain=this.ctx.createGain();
+    osc.type='triangle';osc.frequency.setValueAtTime(170,t);
+    osc.frequency.exponentialRampToValueAtTime(480,t+.075);
+    osc.frequency.exponentialRampToValueAtTime(220,t+.16);
+    gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(.22,t+.008);
+    gain.gain.exponentialRampToValueAtTime(.001,t+.18);
+    osc.connect(gain);gain.connect(this.sfxGain);osc.start(t);osc.stop(t+.19);
+    this.trackSource(osc,[osc,gain]);
+    this.updateAccelerator(1, strength, 24);
+  }
+
+  updateAccelerator(time = 0, strength = 0, speed = 0) {
+    if (!this.ctx || this.isMuted || time <= 0) {this.stopAccelerator();return;}
+    if (!this.acceleratorVoice) {
+      const voice=this.playSound('water_motion',{loop:true,volume:0,filterFreq:700});
+      if (!voice) return;
+      voice.filter.type='bandpass';voice.filter.Q.setValueAtTime(.55,this.ctx.currentTime);
+      this.acceleratorVoice=voice;
+    }
+    const voice=this.acceleratorVoice,t=this.ctx.currentTime;
+    const pace=Math.max(0,Math.min(1,(speed-20)/26)),power=Math.max(.3,Math.min(1,strength/12));
+    const tail=Math.min(1,time/.3);
+    voice.gain.gain.setTargetAtTime((.26+.18*power)*tail,t,.065);
+    voice.filter.frequency.setTargetAtTime(1100+pace*2800,t,.18);
+    voice.source.playbackRate.setTargetAtTime(1+pace*.55,t,.14);
+  }
+
+  stopAccelerator() {
+    const voice=this.acceleratorVoice;if (!voice || !this.ctx) return;
+    this.acceleratorVoice=null;
+    const t=this.ctx.currentTime;
+    voice.gain.gain.cancelScheduledValues(t);voice.gain.gain.setTargetAtTime(0,t,.025);
+    try {voice.source.stop(t+.12);} catch (_) {}
   }
 }
 
@@ -2943,9 +3077,12 @@ class CrabCompanion {
   showResult(outcome){
     const success=outcome===true||outcome==='victory',tie=outcome==='tie';
     this.draw(document.getElementById('result-crab'),success?'victory':'defeat');
-    document.getElementById('result-crab').setAttribute('aria-label',success?'Клешня в солнечных очках сидит на бокале':'Расстроенный Клешня выжимает мокрую клешню');
+    document.getElementById('result-crab').setAttribute('aria-label',success?'Клешня на финише с кубком':'Клешня на финише');
     document.getElementById('result-crab-line').textContent=success?'«Мы легенды!»':tie?'«Ноздря в ноздрю!»':'«В следующий раз рулю я!»';
-    document.getElementById('result-screen').dataset.outcome=tie?'tie':success?'victory':'defeat';
+    const screen=document.getElementById('result-screen'),art=document.getElementById('result-art');
+    screen.dataset.outcome=tie?'tie':success?'victory':'defeat';
+    document.getElementById('result-trophy').classList.toggle('hidden',!success);
+    art.setAttribute('aria-label',success?'Клешня мчится на доске и поднимает кубок':tie?'Клешня поймала волну у самого финиша':'Клешня несётся к финишу на доске');
     document.getElementById('crab-callout')?.classList.remove('visible');
   }
 }
@@ -3297,7 +3434,7 @@ class ComicsWorld {
     if(Math.abs(gap)<1.8&&Math.abs(p.x-h.x)<1.15&&p.airY>=.95){if(!h.airDodge)g.runComic.capture('shark','ХАП!','АКУЛА ОСТАЛАСЬ БЕЗ УЖИНА',95);h.airDodge=true;}
     if((age>3&&gap>36)||gap< -6||(h.attackAt!==null&&g.time-h.attackAt>3.2)){this.endChase(h,true);return;}
     if(Math.abs(gap)<1.8&&Math.abs(p.x-h.x)<1.15&&p.airY<.95&&g.impactCooldown===0){
-      h.hit=true;g.spill(.13,'АКУЛА ЗАДЕЛА');p.speed*=.65;g.balance.disturb(.34,'АКУЛА ЗАДЕЛА');g.impactCooldown=2;g.emit(25,1.3);this.endChase(h);return;
+      h.hit=true;g.spill(.13,'АКУЛА ЗАДЕЛА',true);p.speed*=.65;g.audio?.playCrowdSharkHit();g.balance.disturb(.34,'АКУЛА ЗАДЕЛА');g.impactCooldown=2;g.emit(25,1.3);this.endChase(h);return;
     }
   }
   threat(){
@@ -3344,7 +3481,7 @@ class ComicsWorld {
       const radius=h.collisionRadius??(h.type==='jetski'?1.3:1),depth=h.collisionDepth??1.8,clearance=h.jumpClearance??1;
       if(!h.hit&&Math.abs(ahead)<depth&&Math.abs(h.x-p.x)<radius&&p.airY<clearance&&g.impactCooldown===0){
         const cause=h.cause||(h.type==='shark'?'АКУЛА ЗАДЕЛА':'УДАР ОБ АКВАБАЙК');
-        h.hit=true;g.spill(h.type==='shark'?.13:.10,cause);
+        h.hit=true;g.spill(h.type==='shark'?.13:.10,cause,true);
         p.speed*=.65;g.balance.disturb(.34,cause);g.impactCooldown=2;g.emit(25,1.3);
         g.juice.hitstop(.08);g.juice.pop('БАМ!',p.x,p.y+2,p.z,'bad');g.runComic.capture('hit','БАМ!',h.type==='jetski'?'ПРИВЕТ ОТ БОРИСА':h.cause,45);
       }
@@ -3522,7 +3659,7 @@ class SurfJump {
     this.trickKind=this.canSpecial?'flip':this.takeoffRamp?.type==='side'?'cork':'spin';this.spinStarted=true;this.spinRequest=0;
     this.spinDirection=this.trickKind==='flip'?-1:this.game.p.lean<0?-1:1;
     this.spinDuration=this.trickKind==='flip'?.86:this.game.assist?THREE.MathUtils.clamp(this.flightRemaining*.72,.20,.62):.68;
-    this.game.audio?.playSpin(this.spinDirection);this.game.audio?.playCrowdAwe();
+    this.game.audio?.playSpin(this.spinDirection);this.game.audio?.playCrowdAwe(!!this.takeoffRamp);
   }
   release(){}
   launchRamp(line,surface,pop=false){
@@ -3537,7 +3674,7 @@ class SurfJump {
     this.launchStrength=THREE.MathUtils.clamp((p.jumpVelocity-7)/7.8,0,1);this.landingPulse=0;
     p.airborne=true;p.takeoffHeight=surface.height;p.y=surface.height+.06;p.airY=.06;p.crouch=.7;
     g.trailPoints=[];this.jumps++;g.heroAnimator.beginTurn(0);g.emit(18,.85,true);
-    g.audio.playJump(this.launchStrength);g.juice.punch(2.8);g.juice.buzz(18);
+    g.audio.beginRampFlight();g.audio.playJump(this.launchStrength);g.juice.punch(2.8);g.juice.buzz(18);
     this.updateButton();
   }
   step(dt,surface){
@@ -3590,9 +3727,10 @@ class SurfJump {
         // Routine landings are assisted; choosing a late trick is the real risk.
         const clean=THREE.MathUtils.clamp(1-Math.abs(p.pitch)*.26-Math.abs(p.lean-p.smoothLean)*.35-Math.abs(p.heading)*.10-(unfinished?.72:0),0,1);
         g.handBeer.impact(clean);g.emit(22+Math.round(impact*18),.9+impact*.65,true);g.landingSplash?.(impact);p.crouch=.85;
+        if(this.takeoffRamp)g.audio?.endRampFlight();
         if(g.audio)g.audio.playLanding(clean>.72,impact);
         if(clean>.72){
-          if(this.spinCompleted||this.takeoffRamp)g.audio?.playCrowdApplause(this.spinCompleted&&this.trickKind==='flip');
+          if(this.spinCompleted)g.audio?.playCrowdApplause(this.trickKind==='flip',!!this.takeoffRamp);
           if(!this.spinCompleted){g.juice.punch(1.4);g.juice.buzz(16);}
           if(g.assist)g.balance.immunity=Math.max(g.balance.immunity,.65);
           this.cleanLandings++;
@@ -3815,7 +3953,7 @@ class SurfJourney {
       ]},
       {label:'Макс против Бориса: два стакана и один финиш',panels:[
         {id:'boris',alt:'Лысый Борис на красном аквабайке соревнуется с Максом на сёрфе',speaker:'Борис',line:'У бара буду\nпервым!',sound:'ВЖУ-УХ!'},
-        {id:'shark',alt:'Макс с бокалом и Клешня на хвосте доски уходят от акулы',speaker:'Клешня',line:'ЗУБЫ\nСЗАДИ!'},
+        {id:'shark',alt:'Клешня на хвосте синей доски убегает от акулы с раскрытой пастью; сёрфер вне кадра',speaker:'Клешня',line:'ЗУБЫ\nСЗАДИ!',embeddedDialogue:true},
         {id:'cup',alt:'На стойке бара ждёт кубок победителю гонки; сохранённое пиво принесёт бонус к очкам',speaker:'Тони',line:'Сохрани пиво —\nполучишь бонус!'}
       ]}
     ];
@@ -3877,7 +4015,6 @@ class SurfJourney {
     }
     const available=this.heroes[this.heroIndex].available&&this.locations[this.locationIndex].available,b=document.getElementById('setup-next');b.disabled=!available;b.textContent=available?'ПРОДОЛЖИТЬ':'ЗАКРЫТО';
     const assist=document.getElementById('assist-toggle');assist.textContent='Сложность: '+(this.game.assist?'обычная':'высокая');assist.setAttribute('aria-pressed',!this.game.assist);assist.setAttribute('aria-label','Сложность: '+(this.game.assist?'обычная. Включить высокую':'высокая. Включить обычную'));
-    document.querySelector('.pause-balance-help').classList.toggle('hidden',this.game.assist);
   }
   hideAll(){this.screens.forEach(name=>document.getElementById(name+'-screen').classList.add('hidden'));}
   open(name){
@@ -3890,23 +4027,23 @@ class SurfJourney {
     if(name==='setup'){this.renderSelection();this.prefetchPage(0);}
     (document.querySelector('#'+name+'-screen [data-primary]')||document.querySelector('#'+name+'-screen button'))?.focus({preventScroll:true});
   }
-  home(){this.game.audio.stopBGM();this.game.reset();this.game.renderMenuMeta();['pause-screen','result-screen','share-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));this.open('start');}
+  home(){this.game.audio.stopBGM();this.game.reset();this.game.renderMenuMeta();['pause-screen','result-screen','share-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));this.open('start');this.game.audio.startBGM();}
   loadComicImage(id){
     if(this.comicImages.has(id))return this.comicImages.get(id);
+    const version=id==='shark'?'v5':'v4';
     const image=new Image();image.decoding='async';
     const ready=new Promise((resolve,reject)=>{
       let fallbackTried=false;
-      image.onload=()=>resolve(image);
+      image.onload=()=>image.decode().then(()=>resolve(image),()=>image.onerror());
       image.onerror=()=>{
         if(!fallbackTried){
           fallbackTried=true;
-          image.src='assets/comics/comic-'+id+'-v4.png';
+          image.src='assets/comics/comic-'+id+'-'+version+'.png';
         } else {
           reject(Error('Не удалось загрузить кадр комикса'));
         }
       };
-      image.src='assets/comics/comic-'+id+'-v4.webp';
-      if(image.complete && image.naturalWidth>0)resolve(image);
+      image.src='assets/comics/comic-'+id+'-'+version+'.webp';
     });
     this.comicImages.set(id,ready);
     ready.catch(()=>{if(this.comicImages.get(id)===ready)this.comicImages.delete(id);});
@@ -3921,7 +4058,7 @@ class SurfJourney {
     if(this.page+1<this.story.length)this.prefetchPage(this.page+1);
     const ready=s.panels.map(p=>{
       const panel=document.createElement('figure');panel.className='comic-panel comic-'+p.id;
-      const bubble=document.createElement('p');bubble.className='comic-bubble';bubble.textContent=p.line;bubble.setAttribute('aria-label',p.speaker+': '+p.line.replace(/\n/g,' '));panel.append(bubble);
+      const bubble=document.createElement('p');bubble.className='comic-bubble'+(p.embeddedDialogue?' comic-bubble-embedded':'');bubble.textContent=p.line;bubble.setAttribute('aria-label',p.speaker+': '+p.line.replace(/\n/g,' '));panel.append(bubble);
       if(p.sound){const sound=document.createElement('span');sound.className='comic-sfx';sound.textContent=p.sound;panel.append(sound);}
       book.append(panel);
       return this.loadComicImage(p.id).then(image=>{if(version!==this.storyRender)return;image.alt=p.alt;panel.prepend(image);});
@@ -4266,7 +4403,7 @@ class TrickChain {
     if(!this.count)return 0;
     const g=this.game,count=this.count,value=this.value;
     g.score+=value;this.total+=value;this.banked++;this.best=Math.max(this.best,value);this.clear();
-    this.show('ЗАЧТЕНО','+'+value.toLocaleString('ru-RU'),false);
+    if(value>=2500&&count>=3)this.show('ЗАЧТЕНО','+'+value.toLocaleString('ru-RU'),false);
     if(g.state==='playing'){
       g.juice.punch(Math.min(5,1.5+value/2500));g.juice.buzz(18);
       if(value>=2500){g.juice.hitstop(.07);g.runComic.capture('bank','БАМ!','ЦЕПОЧКА ×'+count+' · +'+value.toLocaleString('ru-RU'),40+Math.min(30,value/400));}
@@ -4289,8 +4426,9 @@ class TrickChain {
   }
   clear(){this.items=[];this.points=this.count=this.timer=0;}
   show(title,line,bad){
+    if(!bad&&!this.game.reserveRewardNotice('chain:'+title))return false;
     this.toast.querySelector('strong').textContent=title;this.toast.querySelector('span').textContent=line;
-    this.toast.classList.toggle('bad',bad);this.toast.classList.remove('visible');void this.toast.offsetWidth;this.toast.classList.add('visible');this.toastTime=1.3;
+    this.toast.classList.toggle('bad',bad);this.toast.classList.remove('visible');void this.toast.offsetWidth;this.toast.classList.add('visible');this.toastTime=bad?1.3:1.7;return true;
   }
   render(){
     const g=this.game,chase=g.chase,p=g.p||{},active=this.count>0;
@@ -4438,13 +4576,13 @@ class RunMeta {
   get missions(){return this.data.missions.active.map(id=>ARCADE_MISSIONS.find(m=>m.id===id)).filter(Boolean);}
   makeGhost(){
     const g=this.game,rig=g.makeSurfer(1,0xf6ebd0);
-    rig.card.material.transparent=true;rig.card.material.opacity=.42;rig.card.material.depthWrite=false;
+    rig.group.scale.setScalar(1.2);
+    rig.card.material.transparent=true;rig.card.material.opacity=.58;rig.card.material.depthWrite=false;
     rig.board.material.transparent=true;rig.board.material.opacity=.35;rig.shadow.visible=false;
     rig.board.children.forEach(child=>{child.material.transparent=true;child.material.opacity=.25;});
-    rig.tag=g.sprite(g.label('РЕКОРД','#124f6a',256,76),1.7,.5);
     this.ghostRig=rig;this.hideGhost();
   }
-  hideGhost(){this.ghostRig.group.visible=this.ghostRig.tag.visible=this.ghostRig.shadow.visible=false;}
+  hideGhost(){this.ghostRig.group.visible=this.ghostRig.shadow.visible=false;}
   reset(){
     this.recording=[];this.recordClock=0;this.liveClock=0;this.completedLive=new Set();this.summary=null;
     this.ghost=this.daily?.ghost||null;this.ghostIndex=0;this.hideGhost();
@@ -4469,7 +4607,7 @@ class RunMeta {
   }
   updateGhost(frame){
     const g=this.game,rig=this.ghostRig,samples=this.ghost;
-    if(!samples||samples.length<2||g.state==='start'){this.hideGhost();return;}
+    if(!samples||samples.length<2||g.state==='start'||g.state==='countdown'){this.hideGhost();return;}
     const t=g.elapsed;
     while(this.ghostIndex<samples.length-2&&samples[this.ghostIndex+1][0]<t)this.ghostIndex++;
     while(this.ghostIndex>0&&samples[this.ghostIndex][0]>t)this.ghostIndex--;
@@ -4480,7 +4618,7 @@ class RunMeta {
     if(gap<-4||gap>140){this.hideGhost();return;}
     const y=g.wave.height(x,z)+air;
     g.updateSurfer(rig,x,z,y,lean,air,0,frame);
-    rig.group.visible=rig.tag.visible=true;rig.shadow.visible=false;rig.tag.position.set(-x,y+3.6,z);
+    rig.group.visible=true;rig.shadow.visible=false;
   }
   finish(){
     const g=this.game,stats=g.runStats(true),d=this.data,score=Math.round(g.score);
@@ -4679,9 +4817,6 @@ class TrickRoute {
       if(side)Object.assign(line,this.sideProps[Math.floor(this.lines.length/2)]);
       this.makeRamp(line);this.lines.push(line);
     }
-    this.choiceSigns=window.FLOW_TEST_MODE?[]:[['ВЫЛЕТ',-2.7,'#c56943'],['ОБЪЕЗД',2.8,'#236b67']].map(([text,x,color])=>({
-      mesh:game.sprite(game.label(text,color,256,64),3.6,.9),x,z:199
-    }));
     this.reset();
   }
   makeInk(color){
@@ -4946,10 +5081,6 @@ class TrickRoute {
   }
   update(){
     const g=this.game,p=g.p,n=16;
-    for(const sign of this.choiceSigns){
-      sign.mesh.visible=['playing','paused'].includes(g.state)&&sign.z-p.z<100&&sign.z-p.z>12;
-      sign.mesh.position.set(-sign.x,g.wave.height(sign.x,sign.z)+2.5,sign.z);
-    }
     for(const line of this.lines){
       line.group.visible=!line.disabled&&['playing','paused'].includes(g.state)&&line.z-p.z<135&&line.z-p.z>-16;
       if(!line.group.visible)continue;
@@ -5012,11 +5143,11 @@ window.TrickRoute=TrickRoute;
 
 ;
 // Source: js/speed-blur.js
-/* A depth-aware radial smear for distant scenery at top speed. The nearby
-   water, rider and warm-coloured route signs stay sharp; HUD lives outside WebGL. */
+/* Radial speed blur: distant scenery at top speed, peripheral water during
+   earned acceleration. The rider's central corridor and DOM HUD stay sharp. */
 class SpeedBlur {
   constructor(game){
-    this.game=game;this.amount=0;this.width=this.height=0;this.size=new THREE.Vector2();
+    this.game=game;this.amount=this.burst=this.burstTime=0;this.width=this.height=0;this.size=new THREE.Vector2();
     const renderer=game.renderer;
     this.supported=renderer.capabilities.isWebGL2||renderer.extensions.has('WEBGL_depth_texture');
     if(!this.supported)return;
@@ -5024,11 +5155,11 @@ class SpeedBlur {
     this.target.depthTexture=new THREE.DepthTexture(1,1,THREE.UnsignedShortType);
     this.material=new THREE.ShaderMaterial({
       depthTest:false,depthWrite:false,
-      uniforms:{uColor:{value:this.target.texture},uDepth:{value:this.target.depthTexture},uAmount:{value:0},uNear:{value:game.camera.near},uFar:{value:game.camera.far},uAspect:{value:1}},
+      uniforms:{uColor:{value:this.target.texture},uDepth:{value:this.target.depthTexture},uAmount:{value:0},uBurst:{value:0},uNear:{value:game.camera.near},uFar:{value:game.camera.far},uAspect:{value:1}},
       vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}`,
       fragmentShader:`
         uniform sampler2D uColor,uDepth;
-        uniform float uAmount,uNear,uFar,uAspect;
+        uniform float uAmount,uBurst,uNear,uFar,uAspect;
         varying vec2 vUv;
         float distanceAt(vec2 uv){float d=texture2D(uDepth,uv).x;return uNear*uFar/(uFar-d*(uFar-uNear));}
         void main(){
@@ -5038,14 +5169,17 @@ class SpeedBlur {
           float farMask=smoothstep(25.0,65.0,distance);
           // Printed yellow/coral guides are readable even at the edge of the frame.
           float warm=step(base.b*1.45,base.r)*step(.38,base.r)*step(base.b*1.18,base.g);
-          float amount=uAmount*edge*farMask*(1.0-warm*.9);
+          // Pad activation has its own immediate perimeter pulse, even below top speed.
+          float perimeter=max(smoothstep(.22,.43,abs(ray.x)),smoothstep(.24,.46,ray.y)*.8);
+          float burst=uBurst*perimeter*smoothstep(5.0,12.0,distance);
+          float amount=max(uAmount*edge*farMask*(1.0-warm*.9),burst*2.8);
           if(amount<.001){gl_FragColor=base;return;}
           vec4 sum=base;float weight=1.0;
-          for(int i=1;i<=8;i++){
-            float t=float(i)/8.0;vec2 uv=clamp(vUv-ray*amount*t*.075,vec2(.002),vec2(.998));
+          for(int i=1;i<=12;i++){
+            float t=float(i)/12.0;vec2 uv=clamp(vUv-ray*amount*t*.075,vec2(.002),vec2(.998));
             float sampleDistance=distanceAt(uv);
             vec4 sampleColor=texture2D(uColor,uv);
-            float safe=smoothstep(23.0,35.0,sampleDistance)*(1.0-step(.12,abs(sampleColor.a-base.a)));
+            float safe=smoothstep(mix(23.0,5.0,uBurst),mix(35.0,12.0,uBurst),sampleDistance)*(1.0-step(.12,abs(sampleColor.a-base.a)));
             float w=(1.0-t*.6)*safe;sum+=sampleColor*w;weight+=w;
           }
           gl_FragColor=sum/weight;
@@ -5054,12 +5188,23 @@ class SpeedBlur {
     this.scene=new THREE.Scene();this.scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),this.material));
     this.camera=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
   }
-  reset(){this.amount=0;this.game.container.style.setProperty('--speed-blur','0');}
+  reset(){this.amount=0;this.cancelBurst();this.game.container.style.setProperty('--speed-blur','0');}
+  triggerBurst(){if(!this.game.juice.calm){this.burstTime=1.05;this.burst=1;this.amount=Math.max(this.amount,.8);}}
+  cancelBurst(){this.burst=this.burstTime=0;}
   update(dt){
     const g=this.game,max=g.assist?35:42;
-    const target=g.state==='playing'&&!g.juice.calm&&!g.p.fallen?THREE.MathUtils.smoothstep(g.p.speed,max-5,max-.5):0;
+    const enabled=g.state==='playing'&&!g.juice.calm&&!g.p.fallen;
+    if(g.juice.calm||g.p.fallen)this.cancelBurst();
+    if(g.state==='playing')this.burstTime=Math.max(0,this.burstTime-dt);
+    const pad=g.rush?.padTime>0&&g.p.recovering===0?THREE.MathUtils.smoothstep(g.rush.padTime,0,.3):0;
+    const ride=g.waveRide;
+    const crest=ride?.caught&&ride.zone==='crest'&&!g.p.airborne&&g.p.recovering===0&&g.p.balance<.5
+      ?THREE.MathUtils.smoothstep(ride.crestTime,.2,.65):0;
+    this.burst=enabled?Math.max(THREE.MathUtils.smoothstep(this.burstTime,0,.8),pad,crest):0;
+    const target=enabled?THREE.MathUtils.smoothstep(g.p.speed,max-5,max-.5):0;
     this.amount+=(target-this.amount)*(1-Math.exp(-dt*5));
-    if(target===0&&(g.state!=='playing'||g.juice.calm))this.amount=0;
+    this.amount=Math.max(this.amount,this.burst*.8);
+    if(!enabled)this.amount=0;
     g.container.style.setProperty('--speed-blur',this.amount.toFixed(3));
   }
   render(){
@@ -5068,7 +5213,7 @@ class SpeedBlur {
     const size=r.getDrawingBufferSize(this.size);
     // Match the normal render resolution: the foreground does not lose detail.
     if(size.x!==this.width||size.y!==this.height){this.width=size.x;this.height=size.y;this.target.setSize(size.x,size.y);}
-    this.material.uniforms.uAmount.value=this.amount;this.material.uniforms.uAspect.value=g.camera.aspect;
+    this.material.uniforms.uAmount.value=this.amount;this.material.uniforms.uBurst.value=this.burst;this.material.uniforms.uAspect.value=g.camera.aspect;
     r.setRenderTarget(this.target);r.render(g.scene,g.camera);
     r.setRenderTarget(null);r.render(this.scene,this.camera);
   }
@@ -5124,6 +5269,110 @@ class RivalCast {
       Object.assign(r,{x:i===0?-3.5:4,z:i===0?46:84,speed:26,lean:0,airY:0,freeEntry:false,passed:false,chat:false,contactLocked:false,collided:false,yieldTime:0,yieldSide:0,nearest:Infinity});
     });
   }
+  waterObstacles(){
+    const g=this.game,rows=[];
+    const add=(kind,x,z,rx,rz)=>rows.push({kind,left:x-rx,right:x+rx,from:z-rz,to:z+rz});
+    // Completion flags belong to the player; the props still occupy the sea.
+    for(const h of g.world.hazards)if(h.type==='flotsam')add(h.prop,h.x,h.z,h.collisionRadius,h.collisionDepth);
+    for(const ramp of g.trickRoute.lines)if(!ramp.disabled){
+      const rx=(Math.abs(ramp.fz)*ramp.width+Math.abs(ramp.fx)*ramp.length)/2;
+      const rz=(Math.abs(ramp.fz)*ramp.length+Math.abs(ramp.fx)*ramp.width)/2;
+      add('ramp',ramp.x,ramp.z,rx,rz);
+    }
+    if(g.setpiece.enabled)for(const rock of g.setpiece.rocks)add('reef',rock.x,rock.z,rock.rx,rock.rz);
+    if(g.beats.enabled){
+      for(const rope of g.beats.ropes)add('rope',rope.x,rope.z,rope.halfWidth+.45,.7);
+      for(const zone of g.beats.zones)for(const gate of zone.gates)
+        for(const side of [-1,1])add('buoy',gate.x+side*1.55,gate.z,.3,.3);
+    }
+    for(const prop of g.rush.scenery)add(prop.kind,prop.x,prop.z,prop.halfWidth,prop.halfDepth);
+    // The nearest possible shoreline includes its foam fringe.
+    rows.push({kind:'beach',left:18.2,right:100,from:-1000,to:g.distance+1000});
+    // The arch's roof is high above the water: only its two feet block a board.
+    if(g.demo){
+      add('lighthouse',-14.8,394,4.5,4.5);
+      add('wreck',17.5,546,5.6,13);
+      for(const side of [-1,1])add('arch',side*15,812,4.5,4.5);
+    }
+    for(const pad of g.rush.accelerators){
+      const xs=Array.from({length:13},(_,i)=>g.trickRoute.routePoint(pad.z+(i/12-.5)*pad.length));
+      const left=Math.min(...xs)-pad.width/2,right=Math.max(...xs)+pad.width/2;
+      rows.push({kind:'pad',left,right,from:pad.z-pad.length/2,to:pad.z+pad.length/2});
+    }
+    for(const {pole,x} of g.finishPosts){
+      const shape=pole.geometry.parameters,radius=Math.max(shape.radiusTop,shape.radiusBottom);
+      add('finish-post',-x,g.distance+2,radius,radius);
+    }
+    return rows;
+  }
+  planWaterRoutes(){
+    const obstacles=this.waterObstacles(),spacing=2;
+    this.game.wave.sea.geometry.computeBoundingBox();
+    const waterLeft=-this.game.wave.sea.geometry.boundingBox.max.x;
+    for(const r of this.game.rivals){
+      const board=r.rig.board,shape=board.geometry.parameters;
+      const radius=Math.hypot(shape.width*board.scale.x,shape.height*board.scale.y)/2;
+      // The entire deck stays beyond the player/Boris corridor, even while turning.
+      const marginX=radius+.4,marginZ=radius+.7;
+      const minX=Math.ceil((waterLeft+marginX)*4)/4,maxX=Math.floor((-16.5-radius)*4)/4;
+      const signature=JSON.stringify([r.index,radius,minX,maxX,this.game.distance,obstacles]);
+      if(r.waterRoute?.signature===signature){if(r.scenic){r.x=this.waterPoint(r,r.z);r.lean=0;}continue;}
+      const rows=obstacles.map(o=>({...o,left:o.left-marginX,right:o.right+marginX,from:o.from-marginZ-spacing,to:o.to+marginZ+spacing}));
+      // Head farther out to sea around shore rocks; never turn into the race lanes.
+      const route=this.planWaterRoute(r,rows,Math.max(minX,-46),maxX)||this.planWaterRoute(r,rows,minX,maxX);
+      if(!route)throw Error('Нет водного маршрута для '+r.name);
+      r.waterRoute={...route,radius,waterLeft,innerEdge:-16.5,obstacles:rows,signature};
+      if(r.scenic){r.x=this.waterPoint(r,r.z);r.lean=0;}
+    }
+  }
+  planWaterRoute(r,rows,minX,maxX){
+    const spacing=2,step=.25,columns=Math.round((maxX-minX)/step)+1,from=-120,count=Math.ceil((this.game.distance+360-from)/spacing)+1;
+    const parents=new Int16Array(count*columns);parents.fill(-1);
+    let costs=new Float64Array(columns);costs.fill(Infinity);
+    const preferred=z=>-22.5-r.index*4+Math.sin(z*.013+r.index)*.55;
+    for(let j=0;j<columns;j++)costs[j]=Math.pow(minX+j*step-preferred(from),2)*10;
+    for(let i=1;i<count;i++){
+      const z=from+i*spacing,blocked=rows.filter(o=>z>=o.from&&z<=o.to),next=new Float64Array(columns);next.fill(Infinity);
+      for(let j=0;j<columns;j++){
+        const x=minX+j*step;if(blocked.some(o=>x>=o.left-.000001&&x<=o.right+.000001))continue;
+        // Prefer broad anticipatory arcs; tight passages can also reduce pace.
+        for(let k=Math.max(0,j-16);k<=Math.min(columns-1,j+16);k++){
+          const delta=(j-k)*step,cost=costs[k]+delta*delta*96+Math.pow(x-preferred(z),2)*.012;
+          if(cost<next[j]){next[j]=cost;parents[i*columns+j]=k;}
+        }
+      }
+      if(!next.some(Number.isFinite))return null;
+      costs=next;
+    }
+    let cursor=0;for(let j=1;j<columns;j++)if(costs[j]<costs[cursor])cursor=j;
+    if(!Number.isFinite(costs[cursor]))return null;
+    const points=new Float64Array(count),slopes=new Float64Array(count);
+    for(let i=count-1;i>=0;i--){points[i]=minX+cursor*step;if(i>0)cursor=parents[i*columns+cursor];}
+    for(let i=1;i<count-1;i++){
+      const a=(points[i]-points[i-1])/spacing,b=(points[i+1]-points[i])/spacing;
+      // Monotone cubic tangents round turns without overshooting a safe corridor.
+      slopes[i]=a*b>0?2*a*b/(a+b):0;
+    }
+    return {from,spacing,points,slopes};
+  }
+  waterPoint(r,z){
+    const route=r.waterRoute;if(!route)return r.x;
+    const {from,spacing,points,slopes}=route,t=THREE.MathUtils.clamp((z-from)/spacing,0,points.length-1);
+    const i=Math.min(points.length-2,Math.floor(t)),u=t-i,u2=u*u,u3=u2*u;
+    return (2*u3-3*u2+1)*points[i]+(u3-2*u2+u)*spacing*slopes[i]
+      +(-2*u3+3*u2)*points[i+1]+(u3-u2)*spacing*slopes[i+1];
+  }
+  waterPace(r,z,distance=32){
+    const {from,spacing,points,slopes}=r.waterRoute;
+    const first=Math.max(0,Math.floor((z-from)/spacing)),last=Math.min(points.length-2,Math.ceil((z+distance-from)/spacing));
+    let slope=.01;
+    for(let i=first;i<=last;i++){
+      const delta=(points[i]-points[i+1])/spacing,a=6*delta+3*(slopes[i]+slopes[i+1]),b=-6*delta-4*slopes[i]-2*slopes[i+1],c=slopes[i];
+      const u=a===0?0:THREE.MathUtils.clamp(-b/(2*a),0,1);
+      slope=Math.max(slope,Math.abs(c),Math.abs(a+b+c),Math.abs(a*u*u+b*u+c));
+    }
+    return Math.min(28,3.2/slope);
+  }
   inView(r,margin=.15){
     const g=this.game,camera=g.camera,box=this.viewBounds;
     camera.updateMatrixWorld(true);
@@ -5140,7 +5389,7 @@ class RivalCast {
     this.viewShift.set(-r.x-r.rig.shadow.position.x,g.wave.height(r.x,r.z)+.04-r.rig.shadow.position.y,r.z-.15-r.rig.shadow.position.z);
     box.union(this.shadowBounds.setFromObject(r.rig.shadow).translate(this.viewShift));
     for(let i=0;i<r.wake.length;i++){
-      const z=r.z-1-i*.65,x=r.x+Math.sin(i*2+g.time*4)*.2,radius=.4+i*.05,y=g.wave.height(x,z)+.06;
+      const z=r.z-1-i*.65,x=(r.scenic?this.waterPoint(r,z):r.x)+Math.sin(i*2+g.time*4)*.2,radius=.4+i*.05,y=g.wave.height(x,z)+.06;
       box.expandByPoint(this.viewPoint.set(-x-radius,y-radius,z-radius));
       box.expandByPoint(this.viewPoint.set(-x+radius,y+radius,z+radius));
     }
@@ -5239,7 +5488,7 @@ class SurfRace {
     this.game.rivals.forEach((r,i)=>{
       r.encounter=null;this.callouts[i].classList.remove('visible');this.cues[i].visible=false;
       r.scenic=this.enabled;
-      if(r.scenic){r.x=i===0?-12:12;r.z=48+i*36;r.speed=26;r.lean=r.airY=0;}
+      if(r.scenic){r.x=-22.5-i*4;r.z=120+i*44;r.speed=26;r.lean=r.airY=0;}
     });
   }
   begin(scene){
@@ -5343,7 +5592,7 @@ window.SurfRace=SurfRace;
 class SurfRush {
   constructor(game){
     this.game=game;this.lines=[];this.scenery=[];
-    this.padTexture=this.makePadTexture();
+    this.padTexture=this.makePadTexture();this.activePadTexture=this.makePadTexture(true);
     this.accelerators=[861,964,1084,1224,1324].map((z,i)=>this.makeAccelerator(z,i));
     this.meter=document.createElement('div');this.meter.id='rush-meter';
     this.meter.innerHTML='<strong>КУРАЖ</strong><span><i></i><i></i><i></i></span><small>0 крышек</small>';
@@ -5365,7 +5614,7 @@ class SurfRush {
         [-21,1044,24,19],[23,1147,27,22],[-19,1209,22,18],[21,1282,24,19],[-20,1338,21,17]];
       for(const [x,z,width,height] of rocks){
         const mesh=g.sprite(texture,width,height);mesh.center.set(.5,0);mesh.position.set(-x,-.45,z);mesh.material.fog=true;
-        this.scenery.push({mesh,z});
+        this.scenery.push({mesh,x,z,halfWidth:width/2,halfDepth:width*.18,kind:'shore-rock'});
       }
       g.renderDirty=true;resolve();
     },undefined,()=>reject(Error('Не удалось загрузить скалы'))));this.ready.catch(()=>{});
@@ -5384,18 +5633,18 @@ class SurfRush {
       const flag=new THREE.Mesh(new THREE.PlaneGeometry(.8,1.1),g.trickRoute.makeInk(i%2?0xf3c24e:0xde7150));
       flag.position.set(-12.4,5.6,680+i*10);flag.rotation.y=Math.PI/2;pier.add(flag);
     }
-    this.scenery.push({mesh:pier,z:710,extent:48});
+    this.scenery.push({mesh:pier,x:15,z:710,halfWidth:3.3,halfDepth:44,kind:'pier',extent:48});
   }
-  makePadTexture(){
+  makePadTexture(active=false){
     const canvas=document.createElement('canvas');canvas.width=256;canvas.height=512;
     const c=canvas.getContext('2d');
     c.fillStyle='#fff0c8';c.beginPath();c.moveTo(15,8);c.lineTo(240,0);c.lineTo(250,492);c.lineTo(8,512);c.closePath();c.fill();
-    c.fillStyle='#ffcd41';c.fillRect(24,18,208,476);
-    c.strokeStyle='#b55a32';c.lineWidth=6;c.strokeRect(28,22,200,468);
+    c.fillStyle=active?'#75e2ad':'#ffcd41';c.fillRect(24,18,208,476);
+    c.strokeStyle=active?'#28785c':'#b55a32';c.lineWidth=6;c.strokeRect(28,22,200,468);
     for(const y of [96,244,392]){
       c.beginPath();c.moveTo(62,y-25);c.lineTo(128,y+32);c.lineTo(194,y-25);
-      c.lineJoin='miter';c.strokeStyle='#dc6747';c.lineWidth=34;c.stroke();
-      c.strokeStyle='#fff4d2';c.lineWidth=15;c.stroke();
+      c.lineJoin='miter';c.strokeStyle=active?'#28785c':'#dc6747';c.lineWidth=34;c.stroke();
+      c.strokeStyle=active?'#ffffff':'#fff4d2';c.lineWidth=15;c.stroke();
     }
     c.fillStyle='rgba(85,63,36,.14)';
     for(let i=0;i<480;i++)c.fillRect((i*73)%256,(i*137)%512,1+i%2,2);
@@ -5408,14 +5657,13 @@ class SurfRush {
     const material=new THREE.MeshBasicMaterial({map:this.padTexture,transparent:true,alphaTest:.08,depthWrite:false,side:THREE.DoubleSide,
       polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
     const mesh=new THREE.Mesh(geometry,material);mesh.frustumCulled=false;mesh.renderOrder=1;mesh.visible=false;g.scene.add(mesh);
-    const sign=g.sprite(g.label('РАЗГОН »','#b45130',256,64),3.6,.9);sign.visible=false;
-    return {z,index,width,length,mesh,sign,strength:index===4?8:10,duration:index===4?1.1:1.65};
+    return {z,index,width,length,mesh,strength:index===4?9.6:12,duration:index===4?1.1:1.65};
   }
   reset(){
     const g=this.game;this.enabled=!g.flowTest;this.moves=new Set();this.window=0;this.active=0;this.activations=0;this.boost=0;this.splashAmount=0;this.lastMove=-100;
     g.container.classList.toggle('rush-mode',this.enabled);g.container.classList.remove('in-rush');
     this.padBoost=this.padTime=this.padStrength=this.padHits=0;this.padEvents=[];
-    for(const pad of this.accelerators){pad.x=g.trickRoute.routePoint(pad.z);pad.taken=pad.done=false;pad.mesh.visible=pad.sign.visible=false;pad.mesh.material.color.set(0xffffff);}
+    for(const pad of this.accelerators){pad.x=g.trickRoute.routePoint(pad.z);pad.taken=pad.done=false;pad.flash=0;pad.mesh.visible=false;pad.mesh.material.color.set(0xffffff);pad.mesh.material.map=this.padTexture;}
     for(const c of g.caps){g.scene.remove(c.mesh);c.mesh.material.dispose();}
     g.caps=[];this.lines=[];
     if(this.enabled){
@@ -5463,7 +5711,7 @@ class SurfRush {
       this.splash(1);this.game.container.classList.add('in-rush');
     }
   }
-  breakStreak(){this.moves.clear();this.window=this.active=this.padTime=0;this.boost*=.3;this.padBoost*=.3;this.game.container.classList.remove('in-rush');}
+  breakStreak(){this.moves.clear();this.window=this.active=this.padTime=0;this.boost*=.3;this.padBoost*=.3;this.game.speedBlur?.cancelBurst();this.game.audio?.stopAccelerator();this.game.container.classList.remove('in-rush');}
   splash(amount){if(!this.game.reducedMotion)this.splashAmount=Math.max(this.splashAmount,amount);}
   step(dt){
     if(!this.enabled)return;
@@ -5473,6 +5721,7 @@ class SurfRush {
     this.padTime=Math.max(0,this.padTime-dt);
     this.padBoost+=((this.padTime>0&&!this.game.p.fallen&&this.game.p.recovering===0?this.padStrength:0)-this.padBoost)*(1-Math.exp(-dt*8));
     this.splashAmount=Math.max(0,this.splashAmount-dt*2.4);
+    for(const pad of this.accelerators)pad.flash=Math.max(0,pad.flash-dt);
     this.game.container.classList.toggle('in-rush',this.active>0);
     for(const line of this.lines)if(line.air&&!line.locked&&line.ramp.z-this.game.p.z<85)this.lockArc(line);
   }
@@ -5484,8 +5733,11 @@ class SurfRush {
       if(Math.abs(p.z-pad.z)>pad.length/2||p.airborne||p.fallen||p.recovering>0||
         Math.abs(p.x-g.trickRoute.routePoint(p.z))>pad.width/2-.15||Math.abs(p.y-g.wave.height(p.x,p.z))>.8)continue;
       pad.taken=pad.done=true;this.padHits++;this.padTime=Math.max(this.padTime,pad.duration);this.padStrength=pad.strength;
+      // A small instant kick makes entering the arrows felt before the sustained pull.
+      p.speed=Math.min(46,p.speed+3);this.padBoost=Math.max(this.padBoost,pad.strength*.7);
       this.padEvents.push({index:pad.index,z:p.z,time:g.time,speed:p.speed});
-      pad.mesh.material.color.set(0xa1d9b3);g.audio.playRush();g.juice.punch(2.5);g.juice.buzz(20);this.splash(.65);g.emit(20,1.1,true);
+      pad.flash=.8;pad.mesh.material.map=this.activePadTexture;
+      g.speedBlur?.triggerBurst();g.audio.playAccelerator(pad.strength);g.juice.punch(3.2);g.juice.buzz(20);this.splash(.65);g.emit(20,1.1,true);
       g.moment('РАЗГОН!','',false,.7);
     }
   }
@@ -5510,7 +5762,6 @@ class SurfRush {
     for(const item of this.scenery)item.mesh.visible=this.enabled&&item.z+(item.extent||0)>p.z-22&&item.z-(item.extent||0)<p.z+165;
     for(const pad of this.accelerators){
       pad.mesh.visible=this.enabled&&['playing','paused'].includes(g.state)&&pad.z-p.z>-pad.length&&pad.z-p.z<110;
-      pad.sign.visible=pad.mesh.visible&&!pad.done&&pad.z-p.z>14;
       if(!pad.mesh.visible)continue;
       const pos=pad.mesh.geometry.attributes.position;
       for(let row=0;row<=12;row++)for(let col=0;col<=4;col++){
@@ -5518,7 +5769,9 @@ class SurfRush {
         pos.setXYZ(row*5+col,-x,g.wave.height(x,z)+.095,z);
       }
       pos.needsUpdate=true;
-      pad.sign.position.set(-pad.x,g.wave.height(pad.x,pad.z)+2.6,pad.z+4);
+      const flash=pad.flash/.8;
+      pad.mesh.material.color.setRGB(1,1,1);
+      if(pad.taken&&!g.reducedMotion)pad.mesh.material.color.setRGB(1+flash*.35,1+flash*.35,1+flash*.35);
     }
     for(const c of g.caps){
       c.mesh.visible=!c.collected&&c.z>p.z-3&&c.z<p.z+100&&(!c.line.air||c.line.locked);
@@ -5587,8 +5840,6 @@ class SurfSetpiece {
       rock.rim.frustumCulled=false;
       rock.original=Float32Array.from(rim.attributes.position.array);game.scene.add(rock.rim);
     }
-    this.signs=[{x:-5.9,z:281,label:'РИСК · СРЕЗКА',color:'#b65c35'},{x:4.4,z:281,label:'ШИРЕ · СПОКОЙНЕЕ',color:'#23766d'},
-      {x:0,z:1082,label:'ПОСЛЕДНИЙ ВЫЛЕТ',color:'#b65c35'}].map(s=>({...s,mesh:game.sprite(game.label(s.label,s.color,512,92),4.8,.86)}));
     this.reset();
   }
   setRockTexture(texture){
@@ -5674,7 +5925,7 @@ class SurfSetpiece {
       const distance=Math.hypot(dx/rx,dz/rz);
       if(distance>=1||p.y>rock.mesh.position.y+rock.mesh.scale.y+.3)continue;
       if(!rock.hit){rock.hit=true;if(!rock.reef)this.clean=false;this.hits++;this.log(rock.reef?'reef-hit':'rock-hit',{obstacleX:rock.x,obstacleZ:rock.z});
-        if(g.impactCooldown===0){g.spill(rock.reef?.04:.08,rock.reef?'ЗАДЕЛ РИФ':'ЗАДЕЛ СКАЛУ');p.speed*=rock.reef?.88:.78;g.impactCooldown=1.2;g.juice.hitstop(.06);g.emit(24,1.1,true);}}
+        if(g.impactCooldown===0){g.spill(rock.reef?.04:.08,rock.reef?'ЗАДЕЛ РИФ':'ЗАДЕЛ СКАЛУ',true);p.speed*=rock.reef?.88:.78;g.impactCooldown=1.2;g.juice.hitstop(.06);g.emit(24,1.1,true);}}
       const side=rock.reef?-Math.sign(rock.x):(dx<0?-1:1);
       p.x=rock.x+side*rx*Math.sqrt(Math.max(0,1-(dz/rz)**2));p.sideVelocity=side*Math.max(1,Math.abs(p.sideVelocity)*.3);
     }
@@ -5710,7 +5961,6 @@ class SurfSetpiece {
       }
       pos.needsUpdate=true;
     }
-    for(const s of this.signs){s.mesh.visible=this.enabled&&s.z-p.z<85&&s.z-p.z>9;s.mesh.position.set(-s.x,g.wave.height(s.x,s.z)+2.5,s.z);}
   }
 }
 window.SurfSetpiece=SurfSetpiece;
@@ -5766,13 +6016,12 @@ class SurfBeats {
     const markers=[-1,1].map(side=>{
       const mesh=new THREE.Mesh(rampBarrier?new THREE.SphereGeometry(.34,10,6):new THREE.ConeGeometry(.42,.9,6),this.flagMaterials[index%2]);g.scene.add(mesh);return {side,mesh};
     });
-    const sign=rampBarrier?null:g.sprite(g.label('ПРЫЖОК ↑','#b75d37',256,64),3.4,.85);
     const floats=Array.from({length:rampBarrier?18:10},(_,i)=>{
       const mesh=new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,rampBarrier?.48:.59,8),i%2?this.poleMaterial:this.flagMaterials[0]);
       mesh.rotation.z=Math.PI/2;mesh.visible=false;g.scene.add(mesh);return mesh;
     });
-    band.visible=false;if(sign)sign.visible=false;markers.forEach(m=>m.mesh.visible=false);
-    return {z,index,band,markers,sign,floats,rampBarrier,halfWidth:3.1};
+    band.visible=false;markers.forEach(m=>m.mesh.visible=false);
+    return {z,index,band,markers,floats,rampBarrier,halfWidth:3.1};
   }
   reset(){
     const g=this.game;this.enabled=!g.flowTest;this.events=[];this.passed=this.slaloms=this.cleared=this.hits=0;
@@ -5789,7 +6038,7 @@ class SurfBeats {
     }
     for(const r of this.ropes){
       if(r.ramp){r.z=r.ramp.exit.z+3;r.x=r.ramp.x;}else r.x=THREE.MathUtils.clamp(g.trickRoute.routePoint(r.z),-5,5);
-      r.done=false;r.result=null;r.band.visible=false;if(r.sign)r.sign.visible=false;
+      r.done=false;r.result=null;r.band.visible=false;
       r.markers.forEach(m=>m.mesh.visible=false);r.floats.forEach(m=>m.visible=false);
     }
     for(const f of this.flocks){f.at=null;f.done=false;f.x=THREE.MathUtils.clamp(g.trickRoute.routePoint(f.z),-5,5);f.birds.forEach(b=>b.visible=false);}
@@ -5852,7 +6101,7 @@ class SurfBeats {
         else if(p.airY>=.95){r.result='jump';this.cleared++;g.awardTrick('НАД КАНАТОМ!',180);
           g.juice.pop('ОП!',p.x,p.y+1.5,p.z,'near');g.juice.buzz(14);g.rush.splash(.4);}
         else{r.result='hit';this.hits++;
-          if(g.impactCooldown===0){g.spill(.025,'ЗАДЕЛ КАНАТ');p.speed*=.9;g.impactCooldown=.8;g.emit(18,.8,true);g.juice.hitstop(.04);}}
+          if(g.impactCooldown===0){g.spill(.025,'ЗАДЕЛ КАНАТ',true);p.speed*=.9;g.impactCooldown=.8;g.emit(18,.8,true);g.juice.hitstop(.04);}}
         this.log('rope',{index:r.index,result:r.result});
       }else if(p.z>r.z+3){r.done=true;r.result='miss';}
     }
@@ -5884,7 +6133,7 @@ class SurfBeats {
     }
     for(const r of this.ropes){
       const visible=this.enabled&&(r.rampBarrier?!r.ramp.disabled:!r.done)&&r.z-p.z>(r.rampBarrier?-8:-3)&&r.z-p.z<85;
-      r.band.visible=visible;if(r.sign)r.sign.visible=visible;r.markers.forEach(m=>m.mesh.visible=visible);
+      r.band.visible=visible;r.markers.forEach(m=>m.mesh.visible=visible);
       r.floats.forEach(m=>m.visible=visible);
       if(!visible)continue;
       const pos=r.band.geometry.attributes.position;
@@ -5902,7 +6151,6 @@ class SurfBeats {
         mesh.position.set(-x,g.wave.height(x,r.z)+(r.rampBarrier?.22:.43),r.z);
         mesh.rotation.z=Math.PI/2+Math.atan((g.wave.height(x+.2,r.z)-g.wave.height(x-.2,r.z))/.4);
       });
-      if(r.sign)r.sign.position.set(-r.x,g.wave.height(r.x,r.z)+2.1,r.z);
     }
     for(const f of this.flocks){
       const age=f.at===null?-1:g.time-f.at;
@@ -6082,7 +6330,7 @@ class SurfControlSettings {
       <button id="control-center" type="button" class="text-button">◎ Запомнить нейтраль</button><p class="controls-action-help">Нажми — прыжок. Ещё раз в воздухе — трюк.<br>Верни курс в центр для чистой посадки.</p><button id="controls-close" type="button" class="yellow-button">ГОТОВО</button></div>`;
     game.container.append(this.screen);
     const pad=document.createElement('div');pad.id='steer-pad';pad.setAttribute('aria-hidden','true');pad.innerHTML='<i></i>';game.container.append(pad);
-    for(const [parent,label] of [['start-screen','Управление'],['selection-footer','Управление'],['pause-card','Управление']]) {
+    for(const [parent,label] of [['start-screen','Управление'],['selection-footer','Управление'],['pause-settings','Управление']]) {
       const button=document.createElement('button');button.type='button';button.className='text-button controls-open';button.textContent=label;
       button.addEventListener('click',e=>{if(performance.now()-(window.__lastTouchTime||0)<350)return;this.open(button);});
       (document.getElementById(parent)||document.querySelector('.'+parent)).append(button);
@@ -6745,7 +6993,7 @@ class BeerDuel {
     const p=this.game.p,b=this.boris;
     this.cooldown=Math.max(0,this.cooldown-dt);
     if(!p.fallen&&!this.arrived&&Math.abs(p.z-b.z)<1.8&&Math.abs(p.x-b.x)<1.35&&Math.abs(p.airY-b.airY)<1&&this.cooldown===0&&this.game.impactCooldown===0){
-      this.spill(.1);this.game.spill(.1,'СТОЛКНУЛИСЬ С БОРИСОМ');p.speed*=.8;b.speed*=.8;
+      this.spill(.1);this.game.spill(.1,'СТОЛКНУЛИСЬ С БОРИСОМ',true);p.speed*=.8;b.speed*=.8;
       this.game.impactCooldown=this.cooldown=2;this.game.emit(20,1.1);
     }
   }
@@ -6905,22 +7153,24 @@ class SkyAdvertiser {
   constructor(game){
     this.game=game;
     this.flight={origin:new THREE.Vector3(110,32,760),velocity:new THREE.Vector3(-8,0,24)};
-    this.width=26;this.bannerWidth=34;this.bannerHeight=8;this.ropeLength=11;
+    this.width=26;this.bannerWidth=52;this.bannerHeight=10;this.ropeLength=11;
     this.group=new THREE.Group();this.group.name='distant-advertising-flight';this.group.visible=false;game.scene.add(this.group);
     this.cameraRight=new THREE.Vector3();
-    this.aircraft=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({transparent:true,alphaTest:.08,depthWrite:false,side:THREE.DoubleSide,fog:false,color:0xc8d8d0,opacity:.9}));
+    this.aircraft=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({transparent:true,alphaTest:.08,depthWrite:false,side:THREE.DoubleSide,fog:false,color:0xffffff,opacity:1}));
     this.aircraft.name='amphibious-plane';this.group.add(this.aircraft);
     this.bannerGeometry=new THREE.PlaneGeometry(this.bannerWidth,this.bannerHeight,24,3);
     this.bannerRest=this.bannerGeometry.attributes.position.array.slice();
-    this.banner=new THREE.Mesh(this.bannerGeometry,new THREE.MeshBasicMaterial({transparent:true,alphaTest:.08,depthWrite:false,side:THREE.DoubleSide,fog:false,color:0xd4e0d4,opacity:.88}));
-    this.banner.name='garret-tow-banner';this.group.add(this.banner);
+    this.banner=new THREE.Mesh(this.bannerGeometry,new THREE.MeshBasicMaterial({transparent:true,alphaTest:.08,depthWrite:false,side:THREE.DoubleSide,fog:false,color:0xffffff,opacity:1}));
+    this.banner.name='baltika-tow-banner';this.group.add(this.banner);
     const ropeGeometry=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(9*3),3));
     this.rope=new THREE.Line(ropeGeometry,new THREE.LineBasicMaterial({color:0xded8ba,transparent:true,opacity:.72,fog:false,depthWrite:false}));this.group.add(this.rope);
     this.ready=Promise.all([
-      new Promise((resolve,reject)=>new THREE.TextureLoader().load('assets/comics/seaplane-distant-v2.png',texture=>{
+      new Promise((resolve,reject)=>new THREE.TextureLoader().load('assets/comics/seaplane-lime-v3.png',texture=>{
         this.fitAircraft(texture);this.aircraft.material.map=texture;this.aircraft.material.needsUpdate=true;resolve();
       },undefined,()=>reject(new Error('Не удалось загрузить дальний самолёт')))),
-      document.fonts.load('900 154px Rubik').then(()=>{this.banner.material.map=this.makeBanner();this.banner.material.needsUpdate=true;})
+      new Promise((resolve,reject)=>new THREE.ImageLoader().load('assets/comics/baltika-logo-reference.png',logo=>{
+        this.banner.material.map=this.makeBanner(logo);this.banner.material.needsUpdate=true;resolve();
+      },undefined,()=>reject(new Error('Не удалось загрузить логотип Балтики'))))
     ]).then(()=>{this.group.visible=true;this.update();game.renderDirty=true;});
     this.ready.catch(()=>{});
   }
@@ -6936,15 +7186,20 @@ class SkyAdvertiser {
     texture.minFilter=THREE.LinearMipmapLinearFilter;texture.magFilter=THREE.LinearFilter;texture.needsUpdate=true;
     this.height=this.width*height/width;
   }
-  makeBanner(){
-    const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=224;
+  makeBanner(logo){
+    const canvas=document.createElement('canvas');canvas.width=1664;canvas.height=320;
     const c=canvas.getContext('2d');
-    c.fillStyle='#eadfc0';c.beginPath();c.moveTo(4,8);c.lineTo(1009,4);c.lineTo(1020,214);c.lineTo(8,220);c.closePath();c.fill();
-    c.fillStyle='#c1af89';c.fillRect(16,10,7,207);
-    c.fillStyle='#c18e42';c.fillRect(40,18,954,6);c.fillRect(40,199,954,5);
-    c.fillStyle='#214d53';c.font='900 154px Rubik, Arial';c.textAlign='center';c.textBaseline='middle';c.fillText('GARRET',525,111,905);
-    // Deterministic paper grain stays faint at the distant display size.
-    c.fillStyle='rgba(77,63,40,.06)';for(let i=0;i<1800;i++)c.fillRect((i*131)%1016+4,(i*73)%208+8,1,1);
+    // Match the supplied artwork's navy exactly; retain its original lettering
+    // and gold arcs instead of approximating the brand with a font.
+    c.drawImage(logo,0,0);const navy=c.getImageData(0,0,1,1).data;c.clearRect(0,0,canvas.width,canvas.height);
+    c.fillStyle=`rgb(${navy[0]},${navy[1]},${navy[2]})`;
+    c.beginPath();c.moveTo(3,5);c.lineTo(1658,2);c.lineTo(1662,314);c.lineTo(5,318);c.closePath();c.fill();
+    c.save();c.clip();
+    const source={x:44,y:82,width:610,height:190},height=292,width=height*source.width/source.height;
+    c.drawImage(logo,source.x,source.y,source.width,source.height,(canvas.width-width)/2,(canvas.height-height)/2,width,height);
+    c.strokeStyle='rgba(219,184,124,.65)';c.lineWidth=2;
+    c.strokeRect(14,12,1636,296);
+    c.restore();
     const texture=new THREE.CanvasTexture(canvas);texture.minFilter=THREE.LinearMipmapLinearFilter;return texture;
   }
   update(){
@@ -6980,11 +7235,63 @@ window.SkyAdvertiser=SkyAdvertiser;
 
 
 ;
+// Source: js/paper-sky.js
+/* Paper scenery projected from fixed world anchors. The DOM keeps the cutout
+   texture crisp and behind the WebGL scene, outside the speed-blur pass. */
+class PaperSky {
+  constructor(game) {
+    this.game = game;
+    this.element = game.container.querySelector('.sky');
+    this.projected = new THREE.Vector3();
+    this.view = new THREE.Vector3();
+    this.edge = new THREE.Vector3();
+    this.layers = [
+      {selector:'.sun-halo',position:[-430,80,5010],width:950,height:950,turn:13},
+      {selector:'.sun',position:[-420,70,5000],width:640,height:640,turn:-5},
+      {selector:'.cloud-one',position:[680,40,4000],width:1300,height:170,turn:-7},
+      {selector:'.cloud-two',position:[-700,180,6100],width:1300,height:180,turn:5}
+    ].map(layer => ({...layer,element:this.element.querySelector(layer.selector),
+      position:new THREE.Vector3(...layer.position)}));
+    this.element.classList.add('world-sky');
+  }
+  update() {
+    const camera = this.game.camera;
+    const width = this.game.renderer.domElement.clientWidth;
+    const height = this.game.renderer.domElement.clientHeight;
+    if (!width || !height) return;
+    camera.updateMatrixWorld();
+    const focal = height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+    for (const layer of this.layers) {
+      this.view.copy(layer.position).applyMatrix4(camera.matrixWorldInverse);
+      const depth = -this.view.z;
+      layer.element.style.visibility = depth > 0 ? 'visible' : 'hidden';
+      if (depth <= 0) continue;
+      this.projected.copy(layer.position).project(camera);
+      // World +X points left in the view down +Z. Its projection also captures
+      // the camera's carve roll, without attaching the scenery to the camera.
+      this.edge.copy(layer.position);this.edge.x-=1;this.edge.project(camera);
+      const roll = Math.atan2(-(this.edge.y-this.projected.y)*height,
+        (this.edge.x-this.projected.x)*width) * 180 / Math.PI;
+      const style = layer.element.style;
+      style.setProperty('--sky-x', ((this.projected.x+1)*width/2).toFixed(3)+'px');
+      style.setProperty('--sky-y', ((1-this.projected.y)*height/2).toFixed(3)+'px');
+      style.setProperty('--sky-width', (layer.width*focal/depth).toFixed(3)+'px');
+      style.setProperty('--sky-height', (layer.height*focal/depth).toFixed(3)+'px');
+      style.setProperty('--sky-turn', (roll+layer.turn).toFixed(3)+'deg');
+    }
+  }
+}
+window.PaperSky = PaperSky;
+
+
+;
 // Source: js/paper-prototype.js
+const START_COUNTDOWN_DURATION=2;
+
 class PaperSurfGame {
   constructor() {
     this.container = document.getElementById('app-container');
-    this.state = 'start'; this.assist=true; this.time = 0; this.elapsed = 0; this.distance = COMICS_COURSE.length;
+    this.state = 'start'; this.assist=true; this.time = 0; this.elapsed = 0; this.distance = COMICS_COURSE.length;this.startCountdown=null;
     this.accumulator = 0; this.lastTime = 0; this.lastPoseFrame = -1;
     this.reducedMotion = matchMedia('(prefers-reduced-motion:reduce)').matches;
     this.input = new PaperInput(this.container);
@@ -7086,6 +7393,7 @@ class PaperSurfGame {
     return new THREE.CanvasTexture(canvas);
   }
   initBackdrop() {
+    this.paperSky = new PaperSky(this);
     this.town = this.sprite(this.textures.bg_town_transparent, 32, 13);
     this.town.center.set(.5,0);this.coastRatio=2.7;
     this.coastAnchor=new THREE.Vector3();this.coastRay=new THREE.Vector3();
@@ -7226,10 +7534,7 @@ class PaperSurfGame {
   bindUI() {
     this.input.bindSteering();
     this.controlSettings=new SurfControlSettings(this);
-    this.pauseTips=document.createElement('details');this.pauseTips.className='pause-tips';
-    this.pauseTips.innerHTML='<summary>Трюки и подсказки</summary><p>В воздухе нажми ещё раз для 360°. После высокого вылета с гребня кнопка предложит «ФЛИП».</p><p>Зелёный пунктир — держишь маршрут. На боковой борт заезжай с воды; трамплин подбрасывает сам. Чистая посадка сохраняет цепочку, удар или падение сжигают её.</p><p>Поймай новую волну и набери скорость, чтобы обогнать Бориса. Побеждает первый у бара. Сохранённое пиво даёт бонус к итоговым очкам: 1% = 50 очков.</p>';
-    document.getElementById('resume-button').after(this.pauseTips);
-    const rushTip=document.createElement('p');rushTip.textContent='Три разных чистых манёвра подряд — Кураж: поймай волну, обгони, прыгни или пройди вплотную. Между ними — не больше 6,5 секунды. Крышки показывают траекторию; удар сбрасывает Кураж.';this.pauseTips.append(rushTip);
+    this.pauseOptions=document.getElementById('pause-options');
     const bindTap=(id,handler)=>{
       const el=typeof id==='string'?document.getElementById(id):id;if(!el)return;
       let localTouchTime=0;
@@ -7257,6 +7562,13 @@ class PaperSurfGame {
     const renderSound=()=>{sound.setAttribute('aria-pressed',String(this.audio.isMuted));sound.setAttribute('aria-label',this.audio.isMuted?'Включить звук':'Отключить звук');sound.title=this.audio.isMuted?'Включить звук':'Отключить звук';};
     bindTap('sound-button',()=>{if(this.audio.isMuted)this.audio.unlock();this.audio.toggleMute();renderSound();});renderSound();
     bindTap('resume-button',()=>this.resume());
+    document.getElementById('pause-screen').addEventListener('keydown',e=>{
+      if(e.code!=='Tab')return;
+      const items=[...document.getElementById('pause-screen').querySelectorAll('button,summary')].filter(el=>!el.disabled&&el.getClientRects().length);
+      const first=items[0],last=items[items.length-1];
+      if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+      else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+    });
     bindTap('reset-button',()=>this.start(false));
     bindTap('center-button',()=>{document.getElementById('center-button').textContent=this.input.recenter()?'◎ Нейтраль запомнили':'◎ Подожди сигнал датчика';});
     bindTap('camera-toggle',()=>{this.juice.setLiveCamera(!this.juice.liveCamera);this.renderCameraToggle();});
@@ -7281,12 +7593,14 @@ class PaperSurfGame {
     document.getElementById('quick-button').classList.remove('hidden');
   }
   reset() {
+    this.clearStartCountdown();this.container.classList.remove('countdown');
     this.audio.resetRide();
     this.input.reset();this.time=this.elapsed=this.accumulator=this.score=this.collected=0;
     this.p={x:1.4,z:0,y:0,speed:29,heading:0,lean:0,pitch:0,smoothLean:0,sideVelocity:0,verticalVelocity:0,crouch:.1,balance:0,recovering:0,airborne:false,airY:0,spin:0};
     this.wave.resetWaves(this.meta.seed);this.deliveryBonus=this.raceScore=0;
     this.spillFlash=this.impactCooldown=this.momentTime=this.hintIndex=this.trickCooldown=this.carveClock=this.wakeClock=0;
     this.combo=1;this.hintTime=0;this.tricksSeen=new Set();this.world.reset();this.comics.reset();this.onboarding.reset();
+    this.rewardNoticeTime=0;this.rewardNotices=new Set();
     this.chase.reset();this.chain.reset();this.juice.reset();this.meta.reset();this.runComic.reset();this.trickRoute.reset();this.speedBlur.reset();
     this.mug.reset();this.mug.foam=.18;this.mug.totalSpilled=0;this.mug.lastSpillTime=0;
     this.waveRide.reset();this.heroAnimator.reset();this.handBeer.reset();this.jump.reset();this.balance.reset();this.container.classList.remove('fallen');
@@ -7308,6 +7622,7 @@ class PaperSurfGame {
     this.courseShow.reset();
     this.duel.reset();
     this.demo.reset();
+    if(!this.flowTest)this.rivalCast.planWaterRoutes();
     document.getElementById('moment').classList.remove('visible');document.getElementById('hint').classList.add('invisible');
     this.wave.update(0,0,true);this.updateCamera(1,true);this.updateVisuals(0);this.updateHUD();
   }
@@ -7327,7 +7642,16 @@ class PaperSurfGame {
         await Promise.race([assets,new Promise((_,reject)=>{loadTimer=setTimeout(()=>reject(Error('Загрузка игры заняла слишком много времени')),45000);})]);
       } finally {clearTimeout(loadTimer);}
       this.rivalCast.run++;
-      this.reset();this.state='playing';this.container.classList.add('playing');
+      this.reset();
+      const useCountdown=!this.flowTest&&!!document.getElementById('start-countdown');
+      this.state=useCountdown?'countdown':'playing';
+      this.container.classList.toggle('countdown',useCountdown);this.container.classList.add('playing');
+      if(useCountdown){
+        this.startCountdown={elapsed:0,label:'3',started:false,goRemaining:0};
+        this.p.z=-this.p.speed*START_COUNTDOWN_DURATION;this.p.y=this.wave.height(this.p.x,this.p.z,this.time);
+        this.input.reset();this.wave.update(this.p.z,this.time,true);this.updateCamera(0,true);
+        this.showStartCountdown('3');
+      }
       this.journey?.hideAll();
       ['start-screen','pause-screen','result-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));
       document.getElementById('touch-guide').classList.remove('visible');document.getElementById('share-screen').classList.add('hidden');this.updateHUD();
@@ -7335,31 +7659,66 @@ class PaperSurfGame {
       this.audio.startBGM();
     } catch(error){console.error(error);this.journey?.showError('Игра не загрузилась. Проверь соединение и нажми «Повторить», чтобы загрузить её заново.');} finally {this.starting=false;const button=document.getElementById('start-button');button.disabled=false;button.textContent='ИГРАТЬ';}
   }
+  showStartCountdown(label,go=false){
+    const el=document.getElementById('start-countdown');if(!el)return;
+    el.textContent=label;el.classList.toggle('go',go);el.setAttribute('aria-hidden','false');
+    el.classList.add('visible');el.classList.remove('beat');void el.offsetWidth;el.classList.add('beat');
+  }
+  clearStartCountdown(){
+    this.startCountdown=null;
+    const el=document.getElementById('start-countdown');if(!el)return;
+    el.classList.remove('visible','beat','go');el.setAttribute('aria-hidden','true');el.textContent='';
+  }
+  advanceStartCountdown(dt){
+    const count=this.startCountdown;if(!count||count.started)return;
+    const advance=Math.min(dt,START_COUNTDOWN_DURATION-count.elapsed);
+    count.elapsed+=advance;this.p.z+=this.p.speed*advance;this.time+=advance;this.wave.time=this.time;
+    this.p.y=this.wave.height(this.p.x,this.p.z,this.time);
+    if(count.elapsed>=START_COUNTDOWN_DURATION){
+      count.started=true;count.goRemaining=.8;this.state='playing';this.container.classList.remove('countdown');
+      this.input.reset();this.accumulator=0;this.audio.playStartHorn?.();
+      this.showStartCountdown('СТАРТ!',true);
+      return;
+    }
+    const label=count.elapsed<1?'3':'2';
+    if(label!==count.label){count.label=label;this.showStartCountdown(label);}
+  }
+  tickStartCountdown(dt){
+    const count=this.startCountdown;if(!count?.started)return;
+    count.goRemaining-=dt;if(count.goRemaining<=0)this.clearStartCountdown();
+  }
   pause() {
-    if(this.state!=='playing')return;this.state='paused';this.input.reset();this.jump.cancel();this.audio.stopBGM();this.audio.stopJetski?.();
-    document.querySelector('.pause-balance-help').classList.toggle('hidden',this.assist);
+    if(this.state!=='playing')return;this.clearStartCountdown();this.state='paused';this.input.reset();this.jump.cancel();this.audio.stopBGM();this.audio.stopJetski?.();
     document.getElementById('center-button').textContent='◎ Запомнить нейтраль';
     this.renderControlHelp();
-    this.pauseTips.open=false;
+    this.pauseOptions.open=false;
     if(this.flowTest)document.getElementById('pause-help').innerHTML+='<br>L — лента, R — тот же участок заново.';
     if(window.DRIVE_TEST_MODE)document.getElementById('pause-help').innerHTML+='<br>Трамплин слева, спокойный объезд справа. После посадки отпусти поворот, чтобы зачесть цепочку. Небольшой пролив уменьшает её множитель; падение сжигает цепочку. Довези не меньше 30% бокала.';
-    this.renderCameraToggle();this.renderMissions(document.getElementById('pause-missions'),this.meta.missions.map(m=>({...m,done:this.meta.completedLive.has(m.id)})));
+    this.renderCameraToggle();
     document.getElementById('pause-screen').classList.remove('hidden');
+    document.querySelector('.pause-card').scrollTop=0;
+    document.getElementById('resume-button').focus({preventScroll:true});
     document.getElementById('moment')?.classList.remove('visible');
     document.getElementById('chain-toast')?.classList.remove('visible');
     if(this.chain)this.chain.toastTime=0;
   }
-  resume() {if(this.state!=='paused')return;this.state='playing';this.input.reset();document.getElementById('pause-screen').classList.add('hidden');this.audio.startBGM();}
+  resume() {if(this.state!=='paused')return;this.state='playing';this.input.reset();document.getElementById('pause-screen').classList.add('hidden');this.container.focus({preventScroll:true});this.audio.startBGM();}
   renderControlHelp() {
     const mode=this.input.mode;
     document.getElementById('center-button').classList.toggle('hidden',mode!=='gyro');
-    const course=mode==='keys'?'← → / A D — курс.':mode==='touch'?'Тяни вбок '+(this.input.jumpSide==='right'?'слева':'справа')+' — курс.':'Наклоняй телефон вбок — курс.';
-    document.getElementById('pause-help').innerHTML=course+'<br>Нажми — прыжок; ещё раз в воздухе — трюк.<br>Отпусти поворот перед посадкой.';
-    if(!this.flowTest)document.getElementById('pause-help').innerHTML+='<br>Приди к бару первым. Каждый 1% пива на финише — +50 очков.';
+    const course=mode==='keys'?'← → / A D — курс.':mode==='touch'?'Тяни '+(this.input.jumpSide==='right'?'слева':'справа')+' — курс.':'Наклон телефона — курс.';
+    document.getElementById('pause-help').innerHTML=course+'<br>'+(mode==='keys'?'Пробел':'Нажми')+' — прыжок. Ещё раз — трюк.';
   }
   hint(text,seconds=4) {document.getElementById('hint').textContent=text;document.getElementById('hint').classList.remove('invisible');this.hintTime=seconds;}
-  moment(word,sub='',bad=false,seconds=1) {
+  reserveRewardNotice(key,once=false){
+    // Drop overlapping notices instead of building a delayed reward queue.
+    if(this.flowTest)return true;
+    if(this.time<this.rewardNoticeTime||this.momentTime>0||this.chain?.toastTime>0||(once&&this.rewardNotices.has(key)))return false;
+    this.rewardNoticeTime=this.time+8;this.rewardNotices.add(key);return true;
+  }
+  moment(word,sub='',bad=false,seconds=1,once=false) {
     if(!bad&&this.momentTime>0&&document.getElementById('moment').classList.contains('bad'))return false;
+    if(!bad&&!this.reserveRewardNotice('moment:'+word,once))return false;
     const el=document.getElementById('moment');el.querySelector('strong').textContent=word;el.querySelector('strong').style.fontSize='';el.querySelector('span').textContent=sub;el.querySelector('span').style.display=sub?'table':'none';el.classList.toggle('bad',bad);el.classList.remove('reward','big-reward','visible');el.querySelector('.moment-points').textContent='';el.querySelector('.moment-mult').textContent='';void el.offsetWidth;el.classList.add('visible');this.momentTime=seconds;return true;
   }
   awardTrick(name,points,quiet=false){
@@ -7368,12 +7727,13 @@ class PaperSurfGame {
     this.waveRide.reward(name);this.chase.onTrick(name);
     this.race.reward(name);
     this.rush?.reward(name);
-    if(!quiet&&this.moment(name,'',false,1.15)){
+    const notice=!quiet&&points>=300&&this.moment(name,'',false,1.7,true);
+    if(notice){
       const el=document.getElementById('moment');el.classList.add('reward');el.classList.toggle('big-reward',points>=600);
       el.querySelector('.moment-points').textContent='+'+gain.toLocaleString('ru-RU');
       el.querySelector('.moment-mult').textContent='ЦЕПОЧКА ×'+this.chain.multiplier;
     }
-    const word=PaperSurfGame.trickWords[name];if(word&&this.p)this.juice.pop(word,this.p.x,this.p.y+2.3,this.p.z,'trick');
+    const word=PaperSurfGame.trickWords[name];if(notice&&word&&this.p)this.juice.pop(word,this.p.x,this.p.y+2.3,this.p.z,'trick');
     if(!['ПОЙМАЛ ВОЛНУ','ОТОРВАЛСЯ!','РАЗОШЛИСЬ','КАРМАН'].includes(name))this.companion.react('trick');
   }
   nearMiss(name,points,x,z,word='ВЖУХ!',quiet=false){
@@ -7387,13 +7747,14 @@ class PaperSurfGame {
       pocket2:this.chase.pocket2Time,longest:this.chain.longest,bestBank:this.chain.best,near:this.chain.nearMisses,wake:this.world.wakeRides,
       sharkAir:sharks.filter(h=>h.escaped&&h.airDodge).length,falls:this.balance.falls,wipes:this.chase.wipes};
   }
-  spill(amount,reason) {
+  spill(amount,reason,impact=false) {
     if(this.flowTest){if(!this.flowTest.handleSpill?.(amount,reason))this.chain.burn();}
     else {this.chain.penalize(amount);this.waveRide.momentum=amount>=.10?0:this.waveRide.momentum*.55;this.chase.onMistake(amount,reason);}
     this.combo=this.chain.multiplier;this.juice.shake(.3+amount*3);
     if(amount>=.01){this.race.boostTime=0;this.race.boost*=.4;this.rush.breakStreak();}
     this.mug.level=Math.max(0,this.mug.level-amount);this.mug.applyStumbleImpulse(0);this.mug.onSpill(Math.sign(this.p.lean),amount);this.spillFlash=.7;
-    this.moment(reason.toUpperCase(),'',true,.85);this.audio.playScratch();
+    this.moment(reason.toUpperCase(),'',true,.85);
+    if(impact)this.audio.playImpact(Math.min(1,amount/.1));else this.audio.playScratch();
     this.companion.react('spill');
   }
 
@@ -7427,7 +7788,7 @@ class PaperSurfGame {
     const surfaceDrive=-slope*9+(p.airborne?0:s.flowZ*.4);
     const drive=this.waveRide.caught||bank||wake>.3?surfaceDrive:THREE.MathUtils.clamp(surfaceDrive,-2,2);
     const target=this.flowTest?this.flowTest.targetSpeed(slope):THREE.MathUtils.clamp((p.airborne?Math.max(this.assist?25:27,p.speed-.8):(this.assist?22:24)+this.waveRide.boost)+this.waveRide.momentum+this.jump.landingBoost+this.race.boost+this.rush.boost+this.rush.padBoost+drive+trim-Math.abs(p.heading)*1.2+(wake>.3?5*wake:0)-(p.recovering>0?5:0),18,this.rush.active>0||this.rush.padBoost>1?46:42);
-    p.speed+=(target-p.speed)*(1-Math.exp(-1.65*dt));
+    p.speed+=(target-p.speed)*(1-Math.exp(-(this.rush.padTime>0&&target>p.speed?3.2:1.65)*dt));
     p.x=THREE.MathUtils.clamp(p.x+p.sideVelocity*dt,-9,9.2);p.z+=p.speed*Math.cos(p.heading)*dt;
     const next=this.trickRoute.stepRide(dt,previousPosition,this.wave.sample(p.x,p.z));this.jump.step(dt,next);
     const vertical=(p.y-previousY)/dt,verticalImpulse=THREE.MathUtils.clamp((vertical-p.verticalVelocity)*.16,-1.5,1.5);
@@ -7476,17 +7837,23 @@ class PaperSurfGame {
     return desired;
   }
   updateRivals(dt){
+    if(dt<=0)return;
     const p=this.p;
     this.rivals.forEach(r=>{
       if(r.scenic){
-        const previousX=r.x,side=r.index===0?-1:1;
-        // Fixed outside lanes leave the playable corridor and side ramps clear.
-        const desired=side*(12.2+Math.sin(r.z*.018+r.index)*.7);
-        r.x+=(desired-r.x)*(1-Math.exp(-dt*1.3));r.lean=THREE.MathUtils.clamp((r.x-previousX)/dt*.15,-.4,.4);
+        const previousX=r.x;
         const sample=this.wave.sample(r.x,r.z);
-        r.speed+=((25.5+sample.energy*2.5)-r.speed)*(1-Math.exp(-dt*1.5));r.z+=r.speed*dt;r.airY=0;
+        const target=Math.min(25.5+sample.energy*2.5,this.rivalCast.waterPace(r,r.z));
+        r.speed+=(target-r.speed)*(1-Math.exp(-dt*1.5));
+        r.speed=Math.min(r.speed,this.rivalCast.waterPace(r,r.z,r.speed*dt));
+        r.z+=r.speed*dt;r.airY=0;
+        r.x=this.rivalCast.waterPoint(r,r.z);
+        const lean=THREE.MathUtils.clamp((r.x-previousX)/Math.max(dt,.0001)*.12,-.35,.35);
+        r.lean+=THREE.MathUtils.clamp((lean-r.lean)*(1-Math.exp(-dt*3)),-dt*.65,dt*.65);
         // Reuse the same cast after its complete silhouette leaves the camera.
-        if(r.z<p.z-35&&!this.rivalCast.inView(r))r.z=p.z+220+r.index*32;
+        if(r.z<p.z-35&&!this.rivalCast.inView(r)){
+          r.z=p.z+220+r.index*32;r.x=this.rivalCast.waterPoint(r,r.z);r.lean=0;
+        }
         return;
       }
       if(this.race.enabled&&!r.encounter)return;
@@ -7510,7 +7877,7 @@ class PaperSurfGame {
       if(!r.freeEntry&&r.encounter?.phase!=='entry'&&r.encounter?.phase!=='exit'&&!r.passed&&(!this.race.enabled||r.wasAhead)&&p.z-r.z>3){r.passed=true;if(this.race.enabled)this.race.onPass(r);else this.score+=100;if(!r.collided&&r.nearest<1.7)this.nearMiss('ВПРИТЫК!',90,r.x,r.z);}
       if((!this.race.enabled&&!r.freeEntry||r.encounter?.phase==='move')&&!r.collided&&!r.contactLocked&&Math.abs(r.z-p.z)<1.5&&Math.abs(r.x-p.x)<(r.couple?1.05:.85)&&Math.abs(p.airY-r.airY)<.95&&this.impactCooldown===0){
         r.collided=r.contactLocked=true;r.yieldTime=3.5;r.yieldSide=r.x>p.x?1:-1;
-        this.spill(.08,r.name+': «Сорян!»');p.speed*=.8;this.impactCooldown=1.6;r.x+=r.yieldSide*1.5;r.z+=2;this.emit(16,1);
+        this.spill(.08,r.name+': «Сорян!»',true);p.speed*=.8;this.impactCooldown=1.6;r.x+=r.yieldSide*1.5;r.z+=2;this.emit(16,1);
       }
       if(!this.race.enabled&&!r.freeEntry&&r.z<p.z-24&&!this.rivalCast.inView(r)){
         this.rivalCast.enterBehind(r);r.freeEntry=true;r.speed=p.speed;
@@ -7558,13 +7925,12 @@ class PaperSurfGame {
         this.audio.playSlam();
       }
     }
-    document.getElementById('result-title').textContent=success?'1-е МЕСТО!':result.outcome==='tie'?'ФОТОФИНИШ!':'2-е МЕСТО';
+    document.getElementById('result-title').textContent=success?'1-е МЕСТО!':result.outcome==='tie'?'НИЧЬЯ':'2-е МЕСТО';
     document.getElementById('result-beer').textContent=result.max+'%';
     document.getElementById('result-beer-bonus').textContent='+'+this.deliveryBonus.toLocaleString('ru-RU');
-    document.getElementById('result-race-score').textContent=this.raceScore.toLocaleString('ru-RU');
-    document.getElementById('result-comment').textContent=success?'Обогнал Бориса — кубок твой!':result.outcome==='tie'?'Пришли одновременно. Будет реванш?':'Борис пришёл первым. Попробуй обогнать!';
+    document.getElementById('result-comment').textContent=success?'Кубок наш!':result.outcome==='tie'?'Финиш вровень.':'Борис впереди. Реванш?';
     this.companion.showResult(result.outcome);
-    document.getElementById('result-score').textContent=Math.round(this.score);
+    document.getElementById('result-score').textContent=Math.round(this.score).toLocaleString('ru-RU');
     this.renderResultMeta(this.meta.finish());
     this.comics.reset();
     document.getElementById('result-screen').classList.remove('hidden');this.container.classList.remove('playing');
@@ -7584,6 +7950,7 @@ class PaperSurfGame {
       summary.record?'НОВЫЙ РЕКОРД!':summary.dailyRecord?'РЕКОРД ВОЛНЫ ДНЯ':'РЕКОРД '+fmt(summary.best);
     this.renderMissions(document.getElementById('result-missions'),summary.missions);
     document.getElementById('result-stars').textContent='★ '+summary.stars;
+    document.getElementById('result-stars').hidden=summary.stars===0;
     this.renderMenuMeta();
   }
   renderCameraToggle(){
@@ -7640,7 +8007,7 @@ class PaperSurfGame {
     this.rivals.forEach(r=>{
       const s=this.wave.sample(r.x,r.z);this.updateSurfer(r.rig,r.x,r.z,s.height+r.airY,r.lean,r.airY,0,frame);
       const visible=r.scenic?['playing','paused'].includes(this.state)&&Math.abs(r.z-p.z)<180:!this.race.enabled||!!r.encounter;r.rig.group.visible=visible;r.rig.shadow.visible=visible;
-      r.wake.forEach((drop,i)=>{const z=r.z-1-i*.65;const x=r.x+Math.sin(i*2+this.time*4)*.2;drop.position.set(-x,this.wave.height(x,z)+.06,z);drop.scale.set(.4+i*.05,.14+i*.02,1);drop.visible=visible&&r.airY<.3;});
+      r.wake.forEach((drop,i)=>{const z=r.z-1-i*.65;const x=(r.scenic?this.rivalCast.waterPoint(r,z):r.x)+Math.sin(i*2+this.time*4)*.2;drop.position.set(-x,this.wave.height(x,z)+.06,z);drop.scale.set(.4+i*.05,.14+i*.02,1);drop.visible=visible&&r.airY<.3;});
     });
     this.meta.updateGhost(frame);
     this.lastPoseFrame=frame;
@@ -7657,6 +8024,7 @@ class PaperSurfGame {
     this.setpiece.update();
     this.beats.update();
     this.courseShow.update(dt);
+    this.paperSky.update();
     this.demo.update();
     this.finishSign.position.set(0,7,this.distance+2);this.finishPosts.forEach(({pole,x})=>pole.position.set(x,3,this.distance+2));
     // Only connect recorded points. Repeating the final point with an expanding
@@ -7734,7 +8102,9 @@ class PaperSurfGame {
   updateHUD() {
     this.duel.updateHUD();
     const pct=Math.round(this.mug.level*100);document.getElementById('beer-value').innerHTML=pct+'<span>%</span>';document.getElementById('beer-fill').style.width=pct+'%';
-    document.getElementById('score-value').textContent=Math.round(this.score).toString().padStart(6,'0');document.getElementById('caps-value').textContent=this.collected;
+    const scoreValue=document.getElementById('score-value'),scoreText=Math.round(this.score).toString().padStart(6,'0');
+    scoreValue.textContent=scoreText;scoreValue.style.setProperty('--score-digits',scoreText.length);
+    document.getElementById('caps-value').textContent=this.collected;
     document.getElementById('combo-value').textContent='×'+this.combo;
     document.getElementById('input-label').textContent=this.input.mode==='gyro'?'НАКЛОН: ↔ КУРС':this.input.mode==='touch'?'ТЯНИ: ↔ КУРС':'← → КУРС · ПРОБЕЛ ПРЫЖОК';
     document.getElementById('speed-value').textContent=Math.round(this.p.speed);document.getElementById('speed-meter').style.width=THREE.MathUtils.clamp(this.p.speed/42*100,20,100)+'%';
@@ -7801,19 +8171,22 @@ class PaperSurfGame {
     if(document.getElementById('coach-line').textContent!==line)document.getElementById('coach-line').textContent=line;
     if(coach.classList.contains('hidden')&&!(p.airborne&&this.jump.canSpin&&this.jump.tricks===0))this.onboarding.highlight='';this.onboarding.renderHighlight();
   }
-  resize() {const {width,height}=this.container.getBoundingClientRect();this.renderDirty=true;this.container.style.setProperty('--panel-size',Math.max(width,height)+'px');this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();}
+  resize() {const {width,height}=this.container.getBoundingClientRect();this.renderDirty=true;this.container.style.setProperty('--panel-size',Math.max(width,height)+'px');this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();this.paperSky.update();}
   animate(now) {
     requestAnimationFrame(this.animate);
     const realDt=this.lastTime?Math.min((now-this.lastTime)/1000,.25):1/60,dt=Math.min(realDt,.05);this.lastTime=now;
-    if(this.state!=='playing'&&!this.renderDirty&&!this.courseShow.deliveryActive)return;
+    const countdownFrame=this.state==='countdown';
+    if(this.state!=='playing'&&!countdownFrame&&!this.renderDirty&&!this.courseShow.deliveryActive)return;
     this.renderDirty=false;
-    if(this.state==='playing'){
+    if(countdownFrame)this.advanceStartCountdown(realDt);
+    else if(this.state==='playing'){
       this.comics.update(realDt);
       if(!this.juice.consumeStop(realDt))this.accumulator+=dt*Math.min(this.comics.timeScale,this.onboarding.timeScale);
       while(this.accumulator>=1/120&&this.state==='playing'){this.step(1/120);this.accumulator-=1/120;if(this.comics.pending){this.accumulator=0;break;}}
       const foamPressure=this.chase.active?.25+.75*this.wave.smooth((12-this.chase.gap)/10.9):0;
       const surface=this.wave.sample(this.p.x,this.p.z);
-      this.audio.updateRide({speed:this.p.speed,lean:this.p.lean,energy:surface.energy,airborne:this.p.airborne,fallen:this.p.fallen,foamPressure});
+      this.audio.updateRide({speed:this.p.speed,lean:this.p.lean,energy:surface.energy,airborne:this.p.airborne,fallen:this.p.fallen,foamPressure,
+        padTime:this.p.recovering===0?this.rush.padTime:0,padStrength:this.rush.padStrength,rampFlight:this.p.airborne&&!!this.jump.takeoffRamp});
       this.audio.updateAmbient?.(realDt);
       if(!this.flowTest)this.rivalCast.music(realDt);
       const wake=this.p.airborne?0:this.world.wakeQualityAt(this.p.x,this.p.z);
@@ -7826,8 +8199,9 @@ class PaperSurfGame {
         this.audio.updateJetski(999,0,0);
       }
     }
-    this.wave.update(this.p.z,this.time);this.updateVisuals(dt);this.updateHUD();
-    this.juice.beforeRender(this.camera,realDt);this.speedBlur.render();this.juice.afterRender(this.camera);
+    this.wave.update(this.p.z,this.time);this.updateVisuals(dt);if(!countdownFrame)this.updateHUD();
+    this.tickStartCountdown(realDt);
+    this.juice.beforeRender(this.camera,realDt);this.paperSky.update();this.speedBlur.render();this.juice.afterRender(this.camera);
     this.comics.capture();this.runComic.flush();
   }
 }

@@ -11,6 +11,7 @@ class SurfAudio {
     try { this.isMuted = localStorage.getItem('garret-paper-muted') === 'true'; } catch (_) {}
     this.bgmPlaying = false;
     this.masterGain = null;
+    this.sceneGain = null;
     this.sfxGain = null;
     this.ambientGain = null;
     this.bgmGain = null;
@@ -20,7 +21,12 @@ class SurfAudio {
     this.soundTimes = new Map();
     this.crowdVoice = null;
     this.crowdTimes = new Map();
+    this.flightCrowdNames = ['crowd_awe','crowd_awe_2','crowd_awe_3'];
+    this.flightCrowdBag = [];
+    this.lastFlightCrowd = null;
     this.musicDuckUntil = 0;
+    this.rampFlight = false;
+    this.acceleratorVoice = null;
     this.ready = Promise.resolve();
     
     // HTML5 BGM Audio element
@@ -58,8 +64,12 @@ class SurfAudio {
       seagull_1: 'seagull_1.wav',
       seagull_2: 'seagull_2.wav',
       seagull_distant: 'seagull_distant.wav',
-      crowd_applause: 'crowd_applause.wav',
-      crowd_awe: 'crowd_awe.wav',
+      crowd_applause: 'crowd_applause_female.wav',
+      crowd_applause_big: 'crowd_cheer_female.wav',
+      crowd_awe: 'crowd_flight_happy.wav',
+      crowd_awe_2: 'crowd_flight_group.wav',
+      crowd_awe_3: 'crowd_flight_bonus.wav',
+      crowd_shark_hit: 'crowd_awe.wav',
       jetski_loop: 'jetski_loop.wav',
       surf_wipeout: 'surf_wipeout.wav',
       landing_clean: 'landing_clean.wav',
@@ -84,18 +94,23 @@ class SurfAudio {
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.85, this.ctx.currentTime);
       this.masterGain.connect(this.ctx.destination);
+
+      // Spectators bypass this bus, so a ramp flight can soften the entire world.
+      this.sceneGain = this.ctx.createGain();
+      this.sceneGain.gain.setValueAtTime(1, this.ctx.currentTime);
+      this.sceneGain.connect(this.masterGain);
       
       this.sfxGain = this.ctx.createGain();
       this.sfxGain.gain.setValueAtTime(0.94, this.ctx.currentTime);
-      this.sfxGain.connect(this.masterGain);
+      this.sfxGain.connect(this.sceneGain);
       
       this.ambientGain = this.ctx.createGain();
       this.ambientGain.gain.setValueAtTime(0, this.ctx.currentTime);
-      this.ambientGain.connect(this.masterGain);
+      this.ambientGain.connect(this.sceneGain);
       
       this.bgmGain = this.ctx.createGain();
       this.bgmGain.gain.setValueAtTime(0.35, this.ctx.currentTime);
-      this.bgmGain.connect(this.masterGain);
+      this.bgmGain.connect(this.sceneGain);
 
       this.crowdGain = this.ctx.createGain();
       this.crowdGain.gain.setValueAtTime(0.55, this.ctx.currentTime);
@@ -265,6 +280,7 @@ class SurfAudio {
       nodes.forEach(node => node.disconnect());
       this.oneShots.delete(voice);
       if (this.crowdVoice === voice) this.crowdVoice = null;
+      if (this.acceleratorVoice === voice) this.acceleratorVoice = null;
     };
     return voice;
   }
@@ -275,6 +291,7 @@ class SurfAudio {
     }
     this.oneShots.clear();
     this.crowdVoice = null;
+    this.acceleratorVoice = null;
   }
 
   resetRide() {
@@ -284,6 +301,7 @@ class SurfAudio {
     this.soundTimes.clear();
     this.crowdTimes.clear();
     this.musicDuckUntil = this.seagullTimer = 0;
+    this.endRampFlight(true);
     this.nextSeagullTime = 6 + Math.random() * 8;
     if (this.ctx && this.bgmGain) {
       this.bgmGain.gain.cancelScheduledValues(this.ctx.currentTime);
@@ -299,6 +317,24 @@ class SurfAudio {
     this.bgmGain.gain.cancelScheduledValues(this.ctx.currentTime);
     this.bgmGain.gain.setTargetAtTime(0.20, this.ctx.currentTime, 0.025);
     this.bgmGain.gain.setTargetAtTime(0.35, this.musicDuckUntil, 0.18);
+  }
+
+  beginRampFlight() {
+    this.rampFlight = true;
+    if (!this.ctx || !this.sceneGain) return;
+    const t = this.ctx.currentTime;
+    this.sceneGain.gain.cancelScheduledValues(t);
+    this.sceneGain.gain.setTargetAtTime(0.48, t, 0.045);
+  }
+
+  endRampFlight(immediate = false) {
+    const active = this.rampFlight;
+    this.rampFlight = false;
+    if (!this.ctx || !this.sceneGain || (!active && !immediate)) return;
+    const t = this.ctx.currentTime;
+    this.sceneGain.gain.cancelScheduledValues(t);
+    if (immediate) this.sceneGain.gain.setValueAtTime(1, t);
+    else this.sceneGain.gain.setTargetAtTime(1, t + 0.18, 0.22);
   }
 
   // --- Dynamic Background Music ---
@@ -348,6 +384,7 @@ class SurfAudio {
   stopBGM() {
     this.bgmPlaying = false;
     this.rideActive = false;
+    this.endRampFlight(true);
     this.stopOneShots();
     this.stopJetski();
     if (this.ambientGain) this.ambientGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.04);
@@ -418,8 +455,12 @@ class SurfAudio {
     this.waveGain.gain.setTargetAtTime(targetGain, t, 0.12);
   }
 
-  updateRide({speed = 0, lean = 0, energy = 0, airborne = false, fallen = false, foamPressure = 0} = {}) {
+  updateRide({speed = 0, lean = 0, energy = 0, airborne = false, fallen = false, foamPressure = 0, padTime = 0, padStrength = 0, rampFlight = false} = {}) {
     if (!this.ctx || !this.rideActive) return;
+    // Pause/resume and an interrupted landing also restore the correct mix.
+    if (rampFlight && !fallen) {if (!this.rampFlight) this.beginRampFlight();}
+    else if (this.rampFlight) this.endRampFlight();
+    this.updateAccelerator(fallen ? 0 : padTime, padStrength, speed);
     const t = this.ctx.currentTime, pace = Math.max(0, Math.min(1.5, speed / 32));
     const turn = Math.min(1, Math.abs(lean)), swell = Math.max(0, Math.min(1, energy));
     this.updateWave(pace, fallen, foamPressure, swell);
@@ -445,7 +486,7 @@ class SurfAudio {
     if(!this.ctx||this.isMuted||!this.bgmPlaying||distance>=42){this.stopRivalMusic();return;}
     if(!this.rivalMusicGain){
       this.rivalMusicGain=this.ctx.createGain();this.rivalMusicGain.gain.value=0;
-      this.rivalMusicPan=this.ctx.createStereoPanner();this.rivalMusicGain.connect(this.rivalMusicPan);this.rivalMusicPan.connect(this.masterGain);
+      this.rivalMusicPan=this.ctx.createStereoPanner();this.rivalMusicGain.connect(this.rivalMusicPan);this.rivalMusicPan.connect(this.sceneGain);
     }
     const t=this.ctx.currentTime,volume=.17*(1-distance/42)**2;
     this.rivalMusicGain.gain.setTargetAtTime(volume,t,.08);this.rivalMusicPan.pan.setTargetAtTime(Math.max(-1,Math.min(1,pan)),t,.08);
@@ -477,7 +518,7 @@ class SurfAudio {
   // --- Dynamic Jetski Motor Engine ---
 
   updateJetski(distance, wakeQuality = 0, lateralOffset = 0) {
-    if (!this.ctx || this.isMuted) return;
+    if (!this.ctx || this.isMuted || !this.rideActive) return;
     
     if (distance < 45) {
       if (!this.jetskiSource && this.buffers['jetski_loop']) {
@@ -535,28 +576,44 @@ class SurfAudio {
 
   // --- A single short crowd voice per reaction; applause can follow a gasp. ---
 
-  playCrowdReaction(name, {volume, duration, cooldown}) {
+  playCrowdReaction(name, {volume, duration, cooldown, replace = false, replaceFade = 0.10, filterFreq = 5200, group = name}) {
     if (!this.ctx || this.isMuted) return null;
     const t = this.ctx.currentTime;
-    if (t - (this.crowdTimes.get(name) ?? -Infinity) < cooldown) return null;
-    // A landing replaces the flight gasp, so spectators never stack over the splash.
+    if (t - (this.crowdTimes.get(group) ?? -Infinity) < cooldown) return null;
+    // Crossfade replaced reactions so the crowd does not get cut off at touchdown.
     if (this.crowdVoice && this.crowdVoice.endsAt > t) {
-      if (name === 'crowd_awe') return null;
+      if (group === 'flight' && !replace) return null;
       const previous = this.crowdVoice;
       previous.gain.gain.cancelScheduledValues(t);
-      previous.gain.gain.setTargetAtTime(0, t, 0.025);
-      previous.source.stop(t + 0.10);
+      previous.gain.gain.setTargetAtTime(0, t, replaceFade / 4);
+      previous.source.stop(t + replaceFade);
     }
-    const voice = this.playSound(name, {volume, duration, output:this.crowdGain, fadeIn:0.035, fadeOut:0.35, filterFreq:5200});
+    const voice = this.playSound(name, {volume, duration, output:this.crowdGain, fadeIn:0.035, fadeOut:0.35, filterFreq});
     if (voice) {
       this.crowdVoice = voice;
-      this.crowdTimes.set(name, t);
+      this.crowdTimes.set(group, t);
     }
     return voice;
   }
 
-  playCrowdAwe() {
-    return this.playCrowdReaction('crowd_awe', {volume:0.42, duration:1.35, cooldown:3.5});
+  playCrowdAwe(ramp = false) {
+    if (!this.ctx || this.isMuted) return null;
+    if (!this.flightCrowdBag.length) {
+      const bag=this.flightCrowdNames.filter(name=>this.buffers[name]);
+      for(let i=bag.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]];}
+      if(bag.length>1&&bag[0]===this.lastFlightCrowd)[bag[0],bag[1]]=[bag[1],bag[0]];
+      this.flightCrowdBag=bag;
+    }
+    const name=this.flightCrowdBag[0];if(!name)return null;
+    if(name===this.lastFlightCrowd){this.flightCrowdBag=[];return null;}
+    const voice=this.playCrowdReaction(name, {volume:ramp ? 0.76 : 0.64, duration:ramp ? 1.8 : 1.5, cooldown:ramp ? 0 : 3.5, replace:ramp, filterFreq:6000, group:'flight'});
+    if(voice){this.lastFlightCrowd=name;this.flightCrowdBag.shift();}
+    return voice;
+  }
+
+  playCrowdSharkHit() {
+    // Disappointment replaces any celebration only after an actual shark hit.
+    return this.playCrowdReaction('crowd_shark_hit', {volume:0.50, duration:1.4, cooldown:1.5, replace:true});
   }
 
   playCrowdCheer(huge = false) {
@@ -567,8 +624,9 @@ class SurfAudio {
     this.playCrowdCheer(false);
   }
 
-  playCrowdApplause(special = false) {
-    return this.playCrowdReaction('crowd_applause', {volume:special ? 0.50 : 0.38, duration:special ? 2.1 : 1.6, cooldown:3.5});
+  playCrowdApplause(special = false, ramp = false) {
+    const sound=special?'crowd_applause_big':'crowd_applause';
+    return this.playCrowdReaction(sound, {volume:special || ramp ? 0.55 : 0.43, duration:special ? 2.1 : ramp ? 1.9 : 1.6, cooldown:ramp ? 0 : 3.5, replaceFade:ramp ? 0.72 : 0.10, filterFreq:8000});
   }
 
   playTrickTriumph(volume = 0.85) {
@@ -579,6 +637,24 @@ class SurfAudio {
   playFanfareWin() {
     if (!this.ctx || this.isMuted) return;
     this.playSound('fanfare_win', { volume: 0.55, rate: 1.0 });
+  }
+
+  playStartHorn() {
+    if (!this.ctx || this.isMuted || !this.sfxGain) return;
+    const ctx=this.ctx,t=ctx.currentTime,duration=.88,filter=ctx.createBiquadFilter(),envelope=ctx.createGain();
+    filter.type='lowpass';filter.frequency.setValueAtTime(1800,t);filter.Q.setValueAtTime(.7,t);
+    envelope.gain.setValueAtTime(.0001,t);envelope.gain.linearRampToValueAtTime(.62,t+.055);
+    envelope.gain.setValueAtTime(.62,t+.58);envelope.gain.exponentialRampToValueAtTime(.001,t+duration);
+    filter.connect(envelope);envelope.connect(this.sfxGain);
+    const partials=[{frequency:233.08,type:'sawtooth',level:.34},{frequency:466.16,type:'sawtooth',level:.17},{frequency:699.23,type:'square',level:.08}];
+    const nodes=[filter,envelope];let first=null;
+    for(const partial of partials){
+      const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type=partial.type;
+      osc.frequency.setValueAtTime(partial.frequency*.94,t);osc.frequency.exponentialRampToValueAtTime(partial.frequency,t+.08);
+      gain.gain.setValueAtTime(partial.level,t);osc.connect(gain);gain.connect(filter);osc.start(t);osc.stop(t+duration);
+      nodes.push(osc,gain);if(!first)first=osc;
+    }
+    this.duckMusic(.8);this.trackSource(first,nodes,{gain:envelope,filter,endsAt:t+duration});
   }
 
   // --- Gameplay SFX ---
@@ -659,6 +735,24 @@ class SurfAudio {
     this.playSound('spill_scratch', { volume: 0.32, rate: 1.0, cooldown:0.65 });
   }
 
+  playImpact(strength = .7) {
+    if (!this.ctx || this.isMuted) return;
+    const t=this.ctx.currentTime;
+    if(t-(this.soundTimes.get('obstacle_impact')??-Infinity)<.18)return;
+    this.soundTimes.set('obstacle_impact',t);
+    strength=Math.max(0,Math.min(1,strength));
+    this.duckMusic(.25);
+    // The landing plop supplies the body; a short, dark attack sounds like wet wood.
+    this.playWaterPlop(strength,false);
+    this.playSound('landing_hard',{volume:.38+strength*.18,rate:.82,duration:.24,filterFreq:900,fadeIn:.003,fadeOut:.16});
+    const osc=this.ctx.createOscillator(),gain=this.ctx.createGain(),filter=this.ctx.createBiquadFilter();
+    osc.type='triangle';osc.frequency.setValueAtTime(240,t);osc.frequency.exponentialRampToValueAtTime(95,t+.075);
+    filter.type='lowpass';filter.frequency.setValueAtTime(750,t);
+    gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(.12+strength*.1,t+.003);gain.gain.exponentialRampToValueAtTime(.001,t+.105);
+    osc.connect(filter);filter.connect(gain);gain.connect(this.sfxGain);osc.start(t);osc.stop(t+.12);
+    this.trackSource(osc,[osc,filter,gain]);
+  }
+
   playSlam() {
     if (!this.ctx || this.isMuted) return;
     this.playLanding(false, 0.7);
@@ -667,6 +761,46 @@ class SurfAudio {
   playRush() {
     if (!this.ctx || this.isMuted) return;
     this.playSound('surf_carve_deep', { volume: 0.9, rate: 1.15 });
+  }
+
+  playAccelerator(strength = 12) {
+    if (!this.ctx || this.isMuted) return;
+    this.stopAccelerator();
+    this.duckMusic(0.45);
+    // A quick rising, rounded tick marks contact before the sustained whoosh.
+    const t=this.ctx.currentTime,osc=this.ctx.createOscillator(),gain=this.ctx.createGain();
+    osc.type='triangle';osc.frequency.setValueAtTime(170,t);
+    osc.frequency.exponentialRampToValueAtTime(480,t+.075);
+    osc.frequency.exponentialRampToValueAtTime(220,t+.16);
+    gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(.22,t+.008);
+    gain.gain.exponentialRampToValueAtTime(.001,t+.18);
+    osc.connect(gain);gain.connect(this.sfxGain);osc.start(t);osc.stop(t+.19);
+    this.trackSource(osc,[osc,gain]);
+    this.updateAccelerator(1, strength, 24);
+  }
+
+  updateAccelerator(time = 0, strength = 0, speed = 0) {
+    if (!this.ctx || this.isMuted || time <= 0) {this.stopAccelerator();return;}
+    if (!this.acceleratorVoice) {
+      const voice=this.playSound('water_motion',{loop:true,volume:0,filterFreq:700});
+      if (!voice) return;
+      voice.filter.type='bandpass';voice.filter.Q.setValueAtTime(.55,this.ctx.currentTime);
+      this.acceleratorVoice=voice;
+    }
+    const voice=this.acceleratorVoice,t=this.ctx.currentTime;
+    const pace=Math.max(0,Math.min(1,(speed-20)/26)),power=Math.max(.3,Math.min(1,strength/12));
+    const tail=Math.min(1,time/.3);
+    voice.gain.gain.setTargetAtTime((.26+.18*power)*tail,t,.065);
+    voice.filter.frequency.setTargetAtTime(1100+pace*2800,t,.18);
+    voice.source.playbackRate.setTargetAtTime(1+pace*.55,t,.14);
+  }
+
+  stopAccelerator() {
+    const voice=this.acceleratorVoice;if (!voice || !this.ctx) return;
+    this.acceleratorVoice=null;
+    const t=this.ctx.currentTime;
+    voice.gain.gain.cancelScheduledValues(t);voice.gain.gain.setTargetAtTime(0,t,.025);
+    try {voice.source.stop(t+.12);} catch (_) {}
   }
 }
 

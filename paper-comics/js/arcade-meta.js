@@ -40,13 +40,13 @@ class RunMeta {
   get missions(){return this.data.missions.active.map(id=>ARCADE_MISSIONS.find(m=>m.id===id)).filter(Boolean);}
   makeGhost(){
     const g=this.game,rig=g.makeSurfer(1,0xf6ebd0);
-    rig.card.material.transparent=true;rig.card.material.opacity=.42;rig.card.material.depthWrite=false;
+    rig.group.scale.setScalar(1.2);
+    rig.card.material.transparent=true;rig.card.material.opacity=.58;rig.card.material.depthWrite=false;
     rig.board.material.transparent=true;rig.board.material.opacity=.35;rig.shadow.visible=false;
     rig.board.children.forEach(child=>{child.material.transparent=true;child.material.opacity=.25;});
-    rig.tag=g.sprite(g.label('РЕКОРД','#124f6a',256,76),1.7,.5);
     this.ghostRig=rig;this.hideGhost();
   }
-  hideGhost(){this.ghostRig.group.visible=this.ghostRig.tag.visible=this.ghostRig.shadow.visible=false;}
+  hideGhost(){this.ghostRig.group.visible=this.ghostRig.shadow.visible=false;}
   reset(){
     this.recording=[];this.recordClock=0;this.liveClock=0;this.completedLive=new Set();this.summary=null;
     this.ghost=this.daily?.ghost||null;this.ghostIndex=0;this.hideGhost();
@@ -71,7 +71,7 @@ class RunMeta {
   }
   updateGhost(frame){
     const g=this.game,rig=this.ghostRig,samples=this.ghost;
-    if(!samples||samples.length<2||g.state==='start'){this.hideGhost();return;}
+    if(!samples||samples.length<2||g.state==='start'||g.state==='countdown'){this.hideGhost();return;}
     const t=g.elapsed;
     while(this.ghostIndex<samples.length-2&&samples[this.ghostIndex+1][0]<t)this.ghostIndex++;
     while(this.ghostIndex>0&&samples[this.ghostIndex][0]>t)this.ghostIndex--;
@@ -82,7 +82,7 @@ class RunMeta {
     if(gap<-4||gap>140){this.hideGhost();return;}
     const y=g.wave.height(x,z)+air;
     g.updateSurfer(rig,x,z,y,lean,air,0,frame);
-    rig.group.visible=rig.tag.visible=true;rig.shadow.visible=false;rig.tag.position.set(-x,y+3.6,z);
+    rig.group.visible=true;rig.shadow.visible=false;
   }
   finish(){
     const g=this.game,stats=g.runStats(true),d=this.data,score=Math.round(g.score);

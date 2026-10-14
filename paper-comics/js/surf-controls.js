@@ -159,7 +159,7 @@ class SurfControlSettings {
       <button id="control-center" type="button" class="text-button">◎ Запомнить нейтраль</button><p class="controls-action-help">Нажми — прыжок. Ещё раз в воздухе — трюк.<br>Верни курс в центр для чистой посадки.</p><button id="controls-close" type="button" class="yellow-button">ГОТОВО</button></div>`;
     game.container.append(this.screen);
     const pad=document.createElement('div');pad.id='steer-pad';pad.setAttribute('aria-hidden','true');pad.innerHTML='<i></i>';game.container.append(pad);
-    for(const [parent,label] of [['start-screen','Управление'],['selection-footer','Управление'],['pause-card','Управление']]) {
+    for(const [parent,label] of [['start-screen','Управление'],['selection-footer','Управление'],['pause-settings','Управление']]) {
       const button=document.createElement('button');button.type='button';button.className='text-button controls-open';button.textContent=label;
       button.addEventListener('click',e=>{if(performance.now()-(window.__lastTouchTime||0)<350)return;this.open(button);});
       (document.getElementById(parent)||document.querySelector('.'+parent)).append(button);

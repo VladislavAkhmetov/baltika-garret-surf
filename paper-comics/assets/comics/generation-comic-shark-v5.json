@@ -1,0 +1,31 @@
+{
+  "asset": "comic-shark-v5",
+  "source": "C:/Users/amazi/.codex/generated_images/01a1390d-10ba-7993-9368-e8c56e9c7e41/exec-94269e22-7845-432a-b971-5526f5cd6b33.png",
+  "method": "Existing built-in imagegen output, cropped to its central panel and exported without repainting the approved illustration.",
+  "crop": {
+    "x": 4,
+    "y": 145,
+    "width": 1356,
+    "height": 978
+  },
+  "scenePolygon": [
+    [
+      4,
+      245
+    ],
+    [
+      1360,
+      145
+    ],
+    [
+      1360,
+      1123
+    ],
+    [
+      4,
+      990
+    ]
+  ],
+  "embeddedDialogue": "ЗУБЫ СЗАДИ!",
+  "prompt": "Edit the attached comic image. Remove the surfer man completely, including every body part, shorts, shirt, and drink. He must be entirely outside the frame. Fill his former area naturally with the existing blue sky, wave, and white spray. Keep only the rear section of the blue-and-white surfboard in the lower right with the same frightened red crab riding on it; the rest of the board continues outside the frame to the right. Preserve the shark on the left with its open mouth, the speech balloon and its original Russian lettering, the coastal background, the wave action, panel borders, and partial comic panels at top and bottom. Preserve the original composition, aspect ratio, vivid colors, ink outlines, and vintage halftone comic style. Make a targeted removal edit, preserving the shark and crab closely. No visible humans or human body parts."
+}

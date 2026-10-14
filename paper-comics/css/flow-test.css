@@ -1,6 +1,6 @@
 /* All experiment styling is scoped; the full game keeps its current layout. */
 .flow-test .hud,.flow-test #ride-coach,.flow-test #arcade-chain,.flow-test #chain-toast,.flow-test #moment,.flow-test #hint,.flow-test #crab-callout,.flow-test #daily-label,.flow-test #quick-button,.flow-test .touch-guide,.flow-test .result-card,.flow-test #pause-missions,.flow-test #assist-toggle,.flow-test .pause-balance-help{display:none!important}
-.flow-test .sun,.ribbon-ride .sun{width:24%;left:65%;top:8%}.flow-test .sun-halo,.ribbon-ride .sun-halo{width:37%;left:59%;top:3%;opacity:.5}.flow-test .cloud-one,.ribbon-ride .cloud-one{top:17%}.flow-test .cloud-two,.ribbon-ride .cloud-two{top:10%}
+.flow-test .sun,.ribbon-ride .sun{width:24%;left:65%;top:8%}.flow-test .sun-halo,.ribbon-ride .sun-halo{width:37%;left:59%;top:3%;opacity:.88}.flow-test .cloud-one,.ribbon-ride .cloud-one{top:17%}.flow-test .cloud-two,.ribbon-ride .cloud-two{top:10%}
 .flow-test .sky{background:linear-gradient(#3b95b0,#afd0c5 28%,#f1d7a8 55%)}
 .flow-test #sound-button{top:74px!important;right:18px!important;width:38px;height:38px}
 .flow-intro .menu-title{left:10%;top:15%;font-size:clamp(48px,7.2vw,92px);line-height:1;letter-spacing:-.045em}

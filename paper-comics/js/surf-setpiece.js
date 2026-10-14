@@ -36,8 +36,6 @@ class SurfSetpiece {
       rock.rim.frustumCulled=false;
       rock.original=Float32Array.from(rim.attributes.position.array);game.scene.add(rock.rim);
     }
-    this.signs=[{x:-5.9,z:281,label:'РИСК · СРЕЗКА',color:'#b65c35'},{x:4.4,z:281,label:'ШИРЕ · СПОКОЙНЕЕ',color:'#23766d'},
-      {x:0,z:1082,label:'ПОСЛЕДНИЙ ВЫЛЕТ',color:'#b65c35'}].map(s=>({...s,mesh:game.sprite(game.label(s.label,s.color,512,92),4.8,.86)}));
     this.reset();
   }
   setRockTexture(texture){
@@ -123,7 +121,7 @@ class SurfSetpiece {
       const distance=Math.hypot(dx/rx,dz/rz);
       if(distance>=1||p.y>rock.mesh.position.y+rock.mesh.scale.y+.3)continue;
       if(!rock.hit){rock.hit=true;if(!rock.reef)this.clean=false;this.hits++;this.log(rock.reef?'reef-hit':'rock-hit',{obstacleX:rock.x,obstacleZ:rock.z});
-        if(g.impactCooldown===0){g.spill(rock.reef?.04:.08,rock.reef?'ЗАДЕЛ РИФ':'ЗАДЕЛ СКАЛУ');p.speed*=rock.reef?.88:.78;g.impactCooldown=1.2;g.juice.hitstop(.06);g.emit(24,1.1,true);}}
+        if(g.impactCooldown===0){g.spill(rock.reef?.04:.08,rock.reef?'ЗАДЕЛ РИФ':'ЗАДЕЛ СКАЛУ',true);p.speed*=rock.reef?.88:.78;g.impactCooldown=1.2;g.juice.hitstop(.06);g.emit(24,1.1,true);}}
       const side=rock.reef?-Math.sign(rock.x):(dx<0?-1:1);
       p.x=rock.x+side*rx*Math.sqrt(Math.max(0,1-(dz/rz)**2));p.sideVelocity=side*Math.max(1,Math.abs(p.sideVelocity)*.3);
     }
@@ -159,7 +157,6 @@ class SurfSetpiece {
       }
       pos.needsUpdate=true;
     }
-    for(const s of this.signs){s.mesh.visible=this.enabled&&s.z-p.z<85&&s.z-p.z>9;s.mesh.position.set(-s.x,g.wave.height(s.x,s.z)+2.5,s.z);}
   }
 }
 window.SurfSetpiece=SurfSetpiece;

@@ -44,6 +44,110 @@ class RivalCast {
       Object.assign(r,{x:i===0?-3.5:4,z:i===0?46:84,speed:26,lean:0,airY:0,freeEntry:false,passed:false,chat:false,contactLocked:false,collided:false,yieldTime:0,yieldSide:0,nearest:Infinity});
     });
   }
+  waterObstacles(){
+    const g=this.game,rows=[];
+    const add=(kind,x,z,rx,rz)=>rows.push({kind,left:x-rx,right:x+rx,from:z-rz,to:z+rz});
+    // Completion flags belong to the player; the props still occupy the sea.
+    for(const h of g.world.hazards)if(h.type==='flotsam')add(h.prop,h.x,h.z,h.collisionRadius,h.collisionDepth);
+    for(const ramp of g.trickRoute.lines)if(!ramp.disabled){
+      const rx=(Math.abs(ramp.fz)*ramp.width+Math.abs(ramp.fx)*ramp.length)/2;
+      const rz=(Math.abs(ramp.fz)*ramp.length+Math.abs(ramp.fx)*ramp.width)/2;
+      add('ramp',ramp.x,ramp.z,rx,rz);
+    }
+    if(g.setpiece.enabled)for(const rock of g.setpiece.rocks)add('reef',rock.x,rock.z,rock.rx,rock.rz);
+    if(g.beats.enabled){
+      for(const rope of g.beats.ropes)add('rope',rope.x,rope.z,rope.halfWidth+.45,.7);
+      for(const zone of g.beats.zones)for(const gate of zone.gates)
+        for(const side of [-1,1])add('buoy',gate.x+side*1.55,gate.z,.3,.3);
+    }
+    for(const prop of g.rush.scenery)add(prop.kind,prop.x,prop.z,prop.halfWidth,prop.halfDepth);
+    // The nearest possible shoreline includes its foam fringe.
+    rows.push({kind:'beach',left:18.2,right:100,from:-1000,to:g.distance+1000});
+    // The arch's roof is high above the water: only its two feet block a board.
+    if(g.demo){
+      add('lighthouse',-14.8,394,4.5,4.5);
+      add('wreck',17.5,546,5.6,13);
+      for(const side of [-1,1])add('arch',side*15,812,4.5,4.5);
+    }
+    for(const pad of g.rush.accelerators){
+      const xs=Array.from({length:13},(_,i)=>g.trickRoute.routePoint(pad.z+(i/12-.5)*pad.length));
+      const left=Math.min(...xs)-pad.width/2,right=Math.max(...xs)+pad.width/2;
+      rows.push({kind:'pad',left,right,from:pad.z-pad.length/2,to:pad.z+pad.length/2});
+    }
+    for(const {pole,x} of g.finishPosts){
+      const shape=pole.geometry.parameters,radius=Math.max(shape.radiusTop,shape.radiusBottom);
+      add('finish-post',-x,g.distance+2,radius,radius);
+    }
+    return rows;
+  }
+  planWaterRoutes(){
+    const obstacles=this.waterObstacles(),spacing=2;
+    this.game.wave.sea.geometry.computeBoundingBox();
+    const waterLeft=-this.game.wave.sea.geometry.boundingBox.max.x;
+    for(const r of this.game.rivals){
+      const board=r.rig.board,shape=board.geometry.parameters;
+      const radius=Math.hypot(shape.width*board.scale.x,shape.height*board.scale.y)/2;
+      // The entire deck stays beyond the player/Boris corridor, even while turning.
+      const marginX=radius+.4,marginZ=radius+.7;
+      const minX=Math.ceil((waterLeft+marginX)*4)/4,maxX=Math.floor((-16.5-radius)*4)/4;
+      const signature=JSON.stringify([r.index,radius,minX,maxX,this.game.distance,obstacles]);
+      if(r.waterRoute?.signature===signature){if(r.scenic){r.x=this.waterPoint(r,r.z);r.lean=0;}continue;}
+      const rows=obstacles.map(o=>({...o,left:o.left-marginX,right:o.right+marginX,from:o.from-marginZ-spacing,to:o.to+marginZ+spacing}));
+      // Head farther out to sea around shore rocks; never turn into the race lanes.
+      const route=this.planWaterRoute(r,rows,Math.max(minX,-46),maxX)||this.planWaterRoute(r,rows,minX,maxX);
+      if(!route)throw Error('Нет водного маршрута для '+r.name);
+      r.waterRoute={...route,radius,waterLeft,innerEdge:-16.5,obstacles:rows,signature};
+      if(r.scenic){r.x=this.waterPoint(r,r.z);r.lean=0;}
+    }
+  }
+  planWaterRoute(r,rows,minX,maxX){
+    const spacing=2,step=.25,columns=Math.round((maxX-minX)/step)+1,from=-120,count=Math.ceil((this.game.distance+360-from)/spacing)+1;
+    const parents=new Int16Array(count*columns);parents.fill(-1);
+    let costs=new Float64Array(columns);costs.fill(Infinity);
+    const preferred=z=>-22.5-r.index*4+Math.sin(z*.013+r.index)*.55;
+    for(let j=0;j<columns;j++)costs[j]=Math.pow(minX+j*step-preferred(from),2)*10;
+    for(let i=1;i<count;i++){
+      const z=from+i*spacing,blocked=rows.filter(o=>z>=o.from&&z<=o.to),next=new Float64Array(columns);next.fill(Infinity);
+      for(let j=0;j<columns;j++){
+        const x=minX+j*step;if(blocked.some(o=>x>=o.left-.000001&&x<=o.right+.000001))continue;
+        // Prefer broad anticipatory arcs; tight passages can also reduce pace.
+        for(let k=Math.max(0,j-16);k<=Math.min(columns-1,j+16);k++){
+          const delta=(j-k)*step,cost=costs[k]+delta*delta*96+Math.pow(x-preferred(z),2)*.012;
+          if(cost<next[j]){next[j]=cost;parents[i*columns+j]=k;}
+        }
+      }
+      if(!next.some(Number.isFinite))return null;
+      costs=next;
+    }
+    let cursor=0;for(let j=1;j<columns;j++)if(costs[j]<costs[cursor])cursor=j;
+    if(!Number.isFinite(costs[cursor]))return null;
+    const points=new Float64Array(count),slopes=new Float64Array(count);
+    for(let i=count-1;i>=0;i--){points[i]=minX+cursor*step;if(i>0)cursor=parents[i*columns+cursor];}
+    for(let i=1;i<count-1;i++){
+      const a=(points[i]-points[i-1])/spacing,b=(points[i+1]-points[i])/spacing;
+      // Monotone cubic tangents round turns without overshooting a safe corridor.
+      slopes[i]=a*b>0?2*a*b/(a+b):0;
+    }
+    return {from,spacing,points,slopes};
+  }
+  waterPoint(r,z){
+    const route=r.waterRoute;if(!route)return r.x;
+    const {from,spacing,points,slopes}=route,t=THREE.MathUtils.clamp((z-from)/spacing,0,points.length-1);
+    const i=Math.min(points.length-2,Math.floor(t)),u=t-i,u2=u*u,u3=u2*u;
+    return (2*u3-3*u2+1)*points[i]+(u3-2*u2+u)*spacing*slopes[i]
+      +(-2*u3+3*u2)*points[i+1]+(u3-u2)*spacing*slopes[i+1];
+  }
+  waterPace(r,z,distance=32){
+    const {from,spacing,points,slopes}=r.waterRoute;
+    const first=Math.max(0,Math.floor((z-from)/spacing)),last=Math.min(points.length-2,Math.ceil((z+distance-from)/spacing));
+    let slope=.01;
+    for(let i=first;i<=last;i++){
+      const delta=(points[i]-points[i+1])/spacing,a=6*delta+3*(slopes[i]+slopes[i+1]),b=-6*delta-4*slopes[i]-2*slopes[i+1],c=slopes[i];
+      const u=a===0?0:THREE.MathUtils.clamp(-b/(2*a),0,1);
+      slope=Math.max(slope,Math.abs(c),Math.abs(a+b+c),Math.abs(a*u*u+b*u+c));
+    }
+    return Math.min(28,3.2/slope);
+  }
   inView(r,margin=.15){
     const g=this.game,camera=g.camera,box=this.viewBounds;
     camera.updateMatrixWorld(true);
@@ -60,7 +164,7 @@ class RivalCast {
     this.viewShift.set(-r.x-r.rig.shadow.position.x,g.wave.height(r.x,r.z)+.04-r.rig.shadow.position.y,r.z-.15-r.rig.shadow.position.z);
     box.union(this.shadowBounds.setFromObject(r.rig.shadow).translate(this.viewShift));
     for(let i=0;i<r.wake.length;i++){
-      const z=r.z-1-i*.65,x=r.x+Math.sin(i*2+g.time*4)*.2,radius=.4+i*.05,y=g.wave.height(x,z)+.06;
+      const z=r.z-1-i*.65,x=(r.scenic?this.waterPoint(r,z):r.x)+Math.sin(i*2+g.time*4)*.2,radius=.4+i*.05,y=g.wave.height(x,z)+.06;
       box.expandByPoint(this.viewPoint.set(-x-radius,y-radius,z-radius));
       box.expandByPoint(this.viewPoint.set(-x+radius,y+radius,z+radius));
     }

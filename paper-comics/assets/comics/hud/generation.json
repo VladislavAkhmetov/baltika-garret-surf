@@ -1,0 +1,19 @@
+{
+  "tool": "built-in image_gen",
+  "reference": "magnific__-img1-c-ui-__96566.png",
+  "assets": [
+    {
+      "name": "paper-blank",
+      "prompt": "Use case: stylized-concept. Generate ONE reusable game HUD background asset: a blank wide rectangle of warm ivory old paper with irregular naturally torn fibrous edges, soft age stains and subtle vintage printed grain, inspired by a Mediterranean paper collage surf game. Straight front view, no perspective. Paper takes 94% width and 88% height of a landscape 3:2 canvas. Cream center remains light and low contrast for readable dark numbers and labels overlaid by code. No text, no numbers, no icons, no borders, no tape, no objects. Transparent background outside paper. The physical sheet should have a wide approximately 1.65:1 aspect ratio, four torn edges, tiny soft contact shadow, authentic tactile paper."
+    },
+    {
+      "name": "ink-blank",
+      "prompt": "Use case: stylized-concept. Asset type: ONE blank reusable game HUD panel. Front-facing horizontal strip of torn ivory paper, overprinted with dark petrol navy blue ink (#204652), slightly distressed vintage print grain, thin irregular cream torn paper rim on all four sides. Inspired by tactile Mediterranean surf travel collages. Wide rectangle approximately 3.2:1 on a landscape canvas; object occupies 96% width and centered vertically. Low contrast grain in large EMPTY navy center, suitable for overlaying cream digital score numbers and progress bars in code. No text, no numbers, no symbols, no objects, no tape. All surrounding space truly transparent. Tiny soft contact shadow. Crisp torn fibers and restrained authentic surface wear."
+    },
+    {
+      "name": "crown-cream",
+      "prompt": "Use case: stylized-concept. Asset type: ONE game control button background, no icon. A single beer bottle crown cap seen exactly from above, circular with 21 very distinct crimped serrated teeth around its circumference. Vintage paper collage style: worn cream enamel face, warm ivory and aged brass folded metal rim, subtle printed paper grain and tiny distressed marks. Thin dark petrol navy circular printed ring just inside the crown rim. Large plain blank cream center, suitable for overlaying dark arrow icons in code. Center cap perfectly centered, 92% of square canvas width and height. Flat top-down orthographic view, no perspective, minimal soft shadow. Transparent background, no text, no numbers, no logo, no arrow, no symbol. Clearly recognizable metal beer crown shape, beautifully tactile, muted warm ivory with dark teal ring."
+    }
+  ],
+  "usage": "Blank backgrounds only. All numbers, labels, icons and progress bars rendered live by HTML/CSS. PNG masters and alpha-preserving WebP delivery copies. Jump uses the same crown with the navy paper texture layered inside its center in CSS."
+}

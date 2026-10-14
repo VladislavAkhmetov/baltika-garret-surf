@@ -51,7 +51,7 @@ class BeerDuel {
     const p=this.game.p,b=this.boris;
     this.cooldown=Math.max(0,this.cooldown-dt);
     if(!p.fallen&&!this.arrived&&Math.abs(p.z-b.z)<1.8&&Math.abs(p.x-b.x)<1.35&&Math.abs(p.airY-b.airY)<1&&this.cooldown===0&&this.game.impactCooldown===0){
-      this.spill(.1);this.game.spill(.1,'СТОЛКНУЛИСЬ С БОРИСОМ');p.speed*=.8;b.speed*=.8;
+      this.spill(.1);this.game.spill(.1,'СТОЛКНУЛИСЬ С БОРИСОМ',true);p.speed*=.8;b.speed*=.8;
       this.game.impactCooldown=this.cooldown=2;this.game.emit(20,1.1);
     }
   }

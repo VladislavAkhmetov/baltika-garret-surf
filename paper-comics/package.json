@@ -1,6 +1,7 @@
 {
   "scripts": {
     "dev": "node scripts/serve.js",
+    "test:speed-blur": "node scripts/test_speed_blur.cjs",
     "test:audio": "node scripts/test_audio.cjs",
     "test:audio:browser": "node scripts/test_audio_browser.cjs",
     "test:course-show": "node scripts/test_course_show.cjs",
@@ -12,6 +13,7 @@
     "test:prototype": "node scripts/test_prototype.js",
     "test:hero-grip": "node scripts/test_hero_grip.cjs",
     "test:sky-flight": "node scripts/test_sky_advertiser.cjs",
+    "test:paper-sky": "node scripts/test_paper_sky.cjs",
     "test:controls": "node scripts/test_controls.cjs",
     "test:chapter": "node scripts/test_chapter.cjs",
     "test:playthrough": "node scripts/check-playthrough.cjs",
@@ -19,6 +21,7 @@
     "test:wager": "node scripts/test_wager.cjs",
     "test:airwaves": "node scripts/test_airwaves.cjs",
     "test:ride-ui": "node scripts/test_ride-ui.cjs",
+    "test:ride-notices": "node scripts/test_ride_notices.cjs",
     "test:sea-visuals": "node scripts/test_sea-visuals.cjs",
     "test:water-motion": "node scripts/test_water-motion.cjs",
     "test:arcade-jump": "node scripts/test_arcade-jump.cjs",
@@ -33,6 +36,7 @@
     "test:ribbon": "node scripts/test_ribbon.cjs",
     "test:maneuvers": "node scripts/test_maneuvers.cjs",
     "test:rivals": "node scripts/test_rivals.cjs",
+    "test:rival-water": "node scripts/test_rival_water.cjs",
     "test:rival-visibility": "node scripts/test_rival_visibility.cjs",
     "test:rival-geometry": "node scripts/test_rival_geometry.cjs"
   },

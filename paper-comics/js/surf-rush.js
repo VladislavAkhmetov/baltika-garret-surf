@@ -2,7 +2,7 @@
 class SurfRush {
   constructor(game){
     this.game=game;this.lines=[];this.scenery=[];
-    this.padTexture=this.makePadTexture();
+    this.padTexture=this.makePadTexture();this.activePadTexture=this.makePadTexture(true);
     this.accelerators=[861,964,1084,1224,1324].map((z,i)=>this.makeAccelerator(z,i));
     this.meter=document.createElement('div');this.meter.id='rush-meter';
     this.meter.innerHTML='<strong>КУРАЖ</strong><span><i></i><i></i><i></i></span><small>0 крышек</small>';
@@ -24,7 +24,7 @@ class SurfRush {
         [-21,1044,24,19],[23,1147,27,22],[-19,1209,22,18],[21,1282,24,19],[-20,1338,21,17]];
       for(const [x,z,width,height] of rocks){
         const mesh=g.sprite(texture,width,height);mesh.center.set(.5,0);mesh.position.set(-x,-.45,z);mesh.material.fog=true;
-        this.scenery.push({mesh,z});
+        this.scenery.push({mesh,x,z,halfWidth:width/2,halfDepth:width*.18,kind:'shore-rock'});
       }
       g.renderDirty=true;resolve();
     },undefined,()=>reject(Error('Не удалось загрузить скалы'))));this.ready.catch(()=>{});
@@ -43,18 +43,18 @@ class SurfRush {
       const flag=new THREE.Mesh(new THREE.PlaneGeometry(.8,1.1),g.trickRoute.makeInk(i%2?0xf3c24e:0xde7150));
       flag.position.set(-12.4,5.6,680+i*10);flag.rotation.y=Math.PI/2;pier.add(flag);
     }
-    this.scenery.push({mesh:pier,z:710,extent:48});
+    this.scenery.push({mesh:pier,x:15,z:710,halfWidth:3.3,halfDepth:44,kind:'pier',extent:48});
   }
-  makePadTexture(){
+  makePadTexture(active=false){
     const canvas=document.createElement('canvas');canvas.width=256;canvas.height=512;
     const c=canvas.getContext('2d');
     c.fillStyle='#fff0c8';c.beginPath();c.moveTo(15,8);c.lineTo(240,0);c.lineTo(250,492);c.lineTo(8,512);c.closePath();c.fill();
-    c.fillStyle='#ffcd41';c.fillRect(24,18,208,476);
-    c.strokeStyle='#b55a32';c.lineWidth=6;c.strokeRect(28,22,200,468);
+    c.fillStyle=active?'#75e2ad':'#ffcd41';c.fillRect(24,18,208,476);
+    c.strokeStyle=active?'#28785c':'#b55a32';c.lineWidth=6;c.strokeRect(28,22,200,468);
     for(const y of [96,244,392]){
       c.beginPath();c.moveTo(62,y-25);c.lineTo(128,y+32);c.lineTo(194,y-25);
-      c.lineJoin='miter';c.strokeStyle='#dc6747';c.lineWidth=34;c.stroke();
-      c.strokeStyle='#fff4d2';c.lineWidth=15;c.stroke();
+      c.lineJoin='miter';c.strokeStyle=active?'#28785c':'#dc6747';c.lineWidth=34;c.stroke();
+      c.strokeStyle=active?'#ffffff':'#fff4d2';c.lineWidth=15;c.stroke();
     }
     c.fillStyle='rgba(85,63,36,.14)';
     for(let i=0;i<480;i++)c.fillRect((i*73)%256,(i*137)%512,1+i%2,2);
@@ -67,14 +67,13 @@ class SurfRush {
     const material=new THREE.MeshBasicMaterial({map:this.padTexture,transparent:true,alphaTest:.08,depthWrite:false,side:THREE.DoubleSide,
       polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
     const mesh=new THREE.Mesh(geometry,material);mesh.frustumCulled=false;mesh.renderOrder=1;mesh.visible=false;g.scene.add(mesh);
-    const sign=g.sprite(g.label('РАЗГОН »','#b45130',256,64),3.6,.9);sign.visible=false;
-    return {z,index,width,length,mesh,sign,strength:index===4?8:10,duration:index===4?1.1:1.65};
+    return {z,index,width,length,mesh,strength:index===4?9.6:12,duration:index===4?1.1:1.65};
   }
   reset(){
     const g=this.game;this.enabled=!g.flowTest;this.moves=new Set();this.window=0;this.active=0;this.activations=0;this.boost=0;this.splashAmount=0;this.lastMove=-100;
     g.container.classList.toggle('rush-mode',this.enabled);g.container.classList.remove('in-rush');
     this.padBoost=this.padTime=this.padStrength=this.padHits=0;this.padEvents=[];
-    for(const pad of this.accelerators){pad.x=g.trickRoute.routePoint(pad.z);pad.taken=pad.done=false;pad.mesh.visible=pad.sign.visible=false;pad.mesh.material.color.set(0xffffff);}
+    for(const pad of this.accelerators){pad.x=g.trickRoute.routePoint(pad.z);pad.taken=pad.done=false;pad.flash=0;pad.mesh.visible=false;pad.mesh.material.color.set(0xffffff);pad.mesh.material.map=this.padTexture;}
     for(const c of g.caps){g.scene.remove(c.mesh);c.mesh.material.dispose();}
     g.caps=[];this.lines=[];
     if(this.enabled){
@@ -122,7 +121,7 @@ class SurfRush {
       this.splash(1);this.game.container.classList.add('in-rush');
     }
   }
-  breakStreak(){this.moves.clear();this.window=this.active=this.padTime=0;this.boost*=.3;this.padBoost*=.3;this.game.container.classList.remove('in-rush');}
+  breakStreak(){this.moves.clear();this.window=this.active=this.padTime=0;this.boost*=.3;this.padBoost*=.3;this.game.speedBlur?.cancelBurst();this.game.audio?.stopAccelerator();this.game.container.classList.remove('in-rush');}
   splash(amount){if(!this.game.reducedMotion)this.splashAmount=Math.max(this.splashAmount,amount);}
   step(dt){
     if(!this.enabled)return;
@@ -132,6 +131,7 @@ class SurfRush {
     this.padTime=Math.max(0,this.padTime-dt);
     this.padBoost+=((this.padTime>0&&!this.game.p.fallen&&this.game.p.recovering===0?this.padStrength:0)-this.padBoost)*(1-Math.exp(-dt*8));
     this.splashAmount=Math.max(0,this.splashAmount-dt*2.4);
+    for(const pad of this.accelerators)pad.flash=Math.max(0,pad.flash-dt);
     this.game.container.classList.toggle('in-rush',this.active>0);
     for(const line of this.lines)if(line.air&&!line.locked&&line.ramp.z-this.game.p.z<85)this.lockArc(line);
   }
@@ -143,8 +143,11 @@ class SurfRush {
       if(Math.abs(p.z-pad.z)>pad.length/2||p.airborne||p.fallen||p.recovering>0||
         Math.abs(p.x-g.trickRoute.routePoint(p.z))>pad.width/2-.15||Math.abs(p.y-g.wave.height(p.x,p.z))>.8)continue;
       pad.taken=pad.done=true;this.padHits++;this.padTime=Math.max(this.padTime,pad.duration);this.padStrength=pad.strength;
+      // A small instant kick makes entering the arrows felt before the sustained pull.
+      p.speed=Math.min(46,p.speed+3);this.padBoost=Math.max(this.padBoost,pad.strength*.7);
       this.padEvents.push({index:pad.index,z:p.z,time:g.time,speed:p.speed});
-      pad.mesh.material.color.set(0xa1d9b3);g.audio.playRush();g.juice.punch(2.5);g.juice.buzz(20);this.splash(.65);g.emit(20,1.1,true);
+      pad.flash=.8;pad.mesh.material.map=this.activePadTexture;
+      g.speedBlur?.triggerBurst();g.audio.playAccelerator(pad.strength);g.juice.punch(3.2);g.juice.buzz(20);this.splash(.65);g.emit(20,1.1,true);
       g.moment('РАЗГОН!','',false,.7);
     }
   }
@@ -169,7 +172,6 @@ class SurfRush {
     for(const item of this.scenery)item.mesh.visible=this.enabled&&item.z+(item.extent||0)>p.z-22&&item.z-(item.extent||0)<p.z+165;
     for(const pad of this.accelerators){
       pad.mesh.visible=this.enabled&&['playing','paused'].includes(g.state)&&pad.z-p.z>-pad.length&&pad.z-p.z<110;
-      pad.sign.visible=pad.mesh.visible&&!pad.done&&pad.z-p.z>14;
       if(!pad.mesh.visible)continue;
       const pos=pad.mesh.geometry.attributes.position;
       for(let row=0;row<=12;row++)for(let col=0;col<=4;col++){
@@ -177,7 +179,9 @@ class SurfRush {
         pos.setXYZ(row*5+col,-x,g.wave.height(x,z)+.095,z);
       }
       pos.needsUpdate=true;
-      pad.sign.position.set(-pad.x,g.wave.height(pad.x,pad.z)+2.6,pad.z+4);
+      const flash=pad.flash/.8;
+      pad.mesh.material.color.setRGB(1,1,1);
+      if(pad.taken&&!g.reducedMotion)pad.mesh.material.color.setRGB(1+flash*.35,1+flash*.35,1+flash*.35);
     }
     for(const c of g.caps){
       c.mesh.visible=!c.collected&&c.z>p.z-3&&c.z<p.z+100&&(!c.line.air||c.line.locked);

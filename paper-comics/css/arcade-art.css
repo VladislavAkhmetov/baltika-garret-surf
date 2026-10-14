@@ -2,7 +2,14 @@
 #app-container{--ride-left:22px;--chain-top:122px;--message-top:122px;--ride-width:330px}
 #app-container:has(#arcade-chain.has-chain){--message-top:200px}
 #app-container.debug-mode:has(#arcade-chain.chasing){--message-top:226px}
-.sky{filter:blur(calc(var(--speed-blur,0) * 2.5px));transform:scale(1.015)}
+#start-countdown{position:absolute;z-index:24;left:50%;top:46%;min-width:1.1em;transform:translate(-50%,-50%);pointer-events:none;visibility:hidden;opacity:0;color:#ffd264;font:400 clamp(100px,27cqw,184px)/.9 'Russo One',Impact,sans-serif;text-align:center;-webkit-text-stroke:3px #103f58;paint-order:stroke fill;text-shadow:0 5px 0 #103f58,0 9px 18px #082e3d70}
+#start-countdown.visible{visibility:visible;opacity:1}
+#start-countdown.beat{animation:start-countdown-beat .38s cubic-bezier(.16,.8,.25,1.15) both}
+#start-countdown.go{min-width:0;padding:8px 22px;font-size:clamp(38px,10cqw,76px);letter-spacing:.04em;color:#fff0bf;-webkit-text-stroke:2px #a43e2b;text-shadow:0 4px 0 #103f58,0 8px 16px #082e3d70}
+#app-container.countdown .hud,#app-container.countdown .sound-button,#app-container.countdown #arcade-chain,#app-container.countdown #moment,#app-container.countdown #chain-toast,#app-container.countdown #crab-callout,#app-container.countdown #comic-frame,#app-container.countdown #ride-coach,#app-container.countdown #hint,#app-container.countdown #spill-flash,#app-container.countdown #shark-threat,#app-container.countdown #balance-cue,#app-container.countdown #wipeout-screen,#app-container.countdown .steer-controls,#app-container.countdown #jump-button,#app-container.countdown #bottom-hud,#app-container.countdown #touch-guide{visibility:hidden!important;pointer-events:none!important}
+#app-container.countdown #start-countdown{visibility:visible;opacity:1}
+@keyframes start-countdown-beat{from{opacity:0;transform:translate(-50%,-50%) scale(1.35)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.sky{pointer-events:none}
 .speed-lines{opacity:calc(var(--lines,0) * .34);background:repeating-conic-gradient(from var(--lines-turn,0deg) at 50% 57%,#fff6df99 0deg .25deg,transparent .25deg 14deg);-webkit-mask:radial-gradient(ellipse 62% 55% at 50% 57%,transparent 65%,#000 100%);mask:radial-gradient(ellipse 62% 55% at 50% 57%,transparent 65%,#000 100%)}
 
 #arcade-chain{top:var(--chain-top);left:var(--ride-left)!important;right:auto!important;bottom:auto!important;width:min(var(--ride-width),calc(100% - 124px));transform:none!important;gap:3px;transition:opacity .15s}
@@ -45,6 +52,8 @@
 #moment:has(~#chain-toast.visible){visibility:hidden}
 @keyframes ride-note{from{opacity:0;translate:0 -6px}to{opacity:1;translate:0 0}}
 #chain-toast.visible{animation:ride-note .22s ease-out both}
+#moment.visible:not(.bad),#chain-toast.visible:not(.bad){animation:reward-note .35s ease-out both}
+@keyframes reward-note{from{opacity:0}to{opacity:1}}
 #chain-toast strong{display:block;font-size:18px;letter-spacing:0;padding:0;background:none;color:#f0fff9;clip-path:none;filter:none;text-shadow:0 2px 4px #062c40b3}
 #chain-toast span{display:block;margin:3px 0 0;font-size:32px;letter-spacing:-1px;color:#ffd264;-webkit-text-stroke:0;text-shadow:0 2px 4px #062c40b3}
 #chain-toast.bad strong,#chain-toast.bad span{background:none;color:#ffcfb4}
@@ -116,5 +125,5 @@
 }
 @media(prefers-reduced-motion:reduce){
  .sky{filter:none;transform:none}
- #moment.visible,#chain-toast.visible{animation:none}
+ #moment.visible,#chain-toast.visible,#moment.visible:not(.bad),#chain-toast.visible:not(.bad){animation:none}
 }

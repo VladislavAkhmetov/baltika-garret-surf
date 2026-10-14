@@ -2,7 +2,7 @@
 /* The game fills its own stage; every label is pasted paper, not a web card. */
 body{display:block;background:#103f58;overflow:hidden}
 .desktop-note{display:none!important}
-#app-container{width:100vw;height:100dvh;max-width:1400px;margin:0 auto;border-radius:0;box-shadow:none;container-type:size}
+#app-container{width:100vw;height:100dvh;max-width:1400px;margin:0 auto;border-radius:0;box-shadow:none;container-type:size;container-name:mobile-screen}
 .paper{background-color:transparent;background-image:url('../assets/comics/paper-panel-v2.webp');background-size:100% 100%;clip-path:none;filter:drop-shadow(2px 3px 1px #143b4b50)}
 .journey{padding:0;align-items:stretch;justify-content:flex-start;backdrop-filter:none;background:#2d8fad;color:var(--ink);--pad:clamp(14px,3cqw,36px)}
 .journey::before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(#fff3d72a 1px,transparent 1px);background-size:5px 5px}

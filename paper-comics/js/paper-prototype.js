@@ -1,7 +1,9 @@
+const START_COUNTDOWN_DURATION=2;
+
 class PaperSurfGame {
   constructor() {
     this.container = document.getElementById('app-container');
-    this.state = 'start'; this.assist=true; this.time = 0; this.elapsed = 0; this.distance = COMICS_COURSE.length;
+    this.state = 'start'; this.assist=true; this.time = 0; this.elapsed = 0; this.distance = COMICS_COURSE.length;this.startCountdown=null;
     this.accumulator = 0; this.lastTime = 0; this.lastPoseFrame = -1;
     this.reducedMotion = matchMedia('(prefers-reduced-motion:reduce)').matches;
     this.input = new PaperInput(this.container);
@@ -103,6 +105,7 @@ class PaperSurfGame {
     return new THREE.CanvasTexture(canvas);
   }
   initBackdrop() {
+    this.paperSky = new PaperSky(this);
     this.town = this.sprite(this.textures.bg_town_transparent, 32, 13);
     this.town.center.set(.5,0);this.coastRatio=2.7;
     this.coastAnchor=new THREE.Vector3();this.coastRay=new THREE.Vector3();
@@ -243,10 +246,7 @@ class PaperSurfGame {
   bindUI() {
     this.input.bindSteering();
     this.controlSettings=new SurfControlSettings(this);
-    this.pauseTips=document.createElement('details');this.pauseTips.className='pause-tips';
-    this.pauseTips.innerHTML='<summary>Трюки и подсказки</summary><p>В воздухе нажми ещё раз для 360°. После высокого вылета с гребня кнопка предложит «ФЛИП».</p><p>Зелёный пунктир — держишь маршрут. На боковой борт заезжай с воды; трамплин подбрасывает сам. Чистая посадка сохраняет цепочку, удар или падение сжигают её.</p><p>Поймай новую волну и набери скорость, чтобы обогнать Бориса. Побеждает первый у бара. Сохранённое пиво даёт бонус к итоговым очкам: 1% = 50 очков.</p>';
-    document.getElementById('resume-button').after(this.pauseTips);
-    const rushTip=document.createElement('p');rushTip.textContent='Три разных чистых манёвра подряд — Кураж: поймай волну, обгони, прыгни или пройди вплотную. Между ними — не больше 6,5 секунды. Крышки показывают траекторию; удар сбрасывает Кураж.';this.pauseTips.append(rushTip);
+    this.pauseOptions=document.getElementById('pause-options');
     const bindTap=(id,handler)=>{
       const el=typeof id==='string'?document.getElementById(id):id;if(!el)return;
       let localTouchTime=0;
@@ -274,6 +274,13 @@ class PaperSurfGame {
     const renderSound=()=>{sound.setAttribute('aria-pressed',String(this.audio.isMuted));sound.setAttribute('aria-label',this.audio.isMuted?'Включить звук':'Отключить звук');sound.title=this.audio.isMuted?'Включить звук':'Отключить звук';};
     bindTap('sound-button',()=>{if(this.audio.isMuted)this.audio.unlock();this.audio.toggleMute();renderSound();});renderSound();
     bindTap('resume-button',()=>this.resume());
+    document.getElementById('pause-screen').addEventListener('keydown',e=>{
+      if(e.code!=='Tab')return;
+      const items=[...document.getElementById('pause-screen').querySelectorAll('button,summary')].filter(el=>!el.disabled&&el.getClientRects().length);
+      const first=items[0],last=items[items.length-1];
+      if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+      else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+    });
     bindTap('reset-button',()=>this.start(false));
     bindTap('center-button',()=>{document.getElementById('center-button').textContent=this.input.recenter()?'◎ Нейтраль запомнили':'◎ Подожди сигнал датчика';});
     bindTap('camera-toggle',()=>{this.juice.setLiveCamera(!this.juice.liveCamera);this.renderCameraToggle();});
@@ -298,12 +305,14 @@ class PaperSurfGame {
     document.getElementById('quick-button').classList.remove('hidden');
   }
   reset() {
+    this.clearStartCountdown();this.container.classList.remove('countdown');
     this.audio.resetRide();
     this.input.reset();this.time=this.elapsed=this.accumulator=this.score=this.collected=0;
     this.p={x:1.4,z:0,y:0,speed:29,heading:0,lean:0,pitch:0,smoothLean:0,sideVelocity:0,verticalVelocity:0,crouch:.1,balance:0,recovering:0,airborne:false,airY:0,spin:0};
     this.wave.resetWaves(this.meta.seed);this.deliveryBonus=this.raceScore=0;
     this.spillFlash=this.impactCooldown=this.momentTime=this.hintIndex=this.trickCooldown=this.carveClock=this.wakeClock=0;
     this.combo=1;this.hintTime=0;this.tricksSeen=new Set();this.world.reset();this.comics.reset();this.onboarding.reset();
+    this.rewardNoticeTime=0;this.rewardNotices=new Set();
     this.chase.reset();this.chain.reset();this.juice.reset();this.meta.reset();this.runComic.reset();this.trickRoute.reset();this.speedBlur.reset();
     this.mug.reset();this.mug.foam=.18;this.mug.totalSpilled=0;this.mug.lastSpillTime=0;
     this.waveRide.reset();this.heroAnimator.reset();this.handBeer.reset();this.jump.reset();this.balance.reset();this.container.classList.remove('fallen');
@@ -325,6 +334,7 @@ class PaperSurfGame {
     this.courseShow.reset();
     this.duel.reset();
     this.demo.reset();
+    if(!this.flowTest)this.rivalCast.planWaterRoutes();
     document.getElementById('moment').classList.remove('visible');document.getElementById('hint').classList.add('invisible');
     this.wave.update(0,0,true);this.updateCamera(1,true);this.updateVisuals(0);this.updateHUD();
   }
@@ -344,7 +354,16 @@ class PaperSurfGame {
         await Promise.race([assets,new Promise((_,reject)=>{loadTimer=setTimeout(()=>reject(Error('Загрузка игры заняла слишком много времени')),45000);})]);
       } finally {clearTimeout(loadTimer);}
       this.rivalCast.run++;
-      this.reset();this.state='playing';this.container.classList.add('playing');
+      this.reset();
+      const useCountdown=!this.flowTest&&!!document.getElementById('start-countdown');
+      this.state=useCountdown?'countdown':'playing';
+      this.container.classList.toggle('countdown',useCountdown);this.container.classList.add('playing');
+      if(useCountdown){
+        this.startCountdown={elapsed:0,label:'3',started:false,goRemaining:0};
+        this.p.z=-this.p.speed*START_COUNTDOWN_DURATION;this.p.y=this.wave.height(this.p.x,this.p.z,this.time);
+        this.input.reset();this.wave.update(this.p.z,this.time,true);this.updateCamera(0,true);
+        this.showStartCountdown('3');
+      }
       this.journey?.hideAll();
       ['start-screen','pause-screen','result-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));
       document.getElementById('touch-guide').classList.remove('visible');document.getElementById('share-screen').classList.add('hidden');this.updateHUD();
@@ -352,31 +371,66 @@ class PaperSurfGame {
       this.audio.startBGM();
     } catch(error){console.error(error);this.journey?.showError('Игра не загрузилась. Проверь соединение и нажми «Повторить», чтобы загрузить её заново.');} finally {this.starting=false;const button=document.getElementById('start-button');button.disabled=false;button.textContent='ИГРАТЬ';}
   }
+  showStartCountdown(label,go=false){
+    const el=document.getElementById('start-countdown');if(!el)return;
+    el.textContent=label;el.classList.toggle('go',go);el.setAttribute('aria-hidden','false');
+    el.classList.add('visible');el.classList.remove('beat');void el.offsetWidth;el.classList.add('beat');
+  }
+  clearStartCountdown(){
+    this.startCountdown=null;
+    const el=document.getElementById('start-countdown');if(!el)return;
+    el.classList.remove('visible','beat','go');el.setAttribute('aria-hidden','true');el.textContent='';
+  }
+  advanceStartCountdown(dt){
+    const count=this.startCountdown;if(!count||count.started)return;
+    const advance=Math.min(dt,START_COUNTDOWN_DURATION-count.elapsed);
+    count.elapsed+=advance;this.p.z+=this.p.speed*advance;this.time+=advance;this.wave.time=this.time;
+    this.p.y=this.wave.height(this.p.x,this.p.z,this.time);
+    if(count.elapsed>=START_COUNTDOWN_DURATION){
+      count.started=true;count.goRemaining=.8;this.state='playing';this.container.classList.remove('countdown');
+      this.input.reset();this.accumulator=0;this.audio.playStartHorn?.();
+      this.showStartCountdown('СТАРТ!',true);
+      return;
+    }
+    const label=count.elapsed<1?'3':'2';
+    if(label!==count.label){count.label=label;this.showStartCountdown(label);}
+  }
+  tickStartCountdown(dt){
+    const count=this.startCountdown;if(!count?.started)return;
+    count.goRemaining-=dt;if(count.goRemaining<=0)this.clearStartCountdown();
+  }
   pause() {
-    if(this.state!=='playing')return;this.state='paused';this.input.reset();this.jump.cancel();this.audio.stopBGM();this.audio.stopJetski?.();
-    document.querySelector('.pause-balance-help').classList.toggle('hidden',this.assist);
+    if(this.state!=='playing')return;this.clearStartCountdown();this.state='paused';this.input.reset();this.jump.cancel();this.audio.stopBGM();this.audio.stopJetski?.();
     document.getElementById('center-button').textContent='◎ Запомнить нейтраль';
     this.renderControlHelp();
-    this.pauseTips.open=false;
+    this.pauseOptions.open=false;
     if(this.flowTest)document.getElementById('pause-help').innerHTML+='<br>L — лента, R — тот же участок заново.';
     if(window.DRIVE_TEST_MODE)document.getElementById('pause-help').innerHTML+='<br>Трамплин слева, спокойный объезд справа. После посадки отпусти поворот, чтобы зачесть цепочку. Небольшой пролив уменьшает её множитель; падение сжигает цепочку. Довези не меньше 30% бокала.';
-    this.renderCameraToggle();this.renderMissions(document.getElementById('pause-missions'),this.meta.missions.map(m=>({...m,done:this.meta.completedLive.has(m.id)})));
+    this.renderCameraToggle();
     document.getElementById('pause-screen').classList.remove('hidden');
+    document.querySelector('.pause-card').scrollTop=0;
+    document.getElementById('resume-button').focus({preventScroll:true});
     document.getElementById('moment')?.classList.remove('visible');
     document.getElementById('chain-toast')?.classList.remove('visible');
     if(this.chain)this.chain.toastTime=0;
   }
-  resume() {if(this.state!=='paused')return;this.state='playing';this.input.reset();document.getElementById('pause-screen').classList.add('hidden');this.audio.startBGM();}
+  resume() {if(this.state!=='paused')return;this.state='playing';this.input.reset();document.getElementById('pause-screen').classList.add('hidden');this.container.focus({preventScroll:true});this.audio.startBGM();}
   renderControlHelp() {
     const mode=this.input.mode;
     document.getElementById('center-button').classList.toggle('hidden',mode!=='gyro');
-    const course=mode==='keys'?'← → / A D — курс.':mode==='touch'?'Тяни вбок '+(this.input.jumpSide==='right'?'слева':'справа')+' — курс.':'Наклоняй телефон вбок — курс.';
-    document.getElementById('pause-help').innerHTML=course+'<br>Нажми — прыжок; ещё раз в воздухе — трюк.<br>Отпусти поворот перед посадкой.';
-    if(!this.flowTest)document.getElementById('pause-help').innerHTML+='<br>Приди к бару первым. Каждый 1% пива на финише — +50 очков.';
+    const course=mode==='keys'?'← → / A D — курс.':mode==='touch'?'Тяни '+(this.input.jumpSide==='right'?'слева':'справа')+' — курс.':'Наклон телефона — курс.';
+    document.getElementById('pause-help').innerHTML=course+'<br>'+(mode==='keys'?'Пробел':'Нажми')+' — прыжок. Ещё раз — трюк.';
   }
   hint(text,seconds=4) {document.getElementById('hint').textContent=text;document.getElementById('hint').classList.remove('invisible');this.hintTime=seconds;}
-  moment(word,sub='',bad=false,seconds=1) {
+  reserveRewardNotice(key,once=false){
+    // Drop overlapping notices instead of building a delayed reward queue.
+    if(this.flowTest)return true;
+    if(this.time<this.rewardNoticeTime||this.momentTime>0||this.chain?.toastTime>0||(once&&this.rewardNotices.has(key)))return false;
+    this.rewardNoticeTime=this.time+8;this.rewardNotices.add(key);return true;
+  }
+  moment(word,sub='',bad=false,seconds=1,once=false) {
     if(!bad&&this.momentTime>0&&document.getElementById('moment').classList.contains('bad'))return false;
+    if(!bad&&!this.reserveRewardNotice('moment:'+word,once))return false;
     const el=document.getElementById('moment');el.querySelector('strong').textContent=word;el.querySelector('strong').style.fontSize='';el.querySelector('span').textContent=sub;el.querySelector('span').style.display=sub?'table':'none';el.classList.toggle('bad',bad);el.classList.remove('reward','big-reward','visible');el.querySelector('.moment-points').textContent='';el.querySelector('.moment-mult').textContent='';void el.offsetWidth;el.classList.add('visible');this.momentTime=seconds;return true;
   }
   awardTrick(name,points,quiet=false){
@@ -385,12 +439,13 @@ class PaperSurfGame {
     this.waveRide.reward(name);this.chase.onTrick(name);
     this.race.reward(name);
     this.rush?.reward(name);
-    if(!quiet&&this.moment(name,'',false,1.15)){
+    const notice=!quiet&&points>=300&&this.moment(name,'',false,1.7,true);
+    if(notice){
       const el=document.getElementById('moment');el.classList.add('reward');el.classList.toggle('big-reward',points>=600);
       el.querySelector('.moment-points').textContent='+'+gain.toLocaleString('ru-RU');
       el.querySelector('.moment-mult').textContent='ЦЕПОЧКА ×'+this.chain.multiplier;
     }
-    const word=PaperSurfGame.trickWords[name];if(word&&this.p)this.juice.pop(word,this.p.x,this.p.y+2.3,this.p.z,'trick');
+    const word=PaperSurfGame.trickWords[name];if(notice&&word&&this.p)this.juice.pop(word,this.p.x,this.p.y+2.3,this.p.z,'trick');
     if(!['ПОЙМАЛ ВОЛНУ','ОТОРВАЛСЯ!','РАЗОШЛИСЬ','КАРМАН'].includes(name))this.companion.react('trick');
   }
   nearMiss(name,points,x,z,word='ВЖУХ!',quiet=false){
@@ -404,13 +459,14 @@ class PaperSurfGame {
       pocket2:this.chase.pocket2Time,longest:this.chain.longest,bestBank:this.chain.best,near:this.chain.nearMisses,wake:this.world.wakeRides,
       sharkAir:sharks.filter(h=>h.escaped&&h.airDodge).length,falls:this.balance.falls,wipes:this.chase.wipes};
   }
-  spill(amount,reason) {
+  spill(amount,reason,impact=false) {
     if(this.flowTest){if(!this.flowTest.handleSpill?.(amount,reason))this.chain.burn();}
     else {this.chain.penalize(amount);this.waveRide.momentum=amount>=.10?0:this.waveRide.momentum*.55;this.chase.onMistake(amount,reason);}
     this.combo=this.chain.multiplier;this.juice.shake(.3+amount*3);
     if(amount>=.01){this.race.boostTime=0;this.race.boost*=.4;this.rush.breakStreak();}
     this.mug.level=Math.max(0,this.mug.level-amount);this.mug.applyStumbleImpulse(0);this.mug.onSpill(Math.sign(this.p.lean),amount);this.spillFlash=.7;
-    this.moment(reason.toUpperCase(),'',true,.85);this.audio.playScratch();
+    this.moment(reason.toUpperCase(),'',true,.85);
+    if(impact)this.audio.playImpact(Math.min(1,amount/.1));else this.audio.playScratch();
     this.companion.react('spill');
   }
 
@@ -444,7 +500,7 @@ class PaperSurfGame {
     const surfaceDrive=-slope*9+(p.airborne?0:s.flowZ*.4);
     const drive=this.waveRide.caught||bank||wake>.3?surfaceDrive:THREE.MathUtils.clamp(surfaceDrive,-2,2);
     const target=this.flowTest?this.flowTest.targetSpeed(slope):THREE.MathUtils.clamp((p.airborne?Math.max(this.assist?25:27,p.speed-.8):(this.assist?22:24)+this.waveRide.boost)+this.waveRide.momentum+this.jump.landingBoost+this.race.boost+this.rush.boost+this.rush.padBoost+drive+trim-Math.abs(p.heading)*1.2+(wake>.3?5*wake:0)-(p.recovering>0?5:0),18,this.rush.active>0||this.rush.padBoost>1?46:42);
-    p.speed+=(target-p.speed)*(1-Math.exp(-1.65*dt));
+    p.speed+=(target-p.speed)*(1-Math.exp(-(this.rush.padTime>0&&target>p.speed?3.2:1.65)*dt));
     p.x=THREE.MathUtils.clamp(p.x+p.sideVelocity*dt,-9,9.2);p.z+=p.speed*Math.cos(p.heading)*dt;
     const next=this.trickRoute.stepRide(dt,previousPosition,this.wave.sample(p.x,p.z));this.jump.step(dt,next);
     const vertical=(p.y-previousY)/dt,verticalImpulse=THREE.MathUtils.clamp((vertical-p.verticalVelocity)*.16,-1.5,1.5);
@@ -493,17 +549,23 @@ class PaperSurfGame {
     return desired;
   }
   updateRivals(dt){
+    if(dt<=0)return;
     const p=this.p;
     this.rivals.forEach(r=>{
       if(r.scenic){
-        const previousX=r.x,side=r.index===0?-1:1;
-        // Fixed outside lanes leave the playable corridor and side ramps clear.
-        const desired=side*(12.2+Math.sin(r.z*.018+r.index)*.7);
-        r.x+=(desired-r.x)*(1-Math.exp(-dt*1.3));r.lean=THREE.MathUtils.clamp((r.x-previousX)/dt*.15,-.4,.4);
+        const previousX=r.x;
         const sample=this.wave.sample(r.x,r.z);
-        r.speed+=((25.5+sample.energy*2.5)-r.speed)*(1-Math.exp(-dt*1.5));r.z+=r.speed*dt;r.airY=0;
+        const target=Math.min(25.5+sample.energy*2.5,this.rivalCast.waterPace(r,r.z));
+        r.speed+=(target-r.speed)*(1-Math.exp(-dt*1.5));
+        r.speed=Math.min(r.speed,this.rivalCast.waterPace(r,r.z,r.speed*dt));
+        r.z+=r.speed*dt;r.airY=0;
+        r.x=this.rivalCast.waterPoint(r,r.z);
+        const lean=THREE.MathUtils.clamp((r.x-previousX)/Math.max(dt,.0001)*.12,-.35,.35);
+        r.lean+=THREE.MathUtils.clamp((lean-r.lean)*(1-Math.exp(-dt*3)),-dt*.65,dt*.65);
         // Reuse the same cast after its complete silhouette leaves the camera.
-        if(r.z<p.z-35&&!this.rivalCast.inView(r))r.z=p.z+220+r.index*32;
+        if(r.z<p.z-35&&!this.rivalCast.inView(r)){
+          r.z=p.z+220+r.index*32;r.x=this.rivalCast.waterPoint(r,r.z);r.lean=0;
+        }
         return;
       }
       if(this.race.enabled&&!r.encounter)return;
@@ -527,7 +589,7 @@ class PaperSurfGame {
       if(!r.freeEntry&&r.encounter?.phase!=='entry'&&r.encounter?.phase!=='exit'&&!r.passed&&(!this.race.enabled||r.wasAhead)&&p.z-r.z>3){r.passed=true;if(this.race.enabled)this.race.onPass(r);else this.score+=100;if(!r.collided&&r.nearest<1.7)this.nearMiss('ВПРИТЫК!',90,r.x,r.z);}
       if((!this.race.enabled&&!r.freeEntry||r.encounter?.phase==='move')&&!r.collided&&!r.contactLocked&&Math.abs(r.z-p.z)<1.5&&Math.abs(r.x-p.x)<(r.couple?1.05:.85)&&Math.abs(p.airY-r.airY)<.95&&this.impactCooldown===0){
         r.collided=r.contactLocked=true;r.yieldTime=3.5;r.yieldSide=r.x>p.x?1:-1;
-        this.spill(.08,r.name+': «Сорян!»');p.speed*=.8;this.impactCooldown=1.6;r.x+=r.yieldSide*1.5;r.z+=2;this.emit(16,1);
+        this.spill(.08,r.name+': «Сорян!»',true);p.speed*=.8;this.impactCooldown=1.6;r.x+=r.yieldSide*1.5;r.z+=2;this.emit(16,1);
       }
       if(!this.race.enabled&&!r.freeEntry&&r.z<p.z-24&&!this.rivalCast.inView(r)){
         this.rivalCast.enterBehind(r);r.freeEntry=true;r.speed=p.speed;
@@ -575,13 +637,12 @@ class PaperSurfGame {
         this.audio.playSlam();
       }
     }
-    document.getElementById('result-title').textContent=success?'1-е МЕСТО!':result.outcome==='tie'?'ФОТОФИНИШ!':'2-е МЕСТО';
+    document.getElementById('result-title').textContent=success?'1-е МЕСТО!':result.outcome==='tie'?'НИЧЬЯ':'2-е МЕСТО';
     document.getElementById('result-beer').textContent=result.max+'%';
     document.getElementById('result-beer-bonus').textContent='+'+this.deliveryBonus.toLocaleString('ru-RU');
-    document.getElementById('result-race-score').textContent=this.raceScore.toLocaleString('ru-RU');
-    document.getElementById('result-comment').textContent=success?'Обогнал Бориса — кубок твой!':result.outcome==='tie'?'Пришли одновременно. Будет реванш?':'Борис пришёл первым. Попробуй обогнать!';
+    document.getElementById('result-comment').textContent=success?'Кубок наш!':result.outcome==='tie'?'Финиш вровень.':'Борис впереди. Реванш?';
     this.companion.showResult(result.outcome);
-    document.getElementById('result-score').textContent=Math.round(this.score);
+    document.getElementById('result-score').textContent=Math.round(this.score).toLocaleString('ru-RU');
     this.renderResultMeta(this.meta.finish());
     this.comics.reset();
     document.getElementById('result-screen').classList.remove('hidden');this.container.classList.remove('playing');
@@ -601,6 +662,7 @@ class PaperSurfGame {
       summary.record?'НОВЫЙ РЕКОРД!':summary.dailyRecord?'РЕКОРД ВОЛНЫ ДНЯ':'РЕКОРД '+fmt(summary.best);
     this.renderMissions(document.getElementById('result-missions'),summary.missions);
     document.getElementById('result-stars').textContent='★ '+summary.stars;
+    document.getElementById('result-stars').hidden=summary.stars===0;
     this.renderMenuMeta();
   }
   renderCameraToggle(){
@@ -657,7 +719,7 @@ class PaperSurfGame {
     this.rivals.forEach(r=>{
       const s=this.wave.sample(r.x,r.z);this.updateSurfer(r.rig,r.x,r.z,s.height+r.airY,r.lean,r.airY,0,frame);
       const visible=r.scenic?['playing','paused'].includes(this.state)&&Math.abs(r.z-p.z)<180:!this.race.enabled||!!r.encounter;r.rig.group.visible=visible;r.rig.shadow.visible=visible;
-      r.wake.forEach((drop,i)=>{const z=r.z-1-i*.65;const x=r.x+Math.sin(i*2+this.time*4)*.2;drop.position.set(-x,this.wave.height(x,z)+.06,z);drop.scale.set(.4+i*.05,.14+i*.02,1);drop.visible=visible&&r.airY<.3;});
+      r.wake.forEach((drop,i)=>{const z=r.z-1-i*.65;const x=(r.scenic?this.rivalCast.waterPoint(r,z):r.x)+Math.sin(i*2+this.time*4)*.2;drop.position.set(-x,this.wave.height(x,z)+.06,z);drop.scale.set(.4+i*.05,.14+i*.02,1);drop.visible=visible&&r.airY<.3;});
     });
     this.meta.updateGhost(frame);
     this.lastPoseFrame=frame;
@@ -674,6 +736,7 @@ class PaperSurfGame {
     this.setpiece.update();
     this.beats.update();
     this.courseShow.update(dt);
+    this.paperSky.update();
     this.demo.update();
     this.finishSign.position.set(0,7,this.distance+2);this.finishPosts.forEach(({pole,x})=>pole.position.set(x,3,this.distance+2));
     // Only connect recorded points. Repeating the final point with an expanding
@@ -751,7 +814,9 @@ class PaperSurfGame {
   updateHUD() {
     this.duel.updateHUD();
     const pct=Math.round(this.mug.level*100);document.getElementById('beer-value').innerHTML=pct+'<span>%</span>';document.getElementById('beer-fill').style.width=pct+'%';
-    document.getElementById('score-value').textContent=Math.round(this.score).toString().padStart(6,'0');document.getElementById('caps-value').textContent=this.collected;
+    const scoreValue=document.getElementById('score-value'),scoreText=Math.round(this.score).toString().padStart(6,'0');
+    scoreValue.textContent=scoreText;scoreValue.style.setProperty('--score-digits',scoreText.length);
+    document.getElementById('caps-value').textContent=this.collected;
     document.getElementById('combo-value').textContent='×'+this.combo;
     document.getElementById('input-label').textContent=this.input.mode==='gyro'?'НАКЛОН: ↔ КУРС':this.input.mode==='touch'?'ТЯНИ: ↔ КУРС':'← → КУРС · ПРОБЕЛ ПРЫЖОК';
     document.getElementById('speed-value').textContent=Math.round(this.p.speed);document.getElementById('speed-meter').style.width=THREE.MathUtils.clamp(this.p.speed/42*100,20,100)+'%';
@@ -818,19 +883,22 @@ class PaperSurfGame {
     if(document.getElementById('coach-line').textContent!==line)document.getElementById('coach-line').textContent=line;
     if(coach.classList.contains('hidden')&&!(p.airborne&&this.jump.canSpin&&this.jump.tricks===0))this.onboarding.highlight='';this.onboarding.renderHighlight();
   }
-  resize() {const {width,height}=this.container.getBoundingClientRect();this.renderDirty=true;this.container.style.setProperty('--panel-size',Math.max(width,height)+'px');this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();}
+  resize() {const {width,height}=this.container.getBoundingClientRect();this.renderDirty=true;this.container.style.setProperty('--panel-size',Math.max(width,height)+'px');this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();this.paperSky.update();}
   animate(now) {
     requestAnimationFrame(this.animate);
     const realDt=this.lastTime?Math.min((now-this.lastTime)/1000,.25):1/60,dt=Math.min(realDt,.05);this.lastTime=now;
-    if(this.state!=='playing'&&!this.renderDirty&&!this.courseShow.deliveryActive)return;
+    const countdownFrame=this.state==='countdown';
+    if(this.state!=='playing'&&!countdownFrame&&!this.renderDirty&&!this.courseShow.deliveryActive)return;
     this.renderDirty=false;
-    if(this.state==='playing'){
+    if(countdownFrame)this.advanceStartCountdown(realDt);
+    else if(this.state==='playing'){
       this.comics.update(realDt);
       if(!this.juice.consumeStop(realDt))this.accumulator+=dt*Math.min(this.comics.timeScale,this.onboarding.timeScale);
       while(this.accumulator>=1/120&&this.state==='playing'){this.step(1/120);this.accumulator-=1/120;if(this.comics.pending){this.accumulator=0;break;}}
       const foamPressure=this.chase.active?.25+.75*this.wave.smooth((12-this.chase.gap)/10.9):0;
       const surface=this.wave.sample(this.p.x,this.p.z);
-      this.audio.updateRide({speed:this.p.speed,lean:this.p.lean,energy:surface.energy,airborne:this.p.airborne,fallen:this.p.fallen,foamPressure});
+      this.audio.updateRide({speed:this.p.speed,lean:this.p.lean,energy:surface.energy,airborne:this.p.airborne,fallen:this.p.fallen,foamPressure,
+        padTime:this.p.recovering===0?this.rush.padTime:0,padStrength:this.rush.padStrength,rampFlight:this.p.airborne&&!!this.jump.takeoffRamp});
       this.audio.updateAmbient?.(realDt);
       if(!this.flowTest)this.rivalCast.music(realDt);
       const wake=this.p.airborne?0:this.world.wakeQualityAt(this.p.x,this.p.z);
@@ -843,8 +911,9 @@ class PaperSurfGame {
         this.audio.updateJetski(999,0,0);
       }
     }
-    this.wave.update(this.p.z,this.time);this.updateVisuals(dt);this.updateHUD();
-    this.juice.beforeRender(this.camera,realDt);this.speedBlur.render();this.juice.afterRender(this.camera);
+    this.wave.update(this.p.z,this.time);this.updateVisuals(dt);if(!countdownFrame)this.updateHUD();
+    this.tickStartCountdown(realDt);
+    this.juice.beforeRender(this.camera,realDt);this.paperSky.update();this.speedBlur.render();this.juice.afterRender(this.camera);
     this.comics.capture();this.runComic.flush();
   }
 }

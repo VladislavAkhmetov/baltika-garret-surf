@@ -19,7 +19,7 @@ async function run(){
       window.sensorTimer=setInterval(()=>{const event=new Event('deviceorientation');Object.defineProperties(event,{gamma:{value:sensorGamma},beta:{value:sensorBeta}});dispatchEvent(event);},25);
     });
     await page.goto(base,{waitUntil:'networkidle0'});
-    await page.click('#start-screen .controls-open');
+    await page.click('#start-button');await page.click('#setup-screen .controls-open');
     assert.equal(await page.$eval('#controls-screen',e=>e.classList.contains('hidden')),false);
     await page.click('[data-input="touch"]');await page.click('[data-jump-side="left"]');
     await page.$eval('#control-sensitivity',el=>{el.value='1.35';el.dispatchEvent(new Event('input',{bubbles:true}));});
@@ -43,7 +43,7 @@ async function run(){
     assert.ok(report.drag.before.lean>.4);assert.equal(report.drag.before.pitch,0);assert.equal(report.drag.before.pad,true);
     assert.deepEqual(report.drag.simultaneous,{drag:1,jumps:1,mode:'touch'});assert.ok(Math.abs(report.drag.released)<.001);assert.equal(report.drag.pointers,0);assert.equal(report.drag.pad,false);
     await page.evaluate(()=>{game.state='playing';game.pause();});
-    await page.click('#pause-screen .controls-open');await page.click('[data-input="gyro"]');
+    await page.click('#pause-options summary');await page.click('#pause-screen .controls-open');await page.click('[data-input="gyro"]');
     await page.waitForFunction(()=>game.input.mode==='gyro'&&!game.input.calibrating);
     await page.click('[data-jump-side="right"]');await page.click('#controls-close');await page.click('#resume-button');
     report.gyro=await page.evaluate(()=>{
@@ -95,8 +95,9 @@ async function run(){
       assert.equal(layout.overflow,false);assert.equal(layout.inside,true);report.layouts.push(layout);
       await page.screenshot({path:path.join(review,'settings-'+width+'x'+height+'.png')});
       if(width===844){
-        await page.touchscreen.touchStart(width-20,height-60);
-        await page.touchscreen.touchMove(width-20,70);await page.touchscreen.touchEnd();
+        const edge=await page.$eval('#controls-screen',el=>el.getBoundingClientRect().right-12);
+        await page.touchscreen.touchStart(edge,height-60);
+        await page.touchscreen.touchMove(edge,70);await page.touchscreen.touchEnd();
         await page.waitForFunction(()=>document.getElementById('controls-screen').scrollTop>0);
         report.nativeSettingsScroll=true;
       }

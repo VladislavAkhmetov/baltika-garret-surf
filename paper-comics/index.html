@@ -23,6 +23,9 @@
     <link rel="stylesheet" href="css/course-show.css">
     <link rel="stylesheet" href="css/beer-duel.css">
   <link rel="stylesheet" href="css/mobile-frame.css">
+  <link rel="stylesheet" href="css/collage-hud.css">
+  <link rel="stylesheet" href="css/pause.css">
+  <link rel="stylesheet" href="css/results.css">
 </head>
 <body>
   <div class="mobile-viewport">
@@ -32,6 +35,7 @@
     <div class="print-grain" aria-hidden="true"></div>
     <div id="speed-lines" class="speed-lines" aria-hidden="true"></div>
     <div id="sfx-layer" class="sfx-layer" aria-hidden="true"></div>
+    <div id="start-countdown" class="start-countdown" role="status" aria-live="assertive" aria-atomic="true" aria-hidden="true"></div>
     <header class="hud" id="hud">
       <div class="beer-ticket paper"><canvas id="beer-canvas" width="104" height="144"></canvas><div><span class="ticket-label">ДОВЕЗИ</span><strong id="beer-value">100<span>%</span></strong><div class="beer-track"><i id="beer-fill"></i></div></div><b id="beer-mult" class="beer-mult" data-level="3" title="Множитель очков от пива">×3</b></div>
       <div class="collection-ticket paper" hidden aria-hidden="true"><div class="wave-caps"><i class="wave-cap"></i><i class="wave-cap"></i><i class="wave-cap"></i></div><small id="collection-value">0 / 3</small></div><div class="score-ticket"><span>СЧЁТ</span><strong id="score-value">000000</strong></div>
@@ -73,26 +77,41 @@
 
 
     <section id="start-screen" class="screen journey menu-screen title-screen" aria-label="Главное меню">
-      <h2 class="menu-title"><span>НИ</span> <span>КАПЛИ!</span></h2>
-      <p class="menu-wager">Обгони Бориса до бара.<br>Сохрани пиво — получи бонус к очкам.</p>
-      <img class="menu-hero" src="assets/comics/hero-crest-close.webp" onerror="this.onerror=null;this.src='assets/comics/hero-crest-close.png'" alt="">
-      <button id="start-button" class="yellow-button menu-play" data-primary>ИГРАТЬ</button>
-      <button id="quick-button" class="text-button menu-quick">БЫСТРЫЙ ЗАЕЗД ↗</button>
-      <p id="daily-label" class="menu-daily"></p>
+      <div class="title-poster-stage" aria-hidden="true">
+        <picture>
+          <source srcset="assets/comics/start-poster.webp" type="image/webp">
+          <img class="title-poster-img" src="assets/comics/start-poster.png" alt="Ни капли! Главное меню">
+        </picture>
+        <button id="quick-button" class="text-button menu-quick poster-quick" aria-label="Быстрый заезд" title="Быстрый заезд"></button>
+        <button id="start-button" class="yellow-button menu-play poster-play" data-primary aria-label="Играть">ИГРАТЬ</button>
+      </div>
+      <h2 class="menu-title sr-overlay" aria-hidden="true"><span>НИ</span> <span>КАПЛИ!</span></h2>
+      <p class="menu-wager sr-overlay" aria-hidden="true">Обгони Бориса до бара.<br>Сохрани пиво — получи бонус к очкам.</p>
+      <img class="menu-hero sr-overlay" src="assets/comics/hero-crest-close.webp" onerror="this.onerror=null;this.src='assets/comics/hero-crest-close.png'" alt="" aria-hidden="true">
+      <p id="daily-label" class="menu-daily sr-overlay" aria-hidden="true"></p>
       <p id="boot-status" class="boot-status" role="status" hidden></p>
       <script>
         (function(){
           var failed=false,timer=null;
           var status=document.getElementById('boot-status');
           var s=document.getElementById('start-button'),q=document.getElementById('quick-button');
+          function syncButtonLabel(){
+            if(!s)return;
+            var txt=(s.textContent||'').trim();
+            if(txt&&txt!=='ИГРАТЬ'){
+              s.classList.add('has-status');
+            }else{
+              s.classList.remove('has-status');
+            }
+          }
           function restore(){
-            s.disabled=false;s.textContent='ИГРАТЬ';delete s.dataset.pending;
+            s.disabled=false;s.textContent='ИГРАТЬ';delete s.dataset.pending;syncButtonLabel();
             q.disabled=false;q.textContent='БЫСТРЫЙ ЗАЕЗД ↗';delete q.dataset.pending;
           }
           window.__surfBootFailed=function(reason){
             if(window.game)return;
             clearTimeout(timer);failed=true;window.__queuedStart=null;restore();
-            s.textContent='ПОВТОРИТЬ ЗАГРУЗКУ';status.hidden=false;
+            s.textContent='ПОВТОРИТЬ ЗАГРУЗКУ';syncButtonLabel();status.hidden=false;
             status.textContent=reason==='init'?'Не удалось запустить игру. Нажми, чтобы попробовать снова.':'Игра не загрузилась. Проверь соединение и повтори загрузку.';
           };
           window.__surfBootReady=function(){clearTimeout(timer);failed=false;status.hidden=true;restore();};
@@ -108,13 +127,18 @@
             }else{
               window.__queuedStart=quick?'quick':'play';
               var b=document.getElementById(quick?'quick-button':'start-button');
-              if(b&&!b.dataset.pending){b.dataset.pending='1';b.textContent='ЗАГРУЗКА…';}
+              if(b&&!b.dataset.pending){b.dataset.pending='1';b.textContent='ЗАГРУЗКА…';syncButtonLabel();}
               status.hidden=false;status.textContent='Загружаем игру…';watch();
             }
           }
           if(s){
             s.addEventListener('pointerup',function(e){if(e.pointerType!=='mouse')act(false);});
             s.addEventListener('click',function(){act(false);});
+            try {
+              var obs=new MutationObserver(syncButtonLabel);
+              obs.observe(s,{childList:true,characterData:true,subtree:true});
+            } catch(e){}
+            syncButtonLabel();
           }
           if(q){
             q.addEventListener('pointerup',function(e){if(e.pointerType!=='mouse')act(true);});
@@ -155,11 +179,78 @@
       <nav class="comic-nav" aria-label="Страницы комикса"><button id="story-next" class="yellow-button" data-primary>ДАЛЬШЕ →</button></nav>
       <p id="story-error" class="story-error paper hidden" role="alert"></p>
     </section>
-    <section id="pause-screen" class="screen hidden">
-      <div class="pause-card paper"><span class="eyebrow">МИНУТКА НА БЕРЕГУ</span><h2>ВЫДОХНИ.</h2><p id="pause-help" class="pause-help">Вбок — курс по склону.<br>Вес на доске — автоматически.</p><p class="pause-balance-help">На гребне и после жёсткой посадки выруливай против завала. Маркер в центре — баланс пойман.</p><button id="resume-button" class="yellow-button">ОБРАТНО НА ВОЛНУ ↗</button><ul id="pause-missions" class="mission-list pause-missions" aria-label="Задания"></ul><button id="center-button" class="text-button" aria-label="Запомнить нейтральное положение телефона">◎ Запомнить нейтраль</button><button id="camera-toggle" class="text-button" aria-pressed="true">Камера: живая</button><button id="assist-toggle" class="text-button" aria-pressed="false">Сложность: обычная</button><button id="reset-button" class="text-button">Начать заново</button><button class="text-button menu-link" data-home>В главное меню</button></div>
+    <section id="pause-screen" class="screen hidden" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+      <div class="pause-card">
+        <header class="pause-heading"><span class="eyebrow">Ⅱ ПАУЗА</span><h2 id="pause-title">ВЫДОХНИ.</h2></header>
+        <div class="pause-art" aria-hidden="true">
+          <div class="pause-sun"></div>
+          <img class="pause-wave" src="assets/comics/wave-swell-cutout-v5.png" alt="">
+          <img class="pause-hero" src="assets/comics/hero-crest-close.webp" onerror="this.onerror=null;this.src='assets/comics/hero-crest-close.png'" alt="">
+        </div>
+        <footer class="pause-actions">
+          <button id="resume-button" class="yellow-button" type="button">ПРОДОЛЖИТЬ <span aria-hidden="true">↗</span></button>
+          <nav class="pause-secondary" aria-label="Действия с заездом">
+            <button id="reset-button" class="text-button" type="button">Заново</button>
+            <button class="text-button menu-link" type="button" data-home>В меню</button>
+          </nav>
+          <details id="pause-options" class="pause-options">
+            <summary>Настройки <span aria-hidden="true">+</span></summary>
+            <div id="pause-settings" class="pause-settings">
+              <p id="pause-help" class="pause-help">Вбок — курс. Нажми — прыжок.</p>
+              <button id="center-button" class="text-button" type="button" aria-label="Запомнить нейтральное положение телефона">◎ Запомнить нейтраль</button>
+              <button id="camera-toggle" class="text-button" type="button" aria-pressed="true">Камера: живая</button>
+              <button id="assist-toggle" class="text-button" type="button" aria-pressed="false">Сложность: обычная</button>
+            </div>
+          </details>
+        </footer>
+      </div>
     </section>
-    <section id="result-screen" class="screen hidden">
-      <div class="result-card paper"><h2 id="result-title">МЕСТО НА ФИНИШЕ</h2><div class="duel-results" aria-label="Сохранённое пиво и бонус к очкам"><div><span>ПИВО НА ФИНИШЕ</span><strong class="result-beer" id="result-beer">100%</strong></div><div><span>БОНУС ЗА ПИВО</span><strong class="result-beer" id="result-beer-bonus">+5 000</strong></div></div><p id="result-comment"></p><div class="result-companion"><canvas id="result-crab" role="img" aria-label="Клешня на финише"></canvas><p><span id="result-crab-line"></span></p></div><div class="result-breakdown"><span>ОЧКИ ЗА ЗАЕЗД</span><b id="result-race-score">0</b></div><div class="result-summary"><span>ИТОГО</span><strong id="result-score">0</strong></div><p id="result-record" class="result-record"></p><div class="result-goals"><ul id="result-missions" class="mission-list" aria-label="Задания"></ul><b id="result-stars" class="result-stars">★ 0</b></div><button id="replay-button" class="yellow-button">ЕЩЁ РАЗ</button><div class="result-share"><button id="comic-button" class="text-button">КОМИКС ЗАЕЗДА</button><button id="challenge-button" class="text-button">ВЫЗОВ ДРУГУ</button><button class="text-button menu-link" data-setup>ВЫБОР</button></div></div>
+    <section id="result-screen" class="screen hidden" aria-labelledby="result-title">
+      <div class="result-card">
+        <header class="result-heading">
+          <span class="eyebrow">ФИНИШ</span>
+          <h2 id="result-title">2-е МЕСТО</h2>
+          <p id="result-comment"></p>
+        </header>
+        <div id="result-art" class="result-art" role="img" aria-label="Клешня на доске среди волн">
+          <img id="result-scene" src="assets/comics/comic-crab-v4.webp" alt="">
+          <svg id="result-trophy" class="result-trophy hidden" viewBox="0 0 280 340" aria-hidden="true">
+            <defs>
+              <linearGradient id="trophy-gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff2a1"/><stop offset=".32" stop-color="#ffc43d"/><stop offset=".68" stop-color="#e78721"/><stop offset="1" stop-color="#ffe889"/></linearGradient>
+              <pattern id="trophy-grain" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="4" cy="6" r="1" fill="#fff4c8" opacity=".8"/><circle cx="13" cy="15" r=".8" fill="#9c481c" opacity=".35"/></pattern>
+            </defs>
+            <path class="trophy-rays" d="M140 9v26M30 37l19 21M250 35l-19 23M8 119l29 5M272 119l-29 5"/>
+            <g class="trophy-outline">
+              <path class="trophy-handles-back" d="M68 73H48c-33 0-43 48-13 75l36 30m141-105h20c33 0 43 48 13 75l-36 30"/>
+              <path class="trophy-handles" d="M68 73H48c-33 0-43 48-13 75l36 30m141-105h20c33 0 43 48 13 75l-36 30"/>
+              <path class="trophy-cup-back" d="M67 61h146l-13 78c-7 40-29 66-60 66s-53-26-60-66L67 61Z"/>
+              <path class="trophy-cup" d="M67 61h146l-13 78c-7 40-29 66-60 66s-53-26-60-66L67 61Z"/>
+              <path d="M67 61h146l-13 78c-7 40-29 66-60 66s-53-26-60-66L67 61Z" fill="url(#trophy-grain)"/>
+              <path class="trophy-stem" d="M117 195v45h46v-45"/>
+              <path class="trophy-base" d="M107 239h66l17 24H90l17-24Zm-24 26h114v31H83z"/>
+            </g>
+            <path class="trophy-shine" d="m94 78 8 50m-9 22 5 15"/>
+            <path class="trophy-star" d="m140 95 7 14 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2z"/>
+          </svg>
+          <canvas id="result-crab" aria-hidden="true"></canvas>
+        </div>
+        <footer class="result-details">
+          <div class="duel-results" aria-label="Пиво на финише и бонус за него">
+            <div><span>ПИВО</span><strong class="result-beer" id="result-beer">100%</strong></div>
+            <div><span>БОНУС</span><strong class="result-beer" id="result-beer-bonus">+5 000</strong></div>
+          </div>
+          <div class="result-summary"><span>СЧЁТ</span><strong id="result-score">0</strong></div>
+          <p id="result-record" class="result-record"></p>
+          <div class="result-goals"><ul id="result-missions" class="mission-list" aria-label="Задания"></ul><b id="result-stars" class="result-stars">★ 0</b></div>
+          <button id="replay-button" class="yellow-button" type="button">ЕЩЁ РАЗ <span aria-hidden="true">↗</span></button>
+          <nav class="result-share" aria-label="Дополнительные действия">
+            <button id="comic-button" class="text-button" type="button">КОМИКС</button>
+            <button id="challenge-button" class="text-button" type="button">ВЫЗОВ</button>
+            <button class="text-button menu-link" type="button" data-setup>В МЕНЮ</button>
+          </nav>
+        </footer>
+        <div class="result-companion" hidden><span id="result-crab-line"></span></div>
+      </div>
     </section>
     <section id="share-screen" class="screen share-screen hidden" aria-label="Комикс заезда">
       <div class="share-card paper"><img id="share-image" alt="Комикс твоего заезда: лучшие моменты и счёт"><p id="share-status" class="share-status" role="status"></p><div class="share-actions"><button id="share-button" class="yellow-button">ПОДЕЛИТЬСЯ</button><button id="share-download" class="text-button">Скачать</button><button id="share-close" class="text-button">Закрыть</button></div></div>

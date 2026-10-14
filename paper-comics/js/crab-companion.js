@@ -113,9 +113,12 @@ class CrabCompanion {
   showResult(outcome){
     const success=outcome===true||outcome==='victory',tie=outcome==='tie';
     this.draw(document.getElementById('result-crab'),success?'victory':'defeat');
-    document.getElementById('result-crab').setAttribute('aria-label',success?'Клешня в солнечных очках сидит на бокале':'Расстроенный Клешня выжимает мокрую клешню');
+    document.getElementById('result-crab').setAttribute('aria-label',success?'Клешня на финише с кубком':'Клешня на финише');
     document.getElementById('result-crab-line').textContent=success?'«Мы легенды!»':tie?'«Ноздря в ноздрю!»':'«В следующий раз рулю я!»';
-    document.getElementById('result-screen').dataset.outcome=tie?'tie':success?'victory':'defeat';
+    const screen=document.getElementById('result-screen'),art=document.getElementById('result-art');
+    screen.dataset.outcome=tie?'tie':success?'victory':'defeat';
+    document.getElementById('result-trophy').classList.toggle('hidden',!success);
+    art.setAttribute('aria-label',success?'Клешня мчится на доске и поднимает кубок':tie?'Клешня поймала волну у самого финиша':'Клешня несётся к финишу на доске');
     document.getElementById('crab-callout')?.classList.remove('visible');
   }
 }

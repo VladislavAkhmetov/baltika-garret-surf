@@ -16,6 +16,7 @@
 .comic-bubble{position:absolute;z-index:3;margin:0;padding:12px 17px;background:var(--comic-paper);border:3px solid var(--comic-ink);border-radius:48% 44% 47% 42% / 43% 48% 44% 49%;box-shadow:3px 3px 0 #092f4428;text-align:center;font:700 clamp(20px,3.25cqw,31px)/1.08 Rubik,sans-serif;white-space:pre-line;letter-spacing:-.6px;transform:rotate(-2deg)}
 .comic-bubble::before,.comic-bubble::after{content:'';position:absolute;clip-path:polygon(0 0,100% 0,10% 100%);width:30px;height:27px;left:22%;top:calc(100% - 3px);background:var(--comic-ink)}
 .comic-bubble::after{width:22px;height:21px;left:calc(22% + 3px);top:calc(100% - 5px);background:var(--comic-paper)}
+.comic-bubble-embedded{opacity:0;pointer-events:none}
 .comic-tony .comic-bubble{right:4%;top:7%;max-width:58%}
 .comic-tony img{object-position:50% 45%}
 .comic-max .comic-bubble{left:4%;top:22%;max-width:48%;transform:rotate(3deg)}
@@ -80,6 +81,7 @@
  .comic-panel:nth-child(3){grid-column:3;grid-row:1;margin:0 0 0 -8px;clip-path:polygon(6% 0,100% 0,100% 100%,0 100%)}
  .comic-bubble{font-size:20px;padding:10px 12px;border-width:2.5px}
  .comic-panel .comic-bubble{left:9%;right:5%;top:4%;max-width:86%}
+ .comic-panel .comic-bubble-embedded{opacity:1}
  .comic-tony .comic-bubble{top:auto;bottom:5%}
  .comic-tony .comic-bubble::before{top:auto;bottom:calc(100% - 3px);clip-path:polygon(0 100%,100% 100%,10% 0)}
  .comic-tony .comic-bubble::after{top:auto;bottom:calc(100% - 5px);clip-path:polygon(0 100%,100% 100%,10% 0)}

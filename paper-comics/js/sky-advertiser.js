@@ -3,22 +3,24 @@ class SkyAdvertiser {
   constructor(game){
     this.game=game;
     this.flight={origin:new THREE.Vector3(110,32,760),velocity:new THREE.Vector3(-8,0,24)};
-    this.width=26;this.bannerWidth=34;this.bannerHeight=8;this.ropeLength=11;
+    this.width=26;this.bannerWidth=52;this.bannerHeight=10;this.ropeLength=11;
     this.group=new THREE.Group();this.group.name='distant-advertising-flight';this.group.visible=false;game.scene.add(this.group);
     this.cameraRight=new THREE.Vector3();
-    this.aircraft=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({transparent:true,alphaTest:.08,depthWrite:false,side:THREE.DoubleSide,fog:false,color:0xc8d8d0,opacity:.9}));
+    this.aircraft=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({transparent:true,alphaTest:.08,depthWrite:false,side:THREE.DoubleSide,fog:false,color:0xffffff,opacity:1}));
     this.aircraft.name='amphibious-plane';this.group.add(this.aircraft);
     this.bannerGeometry=new THREE.PlaneGeometry(this.bannerWidth,this.bannerHeight,24,3);
     this.bannerRest=this.bannerGeometry.attributes.position.array.slice();
-    this.banner=new THREE.Mesh(this.bannerGeometry,new THREE.MeshBasicMaterial({transparent:true,alphaTest:.08,depthWrite:false,side:THREE.DoubleSide,fog:false,color:0xd4e0d4,opacity:.88}));
-    this.banner.name='garret-tow-banner';this.group.add(this.banner);
+    this.banner=new THREE.Mesh(this.bannerGeometry,new THREE.MeshBasicMaterial({transparent:true,alphaTest:.08,depthWrite:false,side:THREE.DoubleSide,fog:false,color:0xffffff,opacity:1}));
+    this.banner.name='baltika-tow-banner';this.group.add(this.banner);
     const ropeGeometry=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(9*3),3));
     this.rope=new THREE.Line(ropeGeometry,new THREE.LineBasicMaterial({color:0xded8ba,transparent:true,opacity:.72,fog:false,depthWrite:false}));this.group.add(this.rope);
     this.ready=Promise.all([
-      new Promise((resolve,reject)=>new THREE.TextureLoader().load('assets/comics/seaplane-distant-v2.png',texture=>{
+      new Promise((resolve,reject)=>new THREE.TextureLoader().load('assets/comics/seaplane-lime-v3.png',texture=>{
         this.fitAircraft(texture);this.aircraft.material.map=texture;this.aircraft.material.needsUpdate=true;resolve();
       },undefined,()=>reject(new Error('Не удалось загрузить дальний самолёт')))),
-      document.fonts.load('900 154px Rubik').then(()=>{this.banner.material.map=this.makeBanner();this.banner.material.needsUpdate=true;})
+      new Promise((resolve,reject)=>new THREE.ImageLoader().load('assets/comics/baltika-logo-reference.png',logo=>{
+        this.banner.material.map=this.makeBanner(logo);this.banner.material.needsUpdate=true;resolve();
+      },undefined,()=>reject(new Error('Не удалось загрузить логотип Балтики'))))
     ]).then(()=>{this.group.visible=true;this.update();game.renderDirty=true;});
     this.ready.catch(()=>{});
   }
@@ -34,15 +36,20 @@ class SkyAdvertiser {
     texture.minFilter=THREE.LinearMipmapLinearFilter;texture.magFilter=THREE.LinearFilter;texture.needsUpdate=true;
     this.height=this.width*height/width;
   }
-  makeBanner(){
-    const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=224;
+  makeBanner(logo){
+    const canvas=document.createElement('canvas');canvas.width=1664;canvas.height=320;
     const c=canvas.getContext('2d');
-    c.fillStyle='#eadfc0';c.beginPath();c.moveTo(4,8);c.lineTo(1009,4);c.lineTo(1020,214);c.lineTo(8,220);c.closePath();c.fill();
-    c.fillStyle='#c1af89';c.fillRect(16,10,7,207);
-    c.fillStyle='#c18e42';c.fillRect(40,18,954,6);c.fillRect(40,199,954,5);
-    c.fillStyle='#214d53';c.font='900 154px Rubik, Arial';c.textAlign='center';c.textBaseline='middle';c.fillText('GARRET',525,111,905);
-    // Deterministic paper grain stays faint at the distant display size.
-    c.fillStyle='rgba(77,63,40,.06)';for(let i=0;i<1800;i++)c.fillRect((i*131)%1016+4,(i*73)%208+8,1,1);
+    // Match the supplied artwork's navy exactly; retain its original lettering
+    // and gold arcs instead of approximating the brand with a font.
+    c.drawImage(logo,0,0);const navy=c.getImageData(0,0,1,1).data;c.clearRect(0,0,canvas.width,canvas.height);
+    c.fillStyle=`rgb(${navy[0]},${navy[1]},${navy[2]})`;
+    c.beginPath();c.moveTo(3,5);c.lineTo(1658,2);c.lineTo(1662,314);c.lineTo(5,318);c.closePath();c.fill();
+    c.save();c.clip();
+    const source={x:44,y:82,width:610,height:190},height=292,width=height*source.width/source.height;
+    c.drawImage(logo,source.x,source.y,source.width,source.height,(canvas.width-width)/2,(canvas.height-height)/2,width,height);
+    c.strokeStyle='rgba(219,184,124,.65)';c.lineWidth=2;
+    c.strokeRect(14,12,1636,296);
+    c.restore();
     const texture=new THREE.CanvasTexture(canvas);texture.minFilter=THREE.LinearMipmapLinearFilter;return texture;
   }
   update(){

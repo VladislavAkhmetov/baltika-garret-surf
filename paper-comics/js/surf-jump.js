@@ -29,7 +29,7 @@ class SurfJump {
     this.trickKind=this.canSpecial?'flip':this.takeoffRamp?.type==='side'?'cork':'spin';this.spinStarted=true;this.spinRequest=0;
     this.spinDirection=this.trickKind==='flip'?-1:this.game.p.lean<0?-1:1;
     this.spinDuration=this.trickKind==='flip'?.86:this.game.assist?THREE.MathUtils.clamp(this.flightRemaining*.72,.20,.62):.68;
-    this.game.audio?.playSpin(this.spinDirection);this.game.audio?.playCrowdAwe();
+    this.game.audio?.playSpin(this.spinDirection);this.game.audio?.playCrowdAwe(!!this.takeoffRamp);
   }
   release(){}
   launchRamp(line,surface,pop=false){
@@ -44,7 +44,7 @@ class SurfJump {
     this.launchStrength=THREE.MathUtils.clamp((p.jumpVelocity-7)/7.8,0,1);this.landingPulse=0;
     p.airborne=true;p.takeoffHeight=surface.height;p.y=surface.height+.06;p.airY=.06;p.crouch=.7;
     g.trailPoints=[];this.jumps++;g.heroAnimator.beginTurn(0);g.emit(18,.85,true);
-    g.audio.playJump(this.launchStrength);g.juice.punch(2.8);g.juice.buzz(18);
+    g.audio.beginRampFlight();g.audio.playJump(this.launchStrength);g.juice.punch(2.8);g.juice.buzz(18);
     this.updateButton();
   }
   step(dt,surface){
@@ -97,9 +97,10 @@ class SurfJump {
         // Routine landings are assisted; choosing a late trick is the real risk.
         const clean=THREE.MathUtils.clamp(1-Math.abs(p.pitch)*.26-Math.abs(p.lean-p.smoothLean)*.35-Math.abs(p.heading)*.10-(unfinished?.72:0),0,1);
         g.handBeer.impact(clean);g.emit(22+Math.round(impact*18),.9+impact*.65,true);g.landingSplash?.(impact);p.crouch=.85;
+        if(this.takeoffRamp)g.audio?.endRampFlight();
         if(g.audio)g.audio.playLanding(clean>.72,impact);
         if(clean>.72){
-          if(this.spinCompleted||this.takeoffRamp)g.audio?.playCrowdApplause(this.spinCompleted&&this.trickKind==='flip');
+          if(this.spinCompleted)g.audio?.playCrowdApplause(this.trickKind==='flip',!!this.takeoffRamp);
           if(!this.spinCompleted){g.juice.punch(1.4);g.juice.buzz(16);}
           if(g.assist)g.balance.immunity=Math.max(g.balance.immunity,.65);
           this.cleanLandings++;

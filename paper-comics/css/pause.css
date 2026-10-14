@@ -1,0 +1,193 @@
+/* A pause poster made from the title screen's paper, surf cutouts and ink badge. */
+#pause-screen {
+  padding: 0;
+  display: block;
+  overflow: hidden;
+  background: #f1e5c9;
+  color: #193b44;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+#pause-screen .pause-card {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(180px, 1fr) auto;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: url('../assets/sprites/sky-paper-grain.svg') center / 180px 180px;
+  transform: none;
+  filter: none;
+  isolation: isolate;
+}
+#pause-screen .pause-heading {
+  position: relative;
+  z-index: 3;
+  padding: max(38px, calc(env(safe-area-inset-top) + 20px)) 20px 8px;
+}
+#pause-screen .eyebrow {
+  margin: 0;
+  font: 500 11px/1.4 Rubik, sans-serif;
+  letter-spacing: .22em;
+}
+#pause-screen h2 {
+  margin: 14px 0 0;
+  font: 400 clamp(36px, 12.6cqw, 55px)/1.1 'Russo One', Impact, sans-serif;
+  letter-spacing: -.055em;
+  transform: rotate(-3deg);
+}
+.pause-art {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.pause-sun {
+  position: absolute;
+  width: 96%;
+  aspect-ratio: 1;
+  max-height: 100%;
+  left: 2%;
+  top: 7%;
+  background: #ffc43d url('../assets/sprites/sky-paper-grain.svg') center / 160px 160px;
+  -webkit-mask: url('../assets/sprites/sky-paper-disc.svg') center / 100% 100% no-repeat;
+  mask: url('../assets/sprites/sky-paper-disc.svg') center / 100% 100% no-repeat;
+  transform: rotate(-12deg);
+}
+.pause-hero {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 112%;
+  object-fit: contain;
+  object-position: center bottom;
+  transform: rotate(3deg);
+  filter: drop-shadow(3px 5px 1px #46381c20);
+}
+.pause-wave {
+  position: absolute;
+  z-index: 1;
+  width: 165%;
+  height: 48%;
+  left: -32%;
+  bottom: -9%;
+  object-fit: fill;
+  transform: rotate(-7deg);
+}
+#pause-screen .pause-actions {
+  position: relative;
+  z-index: 3;
+  padding: 42px 32px max(22px, calc(env(safe-area-inset-bottom) + 12px));
+  background: #ffc43d url('../assets/sprites/sky-paper-grain.svg') center / 180px 180px;
+}
+.pause-actions::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: -24px;
+  width: 100%;
+  height: 42px;
+  background: #ffc43d url('../assets/sprites/sky-paper-grain.svg') center / 180px 180px;
+  clip-path: polygon(0 38%, 4% 47%, 8% 22%, 12% 31%, 16% 9%, 20% 28%, 25% 12%, 30% 35%, 35% 23%, 39% 38%, 43% 17%, 48% 26%, 52% 5%, 57% 23%, 62% 10%, 66% 32%, 71% 17%, 75% 35%, 80% 11%, 84% 25%, 89% 7%, 93% 26%, 97% 15%, 100% 24%, 100% 100%, 0 100%);
+}
+#pause-screen #resume-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px;
+  margin: 0;
+  padding: 16px 20px;
+  background: url('../assets/comics/button-play-base.webp') center / 100% 100% no-repeat;
+  color: #fff3d5;
+  clip-path: none;
+  box-shadow: none;
+  font: 400 clamp(18px, 5.2cqw, 23px)/1.1 'Russo One', Impact, sans-serif;
+  letter-spacing: .02em;
+  transform: rotate(-2deg);
+  transition: translate .15s, filter .15s;
+}
+#pause-screen #resume-button span { margin: 0; font-size: 26px; }
+#pause-screen #resume-button:hover { filter: brightness(1.12); translate: 0 -2px; }
+#pause-screen #resume-button:active { translate: 0 2px; }
+#pause-screen button:focus-visible,
+#pause-screen summary:focus-visible { outline: 3px solid #193b44; outline-offset: 4px; }
+#pause-screen .pause-secondary {
+  display: flex;
+  justify-content: center;
+  gap: 36px;
+  margin-top: 10px;
+}
+#pause-screen .text-button {
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 8px;
+  font: 500 14px/1.4 Rubik, sans-serif;
+  color: #193b44;
+}
+#pause-screen .text-button:hover { text-decoration: underline; text-underline-offset: 4px; }
+#pause-screen .text-button:disabled { opacity: .5; cursor: default; text-decoration: none; }
+#pause-screen .pause-options {
+  width: 100%;
+  margin: 5px 0 0;
+  text-align: center;
+  font: 400 13px/1.5 Rubik, sans-serif;
+}
+.pause-options summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  cursor: pointer;
+  list-style: none;
+  touch-action: manipulation;
+}
+.pause-options summary::-webkit-details-marker { display: none; }
+.pause-options summary span { font-size: 20px; transition: transform .15s; }
+.pause-options[open] summary span { transform: rotate(45deg); }
+#pause-screen .pause-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 3px 6px;
+  padding-top: 8px;
+  border-top: 1px solid #193b4430;
+}
+#pause-screen .pause-help {
+  grid-column: 1 / -1;
+  margin: 0 0 8px;
+  font: 400 12px/1.6 Rubik, sans-serif;
+}
+#pause-screen .pause-settings .text-button { font-size: 12px; padding: 8px 4px; }
+#pause-screen #center-button { grid-column: 1 / -1; }
+#app-container:has(#pause-screen:not(.hidden)) .hud,
+#app-container:has(#pause-screen:not(.hidden)) .steer-controls,
+#app-container:has(#pause-screen:not(.hidden)) #jump-button {
+  visibility: hidden;
+  pointer-events: none;
+}
+@container mobile-screen (max-height: 740px) {
+  #pause-screen .pause-heading { padding-top: max(24px, calc(env(safe-area-inset-top) + 12px)); }
+  #pause-screen h2 { margin-top: 10px; font-size: 11.8cqw; }
+  #pause-screen .pause-actions { padding-top: 30px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  #pause-screen #resume-button { min-height: 64px; }
+  #pause-screen .pause-secondary { margin-top: 4px; }
+  #pause-screen .pause-options { margin-top: 0; }
+}
+@container mobile-screen (max-height: 560px) {
+  #pause-screen .pause-card { grid-template-rows: auto minmax(100px, 1fr) auto; }
+  #pause-screen .pause-heading { padding-top: max(16px, env(safe-area-inset-top)); }
+  #pause-screen h2 { font-size: 9.8cqw; margin-top: 6px; }
+  #pause-screen .pause-actions { padding-top: 20px; }
+  #pause-screen #resume-button { min-height: 56px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #pause-screen #resume-button, .pause-options summary span { transition: none; }
+}

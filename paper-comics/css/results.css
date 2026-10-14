@@ -1,0 +1,312 @@
+/* A finish poster with the same sun-cutout, ink and paper colors as the title. */
+#result-screen {
+  display: block;
+  overflow: hidden;
+  padding: 0;
+  color: #193b44;
+  background: #f1e5c9 url('../assets/sprites/sky-paper-grain.svg') center / 180px 180px;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+#result-screen .result-card {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(185px, 1fr) auto;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  text-align: center;
+  background: url('../assets/sprites/sky-paper-grain.svg') center / 180px 180px;
+  transform: none;
+  filter: none;
+  isolation: isolate;
+}
+#result-screen .result-heading {
+  position: relative;
+  z-index: 2;
+  padding: max(28px, calc(env(safe-area-inset-top) + 14px)) 18px 7px;
+}
+#result-screen .eyebrow {
+  margin: 0;
+  font: 500 11px/1.4 Rubik, sans-serif;
+  letter-spacing: .22em;
+}
+#result-screen .result-heading h2 {
+  margin: 10px 0 4px;
+  font: 400 clamp(36px, 12cqw, 54px)/1.06 'Russo One', Impact, sans-serif;
+  letter-spacing: -.055em;
+  transform: rotate(-2deg);
+}
+#result-screen[data-outcome="victory"] .result-heading h2 { color: #165973; }
+#result-screen[data-outcome="tie"] .result-heading h2 { color: #b75236; }
+#result-screen #result-comment {
+  margin: 5px 0 0;
+  font: 700 21px/1.1 Caveat, cursive;
+  color: #45615c;
+}
+.result-art {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  background: #f3bd37;
+}
+.result-art #result-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 47%;
+}
+.result-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: none;
+}
+.result-trophy {
+  position: absolute;
+  z-index: 2;
+  top: 9%;
+  left: -2%;
+  width: min(49%, 200px);
+  height: auto;
+  overflow: visible;
+  transform: rotate(8deg);
+  filter: drop-shadow(3px 6px 0 #17384650);
+}
+.trophy-rays {
+  fill: none;
+  stroke: #fff0bd;
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-dasharray: 10 9;
+}
+.trophy-handles-back {
+  fill: none;
+  stroke: #f7ebd0;
+  stroke-width: 26;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.trophy-handles {
+  fill: none;
+  stroke: #173b44;
+  stroke-width: 14;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.trophy-cup-back {
+  fill: #f7ebd0;
+  stroke: #f7ebd0;
+  stroke-width: 28;
+  stroke-linejoin: round;
+}
+.trophy-cup {
+  fill: url(#trophy-gold);
+  stroke: #173b44;
+  stroke-width: 8;
+  stroke-linejoin: round;
+}
+.trophy-stem, .trophy-base {
+  fill: url(#trophy-gold);
+  stroke: #173b44;
+  stroke-width: 8;
+  stroke-linejoin: round;
+}
+.trophy-shine {
+  fill: none;
+  stroke: #fff4c4;
+  stroke-width: 8;
+  stroke-linecap: round;
+}
+.trophy-star {
+  fill: #fff0ad;
+  stroke: #dd8525;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+#result-screen #result-crab { display: none; }
+#result-screen .result-details {
+  position: relative;
+  z-index: 2;
+  padding: 33px 30px max(14px, calc(env(safe-area-inset-bottom) + 8px));
+  background: #ffc43d url('../assets/sprites/sky-paper-grain.svg') center / 180px 180px;
+}
+#result-screen .result-details::before {
+  content: '';
+  position: absolute;
+  top: -23px;
+  left: 0;
+  width: 100%;
+  height: 36px;
+  background: #ffc43d url('../assets/sprites/sky-paper-grain.svg') center / 180px 180px;
+  clip-path: polygon(0 38%, 4% 48%, 9% 20%, 14% 34%, 19% 12%, 24% 33%, 30% 14%, 36% 35%, 42% 18%, 49% 34%, 55% 9%, 61% 31%, 67% 15%, 73% 38%, 79% 18%, 85% 33%, 91% 11%, 96% 34%, 100% 20%, 100% 100%, 0 100%);
+}
+#result-screen .duel-results {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 0 0 5px;
+}
+#result-screen .duel-results > div {
+  padding: 0 4px 7px;
+  border-top: 2px solid #193b443d;
+  border-bottom: 2px solid #193b443d;
+}
+#result-screen .duel-results span {
+  display: block;
+  margin: 6px 0 1px;
+  font: 700 10px/1.2 Rubik, sans-serif;
+  letter-spacing: .08em;
+}
+#result-screen .duel-results .result-beer {
+  display: block;
+  margin: 0;
+  font: 400 clamp(30px, 9cqw, 39px)/1.12 'Russo One', sans-serif;
+  letter-spacing: -.035em;
+  color: #125577;
+}
+#result-screen #result-beer-bonus { color: #ad492e; }
+#result-screen .result-summary {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 10px;
+  margin: 6px 0 2px;
+}
+#result-screen .result-summary span { font: 500 12px/1.3 Rubik, sans-serif; letter-spacing: .07em; }
+#result-screen .result-summary strong { font: 400 26px/1.2 'Russo One', sans-serif; }
+#result-screen .result-record { display: none; }
+#result-screen .result-record.is-record {
+  display: table;
+  margin: 4px auto 7px !important;
+  padding: 4px 10px;
+  background: #f4e8cb;
+  font: 700 10px/1.3 Rubik, sans-serif !important;
+  letter-spacing: .03em;
+  transform: rotate(-1deg);
+}
+#result-screen .result-goals { margin: 0; }
+#result-screen .result-goals #result-missions { display: none; }
+#result-screen .result-stars { font: 400 13px/1.4 'Russo One', sans-serif; color: #875d1f; }
+#result-screen .result-stars[hidden] { display: none; }
+#result-screen .result-companion[hidden] { display: none !important; }
+#result-screen #replay-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 68px;
+  margin: 6px 0 0;
+  padding: 13px 15px;
+  background: #f5aa19 url('../assets/comics/paper-panel-v2.webp') center / 100% 100%;
+  background-blend-mode: multiply;
+  color: #173a45;
+  font: 400 20px/1.1 'Russo One', Impact, sans-serif;
+  letter-spacing: .035em;
+  filter: drop-shadow(2px 4px 0 #76551840);
+  transform: rotate(-2deg);
+}
+#result-screen #replay-button span { margin: 0; font-size: 24px; }
+#result-screen .result-share {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 3px;
+}
+#result-screen .result-share .text-button,
+#result-screen .result-share .menu-link {
+  min-height: 40px;
+  margin: 0;
+  padding: 10px 4px;
+  color: #193b44;
+  font: 500 11px/1.35 Rubik, sans-serif !important;
+  letter-spacing: .035em;
+  text-decoration: none !important;
+}
+#result-screen button:focus-visible { outline: 3px solid #193b44; outline-offset: 4px; }
+#app-container:has(#result-screen:not(.hidden)) .sound-button { z-index: 20; }
+@container mobile-screen (max-height: 740px) {
+  #result-screen .result-heading { padding-top: max(18px, calc(env(safe-area-inset-top) + 8px)); }
+  #result-screen .result-heading h2 { margin-top: 7px; font-size: 11cqw; }
+  #result-screen .result-details { padding-top: 26px; padding-bottom: max(9px, env(safe-area-inset-bottom)); }
+  #result-screen #replay-button { min-height: 58px; margin-top: 3px; }
+  #result-screen .duel-results { margin-bottom: 1px; }
+}
+@container mobile-screen (max-height: 560px) {
+  #result-screen .result-card { grid-template-rows: auto minmax(115px, 1fr) auto; }
+  #result-screen .result-heading { padding-top: max(13px, env(safe-area-inset-top)); }
+  #result-screen .result-heading h2 { margin: 4px 0 0; font-size: 9.5cqw; }
+  #result-screen #result-comment { margin-top: 2px; font-size: 17px; }
+  #result-screen .result-details { padding-top: 22px; }
+  #result-screen .duel-results .result-beer { font-size: 26px; }
+  #result-screen #replay-button { min-height: 50px; }
+}
+@container mobile-screen (orientation: landscape) and (max-height: 520px) {
+  #result-screen .result-card {
+    grid-template-columns: 1.05fr 1fr;
+    grid-template-rows: auto 1fr;
+    overflow: hidden;
+  }
+  #result-screen .result-heading {
+    grid-column: 1;
+    grid-row: 1;
+    padding: max(8px, env(safe-area-inset-top)) 16px 2px;
+  }
+  #result-screen .result-heading h2 {
+    margin: 2px 0 0;
+    font-size: 28px;
+  }
+  #result-screen #result-comment {
+    margin: 1px 0 0;
+    font-size: 16px;
+  }
+  #result-screen .result-art {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 0;
+  }
+  #result-screen .result-details {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 8px 24px;
+  }
+  #result-screen .duel-results {
+    margin-bottom: 2px;
+  }
+  #result-screen .duel-results .result-beer {
+    font-size: 22px;
+  }
+  #result-screen .result-summary {
+    margin: 2px 0;
+  }
+  #result-screen .result-summary strong {
+    font-size: 20px;
+  }
+  #result-screen #replay-button {
+    min-height: 44px;
+    margin: 4px 0 2px;
+    font-size: 17px;
+    padding: 8px 12px;
+  }
+  #result-screen .result-share {
+    gap: 12px;
+    margin-top: 1px;
+  }
+  #result-screen .result-share .text-button,
+  #result-screen .result-share .menu-link {
+    min-height: 32px;
+    padding: 6px 2px;
+  }
+}
+@media (prefers-reduced-motion: reduce) { #result-screen button { transition: none !important; } }

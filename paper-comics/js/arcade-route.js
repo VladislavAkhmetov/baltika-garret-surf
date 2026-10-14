@@ -22,9 +22,6 @@ class TrickRoute {
       if(side)Object.assign(line,this.sideProps[Math.floor(this.lines.length/2)]);
       this.makeRamp(line);this.lines.push(line);
     }
-    this.choiceSigns=window.FLOW_TEST_MODE?[]:[['ВЫЛЕТ',-2.7,'#c56943'],['ОБЪЕЗД',2.8,'#236b67']].map(([text,x,color])=>({
-      mesh:game.sprite(game.label(text,color,256,64),3.6,.9),x,z:199
-    }));
     this.reset();
   }
   makeInk(color){
@@ -289,10 +286,6 @@ class TrickRoute {
   }
   update(){
     const g=this.game,p=g.p,n=16;
-    for(const sign of this.choiceSigns){
-      sign.mesh.visible=['playing','paused'].includes(g.state)&&sign.z-p.z<100&&sign.z-p.z>12;
-      sign.mesh.position.set(-sign.x,g.wave.height(sign.x,sign.z)+2.5,sign.z);
-    }
     for(const line of this.lines){
       line.group.visible=!line.disabled&&['playing','paused'].includes(g.state)&&line.z-p.z<135&&line.z-p.z>-16;
       if(!line.group.visible)continue;

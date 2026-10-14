@@ -13,7 +13,7 @@ class SurfJourney {
       ]},
       {label:'Макс против Бориса: два стакана и один финиш',panels:[
         {id:'boris',alt:'Лысый Борис на красном аквабайке соревнуется с Максом на сёрфе',speaker:'Борис',line:'У бара буду\nпервым!',sound:'ВЖУ-УХ!'},
-        {id:'shark',alt:'Макс с бокалом и Клешня на хвосте доски уходят от акулы',speaker:'Клешня',line:'ЗУБЫ\nСЗАДИ!'},
+        {id:'shark',alt:'Клешня на хвосте синей доски убегает от акулы с раскрытой пастью; сёрфер вне кадра',speaker:'Клешня',line:'ЗУБЫ\nСЗАДИ!',embeddedDialogue:true},
         {id:'cup',alt:'На стойке бара ждёт кубок победителю гонки; сохранённое пиво принесёт бонус к очкам',speaker:'Тони',line:'Сохрани пиво —\nполучишь бонус!'}
       ]}
     ];
@@ -75,7 +75,6 @@ class SurfJourney {
     }
     const available=this.heroes[this.heroIndex].available&&this.locations[this.locationIndex].available,b=document.getElementById('setup-next');b.disabled=!available;b.textContent=available?'ПРОДОЛЖИТЬ':'ЗАКРЫТО';
     const assist=document.getElementById('assist-toggle');assist.textContent='Сложность: '+(this.game.assist?'обычная':'высокая');assist.setAttribute('aria-pressed',!this.game.assist);assist.setAttribute('aria-label','Сложность: '+(this.game.assist?'обычная. Включить высокую':'высокая. Включить обычную'));
-    document.querySelector('.pause-balance-help').classList.toggle('hidden',this.game.assist);
   }
   hideAll(){this.screens.forEach(name=>document.getElementById(name+'-screen').classList.add('hidden'));}
   open(name){
@@ -88,23 +87,23 @@ class SurfJourney {
     if(name==='setup'){this.renderSelection();this.prefetchPage(0);}
     (document.querySelector('#'+name+'-screen [data-primary]')||document.querySelector('#'+name+'-screen button'))?.focus({preventScroll:true});
   }
-  home(){this.game.audio.stopBGM();this.game.reset();this.game.renderMenuMeta();['pause-screen','result-screen','share-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));this.open('start');}
+  home(){this.game.audio.stopBGM();this.game.reset();this.game.renderMenuMeta();['pause-screen','result-screen','share-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));this.open('start');this.game.audio.startBGM();}
   loadComicImage(id){
     if(this.comicImages.has(id))return this.comicImages.get(id);
+    const version=id==='shark'?'v5':'v4';
     const image=new Image();image.decoding='async';
     const ready=new Promise((resolve,reject)=>{
       let fallbackTried=false;
-      image.onload=()=>resolve(image);
+      image.onload=()=>image.decode().then(()=>resolve(image),()=>image.onerror());
       image.onerror=()=>{
         if(!fallbackTried){
           fallbackTried=true;
-          image.src='assets/comics/comic-'+id+'-v4.png';
+          image.src='assets/comics/comic-'+id+'-'+version+'.png';
         } else {
           reject(Error('Не удалось загрузить кадр комикса'));
         }
       };
-      image.src='assets/comics/comic-'+id+'-v4.webp';
-      if(image.complete && image.naturalWidth>0)resolve(image);
+      image.src='assets/comics/comic-'+id+'-'+version+'.webp';
     });
     this.comicImages.set(id,ready);
     ready.catch(()=>{if(this.comicImages.get(id)===ready)this.comicImages.delete(id);});
@@ -119,7 +118,7 @@ class SurfJourney {
     if(this.page+1<this.story.length)this.prefetchPage(this.page+1);
     const ready=s.panels.map(p=>{
       const panel=document.createElement('figure');panel.className='comic-panel comic-'+p.id;
-      const bubble=document.createElement('p');bubble.className='comic-bubble';bubble.textContent=p.line;bubble.setAttribute('aria-label',p.speaker+': '+p.line.replace(/\n/g,' '));panel.append(bubble);
+      const bubble=document.createElement('p');bubble.className='comic-bubble'+(p.embeddedDialogue?' comic-bubble-embedded':'');bubble.textContent=p.line;bubble.setAttribute('aria-label',p.speaker+': '+p.line.replace(/\n/g,' '));panel.append(bubble);
       if(p.sound){const sound=document.createElement('span');sound.className='comic-sfx';sound.textContent=p.sound;panel.append(sound);}
       book.append(panel);
       return this.loadComicImage(p.id).then(image=>{if(version!==this.storyRender)return;image.alt=p.alt;panel.prepend(image);});

@@ -1,0 +1,7 @@
+{
+  "tool": "built-in ImageGen",
+  "file": "seaplane-lime-v3.png",
+  "reference": "seaplane-distant-v2.png",
+  "transparent_background": true,
+  "prompt": "Use case: precise-object-edit. Edit target: the attached transparent paper-comics seaplane sprite. Repaint the aircraft a vivid bright lime green / yellow-green (main paint approximately #a8ed28, lighter highlights #d4ff65, shaded surfaces saturated leaf green). Replace the yellow and desaturated teal paint across fuselage, wings, tail and pontoons with this cohesive lime green scheme. Preserve the exact airplane design, left-facing direction, side three-quarter view, proportions, silhouette, windows, propeller, struts, ink outlines and subtle paper texture. Keep dark blue-grey glazing and believable shading. Isolated game sprite with real transparent background and clean alpha edges, entire aircraft inside frame. No text, logos, banner, rope or additional objects. Only recolor the existing aircraft."
+}

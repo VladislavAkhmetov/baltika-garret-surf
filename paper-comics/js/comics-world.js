@@ -118,7 +118,7 @@ class ComicsWorld {
     if(Math.abs(gap)<1.8&&Math.abs(p.x-h.x)<1.15&&p.airY>=.95){if(!h.airDodge)g.runComic.capture('shark','ХАП!','АКУЛА ОСТАЛАСЬ БЕЗ УЖИНА',95);h.airDodge=true;}
     if((age>3&&gap>36)||gap< -6||(h.attackAt!==null&&g.time-h.attackAt>3.2)){this.endChase(h,true);return;}
     if(Math.abs(gap)<1.8&&Math.abs(p.x-h.x)<1.15&&p.airY<.95&&g.impactCooldown===0){
-      h.hit=true;g.spill(.13,'АКУЛА ЗАДЕЛА');p.speed*=.65;g.balance.disturb(.34,'АКУЛА ЗАДЕЛА');g.impactCooldown=2;g.emit(25,1.3);this.endChase(h);return;
+      h.hit=true;g.spill(.13,'АКУЛА ЗАДЕЛА',true);p.speed*=.65;g.audio?.playCrowdSharkHit();g.balance.disturb(.34,'АКУЛА ЗАДЕЛА');g.impactCooldown=2;g.emit(25,1.3);this.endChase(h);return;
     }
   }
   threat(){
@@ -165,7 +165,7 @@ class ComicsWorld {
       const radius=h.collisionRadius??(h.type==='jetski'?1.3:1),depth=h.collisionDepth??1.8,clearance=h.jumpClearance??1;
       if(!h.hit&&Math.abs(ahead)<depth&&Math.abs(h.x-p.x)<radius&&p.airY<clearance&&g.impactCooldown===0){
         const cause=h.cause||(h.type==='shark'?'АКУЛА ЗАДЕЛА':'УДАР ОБ АКВАБАЙК');
-        h.hit=true;g.spill(h.type==='shark'?.13:.10,cause);
+        h.hit=true;g.spill(h.type==='shark'?.13:.10,cause,true);
         p.speed*=.65;g.balance.disturb(.34,cause);g.impactCooldown=2;g.emit(25,1.3);
         g.juice.hitstop(.08);g.juice.pop('БАМ!',p.x,p.y+2,p.z,'bad');g.runComic.capture('hit','БАМ!',h.type==='jetski'?'ПРИВЕТ ОТ БОРИСА':h.cause,45);
       }

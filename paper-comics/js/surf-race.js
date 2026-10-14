@@ -19,7 +19,7 @@ class SurfRace {
     this.game.rivals.forEach((r,i)=>{
       r.encounter=null;this.callouts[i].classList.remove('visible');this.cues[i].visible=false;
       r.scenic=this.enabled;
-      if(r.scenic){r.x=i===0?-12:12;r.z=48+i*36;r.speed=26;r.lean=r.airY=0;}
+      if(r.scenic){r.x=-22.5-i*4;r.z=120+i*44;r.speed=26;r.lean=r.airY=0;}
     });
   }
   begin(scene){

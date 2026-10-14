@@ -70,7 +70,7 @@ async function run(){
         scenic:g.rivals.every(r=>r.scenic&&!r.encounter&&!r.collided),profiles:g.rivals.map(r=>r.id)};
       g.state='paused';g.reset();return result;
     });
-    assert.ok(report.scenery.closest>=11.5&&report.scenery.unchanged&&report.scenery.scenic&&report.scenery.warps>0);
+    assert.ok(report.scenery.closest>=19.3&&report.scenery.unchanged&&report.scenery.scenic&&report.scenery.warps>0);
     assert.equal(report.scenery.visibleWarps,0,'visible surfers never teleport');
     report.rampRide=await page.evaluate(()=>{
       const g=game;g.meta.seed=42;g.reset();g.state='playing';g.input.mode='touch';g.comics.trigger=()=>false;
@@ -95,7 +95,7 @@ async function run(){
           const umbrella=g.trickRoute.lines.find(l=>l.prop==='umbrella');
           g.p.z=shot==='opening'?0:shot==='umbrella'?umbrella.z-24:shot==='surfers'?130:380;g.p.x=shot==='umbrella'?3:0;
           g.time=g.wave.time=g.p.z/35;g.p.y=g.wave.height(g.p.x,g.p.z);
-          if(shot==='surfers')g.rivals.forEach((r,i)=>{r.x=i?-12:12;r.z=g.p.z+30+i*14;});
+          if(shot==='surfers')g.rivals.forEach((r,i)=>{r.z=g.p.z+166+i*12;r.x=g.rivalCast.waterPoint(r,r.z);});
           if(shot==='boris'){g.duel.boris.x=2.5;g.duel.boris.z=g.p.z+13;g.duel.boris.airY=.7;g.duel.roll=.15;}
           g.wave.update(g.p.z,g.time,true);g.updateCamera(1,true);g.updateVisuals(0);g.updateHUD();g.renderer.render(g.scene,g.camera);
           const pos=umbrella.top.geometry.attributes.position;let surfaceError=0;

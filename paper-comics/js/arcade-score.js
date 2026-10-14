@@ -39,7 +39,7 @@ class TrickChain {
     if(!this.count)return 0;
     const g=this.game,count=this.count,value=this.value;
     g.score+=value;this.total+=value;this.banked++;this.best=Math.max(this.best,value);this.clear();
-    this.show('ЗАЧТЕНО','+'+value.toLocaleString('ru-RU'),false);
+    if(value>=2500&&count>=3)this.show('ЗАЧТЕНО','+'+value.toLocaleString('ru-RU'),false);
     if(g.state==='playing'){
       g.juice.punch(Math.min(5,1.5+value/2500));g.juice.buzz(18);
       if(value>=2500){g.juice.hitstop(.07);g.runComic.capture('bank','БАМ!','ЦЕПОЧКА ×'+count+' · +'+value.toLocaleString('ru-RU'),40+Math.min(30,value/400));}
@@ -62,8 +62,9 @@ class TrickChain {
   }
   clear(){this.items=[];this.points=this.count=this.timer=0;}
   show(title,line,bad){
+    if(!bad&&!this.game.reserveRewardNotice('chain:'+title))return false;
     this.toast.querySelector('strong').textContent=title;this.toast.querySelector('span').textContent=line;
-    this.toast.classList.toggle('bad',bad);this.toast.classList.remove('visible');void this.toast.offsetWidth;this.toast.classList.add('visible');this.toastTime=1.3;
+    this.toast.classList.toggle('bad',bad);this.toast.classList.remove('visible');void this.toast.offsetWidth;this.toast.classList.add('visible');this.toastTime=bad?1.3:1.7;return true;
   }
   render(){
     const g=this.game,chase=g.chase,p=g.p||{},active=this.count>0;
