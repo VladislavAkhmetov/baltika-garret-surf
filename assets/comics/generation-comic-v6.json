@@ -1,0 +1,65 @@
+{
+  "mode": "built-in image_gen",
+  "created": "2026-10-15",
+  "version": "v6",
+  "title": "Новая история: смена в дальнем баре",
+  "purpose": "Two-page inked paper comic: six independent panels for the new beach bar shift story (STORY_SHIFT_V6.md).",
+  "panels": [
+    {
+      "id": "cards",
+      "file": "comic-cards-v6.png",
+      "status": "generated",
+      "prompt": "Create ONE full-bleed landscape comic panel, 3:2 aspect ratio, high resolution. Inked graphic novel / European paper comic style. Confident hand-inked dark navy outlines, colored pencil and screenprinted halftone texture on warm ivory paper. Max and Boris sit on neighboring wooden bar stools at Tony's beach bar, playing cards directly on the wooden counter and idly drinking Garret Non-Alcoholic. Max props his chin on his hand, looking sluggishly bored. Boris distractedly examines his cards with lowered shoulders; the card deal has stalled. On the counter between them are two identical glass handled beer mugs with pale golden drink and visible recognizable bottles of Garret Non-Alcoholic. Max: adult athletic man ~28, curly brown hair, facial stubble, white tank top, dark green shorts with yellow flowers. Boris: adult bald man, facial stubble, casual clothes. Medium close-up of both at the bar counter. Keep the upper center/right relatively clean and uncluttered warm background. No speech bubbles, no text, no panel borders, no trophies.",
+      "dialogue": []
+    },
+    {
+      "id": "job",
+      "file": "comic-job-v6.png",
+      "status": "interim",
+      "prompt": "Create ONE full-bleed landscape comic panel, 3:2 aspect ratio, high resolution. European inked paper comic style. Confident hand-inked dark navy outlines, colored pencil and halftone texture on warm ivory paper. Palette: vivid cyan ocean, dark navy, lemon yellow, coral, cream, wood tones. Tony (bar owner: middle-aged, wavy gray hair and beard, burnt orange apron) walks up to the wooden beach bar counter where Max and Boris are sitting. Tony points with one arm across the sunlit turquoise bay toward a distant crowded beach where a small beach bar with thirsty people is visible. Max (curly brown hair, white tank top, floral shorts) and Boris (bald with stubble) turn around from their cards, looking surprised and energized by Tony's proposal. On the counter: cards, two handled glass beer mugs, Garret Non-Alcoholic bottles. Medium shot inside the wooden open-air beach bar looking out toward the bay. Leave upper right/center area relatively open and calm for HTML speech balloons. No text, no speech bubbles, no trophies.",
+      "dialogue": [
+        { "speaker": "Тони", "line": "Парни, на дальнем\nпляже все пить хотят!" },
+        { "speaker": "Тони", "line": "Кто подработает\nв баре до закрытия?" }
+      ]
+    },
+    {
+      "id": "wager",
+      "file": "comic-wager-v6.png",
+      "status": "interim",
+      "prompt": "Create ONE full-bleed landscape comic panel, 3:2 aspect ratio, high resolution. European inked paper comic style. Confident hand-inked dark navy outlines, colored pencil and halftone texture on warm ivory paper. Palette: vivid cyan ocean, dark navy, lemon yellow, coral, cream, wood tones. Max and Boris close-up at the wooden counter, making their friendly wager with a firm handshake across the table. They both smile with spirited, cheerful rivalry. In the foreground on the counter stand two identical glass handled mugs filled to the same level with pale golden beer and a head of white foam, plus Garret Non-Alcoholic bottles and the card deck set aside. Max: adult curly brown hair, stubble, white tank top. Boris: adult bald head, stubble, athletic build in casual t-shirt. Keep upper 30% clean and uncluttered for speech balloons. No text, no speech bubbles, no trophies.",
+      "dialogue": [
+        { "speaker": "Борис", "line": "Берёмся!" },
+        { "speaker": "Макс", "line": "Кто больше довезёт —\nза стойку!" },
+        { "speaker": "Борис", "line": "Проигравшему —\nуборка и посуда!" }
+      ]
+    },
+    {
+      "id": "jetski-start",
+      "file": "comic-jetski-start-v6.png",
+      "status": "interim",
+      "prompt": "Create ONE full-bleed landscape comic panel, 3:2 aspect ratio, high resolution. European inked paper comic style. Confident hand-inked dark navy outlines, colored pencil and halftone texture on warm ivory paper. Palette: vivid cyan ocean, dark navy, lemon yellow, coral, cream. At a wooden seaside dock/jetty, Boris is getting ready on his red-and-white jetski. He is sitting on the jetski, wearing a bright yellow life jacket over his dark shirt. One hand grips the handlebar, and he looks back over his shoulder toward the viewer / Max with a cocky, cheerful grin. Mounted in a sturdy cup holder on the jetski console is his glass handled mug with golden beer. The jetski floats gently on the clear turquoise water near the wooden dock. Keep upper left or right relatively calm for a speech balloon. No text, no speech bubbles.",
+      "dialogue": [
+        { "speaker": "Борис", "line": "Готовься мыть\nстаканы!" }
+      ]
+    },
+    {
+      "id": "umbrella-crab",
+      "file": "comic-umbrella-crab-v6.png",
+      "status": "generated",
+      "prompt": "Create ONE full-bleed landscape comic panel, 3:2 aspect ratio, high resolution. European inked paper comic style. Confident hand-inked dark navy outlines, colored pencil and halftone texture on warm ivory paper. On the warm golden sandy beach, under a wide beach umbrella casting a distinct cool shade. Max's blue surfboard (cream stripe, ochre stringer) lies on the sand. On the tail of the board, Kleshnya the little orange-red crab was peacefully resting. Max crouches down and lifts up the front of the board with a mischievous grin. The little crab opens its big black stalk eyes in comic shock, raising its claws and clinging tightly to the board's tail. In his other hand, Max carefully balances his full glass mug of golden beer without spilling a drop. Umbrella overhead casting shade. Keep upper portion open for speech bubble. No text, no speech bubbles.",
+      "dialogue": [
+        { "speaker": "Клешня", "line": "Эй! Я тут отдыхал!" }
+      ]
+    },
+    {
+      "id": "shift-launch",
+      "file": "comic-shift-launch-v6.png",
+      "status": "generated",
+      "prompt": "Create ONE full-bleed landscape comic panel, 3:2 aspect ratio, high resolution. European inked paper comic style. Confident hand-inked dark navy outlines, colored pencil and halftone texture on warm ivory paper. Max and Boris launching across the waves on their way to the shift at the distant beach bar. In the foreground/midground, Max carves dynamically across a curling cyan wave on his blue surfboard with cream stripe, athletic and balanced, holding his glass beer mug aloft with full control. Kleshnya the little crab clings to the tail of the surfboard, eyes wide as spray flies. Nearby on a parallel wave crest, Boris speeds along on his red-and-white jetski with his yellow life jacket, his mug secure in the console holder. In the distance across the sunny bay, the destination beach and bar with tiny figures of waiting visitors are visible. High-energy surfing action, speed hatching. Keep upper sky area clear for speech balloon. NO trophies, medals, or award pedestals. No text, no speech bubbles.",
+      "dialogue": [
+        { "speaker": "Макс", "line": "Держись, Клешня!\nНас ждут!" }
+      ],
+      "sound": "ПОГНАЛИ!"
+    }
+  ]
+}

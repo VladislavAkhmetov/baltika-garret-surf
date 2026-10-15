@@ -36,6 +36,28 @@
 .comic-cup .comic-bubble{right:3%;top:4%;max-width:59%}
 .comic-cup .comic-bubble::before,.comic-cup .comic-bubble::after{left:75%;transform:rotate(-17deg)}
 .comic-cup img{object-position:50% 56%}
+
+/* V6 Comic Panels */
+.comic-cards .comic-bubble{display:none !important}
+.comic-cards img{object-position:50% 50%}
+.comic-job .comic-bubble{right:4%;top:6%;max-width:58%}
+.comic-job .comic-bubble-2{right:6%;top:50%;max-width:54%;font-size:clamp(17px,2.8cqw,26px)}
+.comic-job img{object-position:50% 45%}
+.comic-wager .comic-bubble-1{left:4%;top:8%;max-width:44%;transform:rotate(-3deg)}
+.comic-wager .comic-bubble-2{right:4%;top:6%;max-width:50%;transform:rotate(2deg)}
+.comic-wager .comic-bubble-3{left:6%;bottom:8%;top:auto;max-width:52%;font-size:clamp(16px,2.6cqw,24px)}
+.comic-wager img{object-position:50% 40%}
+.comic-jetski-start .comic-bubble{left:4%;top:9%;max-width:54%}
+.comic-jetski-start .comic-bubble::before,.comic-jetski-start .comic-bubble::after{left:77%;transform:rotate(-30deg)}
+.comic-jetski-start img{object-position:50% 37%}
+.comic-umbrella-crab .comic-bubble{right:6%;top:8%;max-width:54%}
+.comic-umbrella-crab .comic-bubble::before,.comic-umbrella-crab .comic-bubble::after{left:72%;transform:rotate(-20deg)}
+.comic-umbrella-crab img{object-position:50% 50%}
+.comic-shift-launch .comic-bubble{left:5%;top:8%;max-width:54%}
+.comic-shift-launch .comic-sfx{right:6%;bottom:12%;left:auto;transform:rotate(8deg)}
+.comic-shift-launch img{object-position:50% 50%}
+.story-version-btn{margin-left:52px;font:600 12px Rubik,sans-serif;color:var(--comic-ink);background:var(--comic-paper);border:2px solid var(--comic-ink);border-radius:6px;padding:4px 9px;cursor:pointer;box-shadow:2px 2px 0 #092f4420;transition:transform .1s ease;white-space:nowrap}
+.story-version-btn:hover{transform:scale(1.04)}
 .comic-page[data-comic-page="1"]{grid-template-rows:30% 34% 36%}
 .comic-nav{position:relative;z-index:4;flex-shrink:0;display:flex;justify-content:center;width:100%;padding:12px 14px max(14px,env(safe-area-inset-bottom));}
 .comic-nav #story-next{min-height:54px;width:min(100%,420px);font:400 22px 'Russo One',Impact,sans-serif;transform:rotate(-1deg);padding:10px 24px}
