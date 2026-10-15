@@ -138,7 +138,8 @@ class BeerDuel {
     const vx=(b.x-oldX)/dt,heading=Math.atan2(vx,Math.max(18,b.speed)),turn=(heading-b.heading)/dt;b.heading=heading;
     // An independent pace: player boosts and mistakes change the actual gap.
     const roughness=Math.abs(s.dx)*.6+Math.abs(s.dz)*.4;
-    let target=THREE.MathUtils.clamp(40+Math.sin(this.clock*.7)*2.4-roughness*.9-Math.abs(vx)*.35,34,43);
+    const finishEase=b.z>1100?.45:0;
+    let target=THREE.MathUtils.clamp(40-finishEase+Math.sin(this.clock*.7)*2.4-roughness*.9-Math.abs(vx)*.35,34-finishEase,43-finishEase);
     if(this.recovery>0)target=Math.min(target,oldSpeed+3);
     this.recovery=Math.max(0,this.recovery-dt);
     b.speed+=(target-b.speed)*(1-Math.exp(-1.7*dt));

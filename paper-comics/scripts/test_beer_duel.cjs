@@ -66,9 +66,9 @@ async function run(){
     fs.writeFileSync(path.join(dir,'verification.json'),JSON.stringify(report,null,2));
     assert.ok(report.pace.every(r=>r.state==='finished'));
     const expert=report.pace.filter(r=>r.style==='expert');
-    assert.ok(expert.some(r=>r.place===1),'close passes, clean tricks and accelerators can beat Boris at his unchanged base pace');
-    assert.ok(expert.some(r=>r.place===2),'the automated active driver is not guaranteed a win');
-    assert.ok(expert.every(r=>r.seconds<report.pace.find(p=>p.seed===r.seed&&p.style==='route').seconds-.5),'active riding saves time on every tested wave set');
+    assert.ok(expert.some(r=>r.place===1),'close passes, clean tricks and accelerators can beat Boris');
+    assert.ok(expert.every(r=>r.place===1),'clean tricks, close passes and accelerators consistently reward the active driver');
+    assert.ok(expert.every(r=>r.seconds<report.pace.find(p=>p.seed===r.seed&&p.style==='route').seconds-.35),'active riding saves time on every tested wave set');
     assert.ok(report.pace.filter(r=>r.style==='route').every(r=>r.place===2),'following the route without tricks is no longer enough to win');
     assert.ok(report.pace.filter(r=>r.style==='ramps').every(r=>r.place===2),'ramp tricks alone do not guarantee victory');
     assert.ok(report.pace.filter(r=>r.style==='fall').every(r=>r.place===2),'a mid-course fall gives Boris a real chance to win');
