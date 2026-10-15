@@ -38,7 +38,7 @@ class SurfOnboarding {
     }
     if(!this.completed.has('jump')&&this.completed.has('wave')&&this.jumpOfferTime<5&&p.z<250&&g.balance.mode==='stable'){
       this.jumpOffered=true;this.highlight='jump';
-      return {id:'jump',title:'ПРЫЖОК → ТРЮК',line:keys?'Пробел на гребне, ещё раз в воздухе — трюк.':'Нажми прыжок на гребне, ещё раз в воздухе — трюк.'};
+      return {id:'jump',title:'ПРЫЖОК → ТРЮК',line:keys?'Пробел на гребне, в воздухе — трюк.':'Тап на гребне, в воздухе — трюк.'};
     }
     return null;
   }

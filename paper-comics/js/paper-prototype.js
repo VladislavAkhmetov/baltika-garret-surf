@@ -874,7 +874,7 @@ class PaperSurfGame {
       if(ramp){id='ramp';title=ramp.type==='side'?'БОРТ У КРАЯ':'ТРАМПЛИН ВПЕРЕДИ';line=ramp.type==='side'?'Заедь сбоку с воды — вылетишь к середине.':'Держи пунктир — доска взлетит сама.';}
     }
     // Once learned, the wave and the highlighted jump control carry the cue.
-    if(!lesson&&['balance','landing','danger'].includes(id)&&!(id==='landing'&&this.jump.spinStarted&&this.jump.tricks===0))line='';
+    if(!lesson&&['balance','landing','danger','route','ramp','show'].includes(id)&&!(id==='landing'&&this.jump.spinStarted&&this.jump.tricks===0))line='';
     const urgent=['steer','balance','landing','danger','spin','chase'].includes(id),coach=document.getElementById('ride-coach');coach.dataset.lesson=id;
     const dolphinsVisible=this.demo.dolphins.some(d=>d.group.visible);
     coach.classList.toggle('hidden',!title||this.comics.pending||this.comics.active||((this.momentTime>0||dolphinsVisible)&&!urgent));

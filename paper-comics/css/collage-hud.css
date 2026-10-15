@@ -5,18 +5,18 @@
   --hud-crown: url('../assets/comics/hud/crown-cream.webp');
   --hud-color: #20434c;
   --ride-left: 12px;
-  --hud-top: max(12px, env(safe-area-inset-top));
-  --hud-row-top: calc(var(--hud-top) + 117px);
+  --hud-top: max(10px, env(safe-area-inset-top));
+  --hud-row-top: calc(var(--hud-top) + 90px);
   --hud-status-width: calc((100cqw - 24px) * .32);
   --hud-chain-width: calc((100cqw - 24px) * .34);
   --hud-score-width: calc((100cqw - 24px) * .29);
 }
-#app-container.beer-duel { --chain-top: var(--hud-row-top); --message-top: calc(var(--hud-row-top) + 59px); }
-#app-container.beer-duel:has(#arcade-chain.has-chain) { --message-top: calc(var(--hud-row-top) + 65px); }
+#app-container.beer-duel { --chain-top: var(--hud-row-top); --message-top: calc(var(--hud-row-top) + 50px); }
+#app-container.beer-duel:has(#arcade-chain.has-chain) { --message-top: calc(var(--hud-row-top) + 54px); }
 #app-container .hud {
   top: var(--hud-top); left: 12px; right: 12px;
-  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) 44px;
-  gap: 9px; align-items: start;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) 40px;
+  gap: 8px; align-items: start;
   color: var(--hud-color);
 }
 #app-container .beer-ticket,
@@ -32,51 +32,51 @@
 }
 #app-container .beer-ticket {
   position: relative; grid-column: 1; grid-row: 1;
-  height: 106px; padding: 12px 12px 24px 4px; gap: 1px;
-  transform: rotate(-3deg); align-items: center;
+  height: 78px; padding: 8px 10px 18px 4px; gap: 1px;
+  transform: rotate(-2.5deg); align-items: center;
 }
-#app-container #beer-canvas { width: 42px; height: 68px; }
+#app-container #beer-canvas { width: 32px; height: 50px; }
 #app-container .beer-ticket > div { min-width: 0; }
 #app-container .beer-ticket .ticket-label {
-  display: block !important; font: 700 clamp(8px, 2.25cqw, 10px)/1.3 Rubik, sans-serif;
+  display: block !important; font: 700 clamp(8px, 2.2cqw, 9.5px)/1.25 Rubik, sans-serif;
   letter-spacing: 0; white-space: nowrap;
 }
 #app-container .beer-ticket strong {
-  font: 900 clamp(34px, 10.8cqw, 46px)/1.15 Rubik, sans-serif;
-  letter-spacing: -2px; white-space: nowrap; font-variant-numeric: tabular-nums;
+  font: 900 clamp(26px, 8.5cqw, 36px)/1.1 Rubik, sans-serif;
+  letter-spacing: -1.5px; white-space: nowrap; font-variant-numeric: tabular-nums;
 }
 #app-container .beer-ticket strong span { font-size: .55em; letter-spacing: -1px; }
 #app-container .beer-track {
-  position: absolute; left: 17px; right: 14px; bottom: 14px;
-  height: 13px; margin: 0; border: 2px solid var(--hud-color);
-  padding: 2px; background: #f9e5be70;
+  position: absolute; left: 14px; right: 12px; bottom: 8px;
+  height: 9px; margin: 0; border: 1.5px solid var(--hud-color);
+  padding: 1.5px; background: #f9e5be70;
 }
 #app-container .beer-track i { background: #ffb719; }
 #app-container .duel-ticket {
-  grid-column: 2; grid-row: 1; height: 102px;
-  margin-top: 3px; padding: 15px 13px 13px; transform: rotate(3deg);
+  grid-column: 2; grid-row: 1; height: 75px;
+  margin-top: 2px; padding: 10px 10px 9px; transform: rotate(2.5deg);
 }
-#app-container .duel-ticket > span { font: 700 10px/1.4 Rubik, sans-serif; letter-spacing: .02em; }
+#app-container .duel-ticket > span { font: 700 9px/1.3 Rubik, sans-serif; letter-spacing: .02em; }
 #app-container .duel-ticket > strong {
-  font: 900 clamp(36px, 12cqw, 50px)/1.2 Rubik, sans-serif;
-  color: #bd442c; letter-spacing: -2px; white-space: nowrap;
+  font: 900 clamp(26px, 9.5cqw, 38px)/1.15 Rubik, sans-serif;
+  color: #bd442c; letter-spacing: -1.5px; white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 #app-container .duel-ticket small { font-size: .65em; letter-spacing: -1px; }
 #app-container #pause-button {
   position: static; top: auto; right: auto;
-  grid-column: 3; grid-row: 1; width: 44px; height: 44px;
-  margin-top: 53px; padding: 4px; font: 900 29px/1 Rubik, sans-serif;
-  transform: rotate(4deg);
+  grid-column: 3; grid-row: 1; width: 38px; height: 38px;
+  margin-top: 47px; padding: 2px; font: 900 24px/1 Rubik, sans-serif;
+  transform: rotate(3deg);
 }
 #app-container.playing #sound-button {
   left: auto; right: 12px; top: var(--hud-top);
-  width: 44px; height: 44px; padding: 9px; transform: rotate(-6deg);
+  width: 38px; height: 38px; padding: 7px; transform: rotate(-5deg);
 }
 #app-container .score-ticket {
   container-type: inline-size;
-  position: absolute; top: 117px; right: 0; width: var(--hud-score-width); max-width: none;
-  padding: 8px 8px; transform: rotate(2deg);
+  position: absolute; top: var(--hud-row-top); right: 0; width: var(--hud-score-width); max-width: none;
+  padding: 6px 6px; transform: rotate(1.5deg);
   background: var(--hud-ink) center / 100% 125% no-repeat;
   filter: drop-shadow(1px 3px 2px #36271e35);
 }
@@ -89,14 +89,14 @@
 #app-container .duel-ticket::before { left: 65%; width: 13px; height: 19px; background: #ead6b799; transform: rotate(-23deg); }
 #app-container .score-ticket strong {
   padding: 0; border: 0; background: none; clip-path: none;
-  font: 500 min(24px, calc(100cqw / (var(--score-digits, 6) * .65)))/1.15 Rubik, sans-serif; letter-spacing: -.8px;
+  font: 500 min(20px, calc(100cqw / (var(--score-digits, 6) * .65)))/1.15 Rubik, sans-serif; letter-spacing: -.6px;
   text-align: center; color: #f7e8c6; font-variant-numeric: tabular-nums;
 }
 #app-container .duel-status {
   top: var(--hud-row-top); left: 12px; width: var(--hud-status-width); max-width: none;
-  min-height: 28px; padding: 8px 10px; border-radius: 0;
+  min-height: 24px; padding: 6px 8px; border-radius: 0;
   background: var(--hud-ink) center / 100% 125% no-repeat;
-  color: #f7e8c6; font: 700 clamp(8px, 2.2cqw, 10px)/1.3 Rubik, sans-serif;
+  color: #f7e8c6; font: 700 clamp(8px, 2.1cqw, 9.5px)/1.25 Rubik, sans-serif;
   filter: drop-shadow(1px 3px 2px #36271e35); transform: rotate(-1deg);
 }
 #app-container .duel-status::before { content: '♛'; margin-right: 5px; color: #f1cf8f; font-size: 14px; vertical-align: -1px; }
@@ -105,28 +105,29 @@
   width: var(--hud-chain-width); max-width: none;
 }
 #app-container .chain-row {
-  padding: 10px 10px 15px; border: 0; border-radius: 0;
+  padding: 7px 8px 11px; border: 0; border-radius: 0;
   background: var(--hud-ink) center / 100% 125% no-repeat;
   color: #fff5de; filter: drop-shadow(1px 3px 2px #36271e30);
 }
-#app-container .chain-value { font: 900 min(27px, 6.7cqw)/1.1 Rubik, sans-serif; letter-spacing: -1px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#app-container .chain-value { font: 900 min(22px, 5.8cqw)/1.1 Rubik, sans-serif; letter-spacing: -1px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 #app-container .chain-count { color: #ffbf26; }
-#app-container .chain-timer { left: 12px; right: 12px; bottom: 10px; height: 3px; background: #eee0bf40; }
+#app-container .chain-timer { left: 12px; right: 12px; bottom: 8px; height: 3px; background: #eee0bf40; }
 #app-container .chain-timer i { background: #f4c960; }
 #app-container #ride-coach {
-  padding: 11px 18px 12px; max-width: calc(100% - 24px); width: calc(100% - 24px);
-  transform: rotate(-2deg); text-shadow: none;
+  padding: 6px 14px 7px; max-width: min(340px, calc(100% - 24px)); width: max-content;
+  transform: rotate(-1.5deg); text-shadow: none;
 }
-#app-container #ride-coach strong { font: 900 18px/1.15 Rubik, sans-serif; }
-#app-container #ride-coach span { color: var(--hud-color); font: 500 13px/1.35 Rubik, sans-serif; margin-top: 7px; }
+#app-container #ride-coach strong { font: 900 14px/1.2 Rubik, sans-serif; display: block; }
+#app-container #ride-coach span { color: var(--hud-color); font: 500 11.5px/1.25 Rubik, sans-serif; margin-top: 3px; display: block; }
+#app-container #ride-coach span:empty { display: none; }
 #app-container #rush-meter {
   top: auto; left: auto; right: 15px;
-  bottom: max(calc(var(--action-size, 72px) + 74px), calc(env(safe-area-inset-bottom) + var(--action-size, 72px) + 66px));
-  width: 84px; padding: 13px 9px 12px; transform: rotate(2deg);
+  bottom: max(calc(var(--action-size, 72px) + 68px), calc(env(safe-area-inset-bottom) + var(--action-size, 72px) + 60px));
+  width: 72px; padding: 7px 6px 7px; transform: rotate(2deg);
 }
-#app-container #rush-meter strong { font: 700 12px/1.3 Rubik, sans-serif; }
-#app-container #rush-meter span { gap: 5px; padding-top: 7px; }
-#app-container #rush-meter i { width: 14px; height: 14px; background: transparent; border: 1.5px solid var(--hud-color); }
+#app-container #rush-meter strong { font: 700 10px/1.2 Rubik, sans-serif; }
+#app-container #rush-meter span { gap: 4px; padding-top: 4px; }
+#app-container #rush-meter i { width: 11px; height: 11px; background: transparent; border: 1.5px solid var(--hud-color); }
 #app-container #rush-meter i.lit { background: #ffbf26; border-color: #aa6635; }
 #app-container.in-rush #rush-meter { filter: drop-shadow(0 0 6px #ffcc57); }
 #app-container[data-input-mode="touch"] .steer-controls { display: flex; }
@@ -174,35 +175,44 @@
 #app-container .steer-controls button.pressed,
 #app-container #jump-button:active { scale: .93; filter: brightness(1.12) drop-shadow(0 1px 1px #183e4666); }
 #app-container[data-jump-side="left"] #rush-meter { right: auto; left: 15px; }
-#app-container .bottom-hud { left: 44%; right: 28%; bottom: 22px; }
+#app-container .speed-ticket { display: none; }
+#app-container .bottom-hud {
+  left: 24%; right: 24%; bottom: max(14px, calc(env(safe-area-inset-bottom) + 8px));
+  pointer-events: none; justify-content: center;
+}
+#app-container .route-ticket {
+  width: 100%; max-width: 220px; height: 6px;
+  border: 1px solid var(--hud-color); background: #f9e5be50;
+  border-radius: 3px; overflow: hidden; margin: 0 auto;
+}
 @container mobile-screen (max-width:370px) {
-  #app-container .hud { gap: 7px; left: 10px; right: 10px; }
-  #app-container #beer-canvas { width: 34px; height: 61px; }
-  #app-container .beer-ticket { padding-right: 9px; }
-  #app-container .duel-ticket { padding-left: 11px; padding-right: 8px; }
-  #app-container .duel-ticket > strong { font-size: 38px; }
-  #app-container .score-ticket strong { font-size: min(22px, calc(100cqw / (var(--score-digits, 6) * .65))); }
+  #app-container .hud { gap: 6px; left: 8px; right: 8px; }
+  #app-container #beer-canvas { width: 28px; height: 44px; }
+  #app-container .beer-ticket { padding-right: 7px; height: 74px; }
+  #app-container .duel-ticket { padding-left: 8px; padding-right: 7px; height: 72px; }
+  #app-container .duel-ticket > strong { font-size: 30px; }
+  #app-container .score-ticket strong { font-size: min(18px, calc(100cqw / (var(--score-digits, 6) * .65))); }
 }
 @container mobile-screen (max-height:520px) {
-  #app-container { --hud-top: 10px; --hud-row-top: 105px; }
-  #app-container.beer-duel { --chain-top: var(--hud-row-top); --message-top: calc(var(--hud-row-top) + 53px); }
-  #app-container.beer-duel:has(#arcade-chain.has-chain) { --message-top: calc(var(--hud-row-top) + 59px); }
-  #app-container .beer-ticket { height: 84px; padding-top: 7px; padding-bottom: 19px; }
-  #app-container .beer-ticket strong { font-size: 34px; }
-  #app-container #beer-canvas { height: 51px; width: 32px; }
-  #app-container .beer-track { bottom: 11px; height: 10px; padding: 1px; }
-  #app-container .duel-ticket { height: 81px; padding-top: 10px; }
-  #app-container .duel-ticket > strong { font-size: 36px; }
-  #app-container #pause-button { margin-top: 44px; height: 40px; }
-  #app-container.playing #sound-button { height: 40px; }
-  #app-container .score-ticket { top: 95px; }
-  #app-container .chain-row { padding-top: 8px; padding-bottom: 12px; }
-  #app-container .chain-value { font-size: 23px; }
+  #app-container { --hud-top: 10px; --hud-row-top: 96px; }
+  #app-container.beer-duel { --chain-top: var(--hud-row-top); --message-top: calc(var(--hud-row-top) + 48px); }
+  #app-container.beer-duel:has(#arcade-chain.has-chain) { --message-top: calc(var(--hud-row-top) + 52px); }
+  #app-container .beer-ticket { height: 76px; padding-top: 6px; padding-bottom: 16px; }
+  #app-container .beer-ticket strong { font-size: 28px; }
+  #app-container #beer-canvas { height: 44px; width: 28px; }
+  #app-container .beer-track { bottom: 8px; height: 9px; padding: 1px; }
+  #app-container .duel-ticket { height: 74px; padding-top: 8px; }
+  #app-container .duel-ticket > strong { font-size: 30px; }
+  #app-container #pause-button { margin-top: 44px; height: 34px; width: 34px; font-size: 22px; }
+  #app-container.playing #sound-button { height: 34px; width: 34px; padding: 6px; }
+  #app-container .score-ticket { top: var(--hud-row-top); }
+  #app-container .chain-row { padding-top: 6px; padding-bottom: 9px; }
+  #app-container .chain-value { font-size: 20px; }
   #app-container #ride-coach,
-  #app-container:has(#arcade-chain.has-chain) #ride-coach { padding: 10px 15px; max-width: calc(100% - 122px); }
-  #app-container #ride-coach strong { font-size: 14px; }
-  #app-container #ride-coach span { font-size: 11px; margin-top: 4px; }
-  #app-container .steer-controls button { width: 60px; height: 60px; }
-  #app-container #jump-button { bottom: 28px; }
-  #app-container #rush-meter { bottom: 137px; width: 76px; padding: 10px 8px; }
+  #app-container:has(#arcade-chain.has-chain) #ride-coach { padding: 5px 12px; max-width: calc(100% - 122px); }
+  #app-container #ride-coach strong { font-size: 13px; }
+  #app-container #ride-coach span { font-size: 11px; margin-top: 2px; }
+  #app-container .steer-controls button { width: 56px; height: 56px; }
+  #app-container #jump-button { bottom: 24px; }
+  #app-container #rush-meter { bottom: calc(var(--action-size, 72px) + 38px); width: 68px; padding: 6px 5px; }
 }
