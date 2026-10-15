@@ -197,6 +197,7 @@ class SurfRush {
     this.meter.querySelectorAll('i').forEach((el,i)=>el.classList.toggle('lit',this.active>0||i<this.moves.size));
     this.meter.querySelector('small').textContent=g.collected+' крышек';
     this.meter.style.setProperty('--rush-left',this.active/3.6);
+    const jump=document.getElementById('jump-button');if(jump){jump.style.setProperty('--courage',this.active>0?1:Math.min(3,this.moves.size)/3);jump.classList.toggle('courage-full',this.active>0);}
     // One verbal signal owns the screen. The score and controls stay readable.
     const moment=document.getElementById('moment'),coach=document.getElementById('ride-coach'),toast=document.getElementById('chain-toast'),hint=document.getElementById('hint');
     const hasMoment=g.momentTime>0&&moment.classList.contains('visible'),hasCoach=!coach.classList.contains('hidden');

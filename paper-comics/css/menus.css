@@ -75,7 +75,8 @@
 
 /* Ultimate First Screen Poster */
 .title-screen {
-  background: #f6af15;
+  --poster-yellow: #f6af15;
+  background: var(--poster-yellow);
   padding: 0 !important;
   overflow: hidden !important;
   position: absolute;
@@ -88,19 +89,27 @@
 .title-poster-stage {
   position: absolute;
   left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  top: 0;
+  transform: translateX(-50%);
   aspect-ratio: 579 / 1024;
-  min-width: 100%;
-  min-height: 100%;
-  width: auto;
+  width: min(100%, calc(72cqh * 579 / 810));
   height: auto;
   max-width: none;
   max-height: none;
   overflow: hidden;
+  clip-path: inset(0 0 20.9% 0);
   user-select: none;
   -webkit-user-select: none;
   z-index: 1;
+}
+
+/* Blend the paper edge into the yellow extension on taller screens. */
+.title-poster-stage::after {
+  content: '';
+  position: absolute;
+  inset: 77% 0 20.9%;
+  background: linear-gradient(transparent, var(--poster-yellow));
+  pointer-events: none;
 }
 
 .title-poster-stage picture,
@@ -112,15 +121,52 @@
   pointer-events: none;
 }
 
+/* Center controls in the yellow space below the artwork, including short phones. */
+.title-menu-actions {
+  position: absolute;
+  left: 50%;
+  top: calc((100% + min(calc(100cqw * 810 / 579), 72cqh) - env(safe-area-inset-bottom)) / 2);
+  transform: translate(-50%, -50%);
+  width: min(100%, calc((28cqh - env(safe-area-inset-bottom)) * 479 / 214));
+  aspect-ratio: 479 / 214;
+  background: url('../assets/comics/start-poster.webp') center bottom / 120.877% auto no-repeat;
+  mask-image: linear-gradient(transparent, black 4%);
+  z-index: 2;
+}
+
+.title-bottle {
+  position: absolute;
+  width: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(2px 4px 2px #17282c30);
+  z-index: 3;
+}
+
+.title-bottle-lemon {
+  left: 3%;
+  top: calc(min(calc(100cqw * 810 / 579), 72cqh) - 12cqh);
+  height: min(22cqh, 44cqw);
+  transform: rotate(-19deg);
+}
+
+.title-bottle-raspberry {
+  right: 2%;
+  top: calc(min(calc(100cqw * 810 / 579), 72cqh) - 9cqh);
+  height: min(25cqh, 49cqw);
+  transform: rotate(12deg);
+}
+
 /* Play button overlay */
 .title-screen #start-button.poster-play {
   position: absolute !important;
-  left: 24.01% !important;
-  top: 84.67% !important;
+  left: 12.3% !important;
+  top: 26.37% !important;
   bottom: auto !important;
   right: auto !important;
-  width: 51.99% !important;
-  height: 7.32% !important;
+  width: 75.41% !important;
+  height: 42.03% !important;
   min-height: 0 !important;
   max-width: none !important;
   margin: 0 !important;
@@ -178,12 +224,12 @@
 /* Quick ride hotspot */
 .title-screen #quick-button.poster-quick {
   position: absolute !important;
-  left: 28% !important;
-  top: 81.6% !important;
+  left: 18.09% !important;
+  top: 8.74% !important;
   bottom: auto !important;
   right: auto !important;
-  width: 44% !important;
-  height: 3.2% !important;
+  width: 63.82% !important;
+  height: 18.37% !important;
   margin: 0 !important;
   padding: 0 !important;
   background: transparent !important;
@@ -231,4 +277,3 @@
   z-index: 24 !important;
   pointer-events: none !important;
 }
-

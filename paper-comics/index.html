@@ -38,7 +38,7 @@
     <div id="start-countdown" class="start-countdown" role="status" aria-live="assertive" aria-atomic="true" aria-hidden="true"></div>
     <header class="hud" id="hud">
       <div class="beer-ticket paper"><canvas id="beer-canvas" width="104" height="144"></canvas><div><span class="ticket-label">ДОВЕЗИ</span><strong id="beer-value">100<span>%</span></strong><div class="beer-track"><i id="beer-fill"></i></div></div><b id="beer-mult" class="beer-mult" data-level="3" title="Множитель очков от пива">×3</b></div>
-      <div class="collection-ticket paper" hidden aria-hidden="true"><div class="wave-caps"><i class="wave-cap"></i><i class="wave-cap"></i><i class="wave-cap"></i></div><small id="collection-value">0 / 3</small></div><div class="score-ticket"><span>СЧЁТ</span><strong id="score-value">000000</strong></div>
+      <div class="collection-ticket paper" hidden aria-hidden="true"><div class="wave-caps"><i class="wave-cap"></i><i class="wave-cap"></i><i class="wave-cap"></i></div><small id="collection-value">0 / 3</small></div><div class="score-ticket"><span>СЧЁТ</span><strong id="score-value">0</strong></div>
       <button id="pause-button" class="small-button paper" aria-label="Пауза">Ⅱ</button>
     </header>
     <button id="sound-button" class="sound-button paper" type="button" aria-label="Отключить звук" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="sound-waves" d="M16 8c2 2 2 6 0 8m3-11c4 4 4 10 0 14"/><path class="sound-off" d="m17 9 5 6m0-6-5 6"/></svg></button>
@@ -82,6 +82,10 @@
           <source srcset="assets/comics/start-poster.webp" type="image/webp">
           <img class="title-poster-img" src="assets/comics/start-poster.png" alt="Ни капли! Главное меню">
         </picture>
+      </div>
+      <img class="title-bottle title-bottle-lemon" src="assets/comics/garret-lemon-paper.png" alt="" aria-hidden="true">
+      <img class="title-bottle title-bottle-raspberry" src="assets/comics/garret-raspberry-peach-paper.png" alt="" aria-hidden="true">
+      <div class="title-menu-actions">
         <button id="quick-button" class="text-button menu-quick poster-quick" aria-label="Быстрый заезд" title="Быстрый заезд"></button>
         <button id="start-button" class="yellow-button menu-play poster-play" data-primary aria-label="Играть">ИГРАТЬ</button>
       </div>
@@ -197,6 +201,7 @@
             <summary>Настройки <span aria-hidden="true">+</span></summary>
             <div id="pause-settings" class="pause-settings">
               <p id="pause-help" class="pause-help">Вбок — курс. Нажми — прыжок.</p>
+              <button id="pause-sound" class="text-button" type="button" aria-pressed="true">Звук: включён</button>
               <button id="center-button" class="text-button" type="button" aria-label="Запомнить нейтральное положение телефона">◎ Запомнить нейтраль</button>
               <button id="camera-toggle" class="text-button" type="button" aria-pressed="true">Камера: живая</button>
               <button id="assist-toggle" class="text-button" type="button" aria-pressed="false">Сложность: обычная</button>

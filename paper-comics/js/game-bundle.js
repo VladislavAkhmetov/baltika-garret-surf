@@ -3906,7 +3906,7 @@ class SurfOnboarding {
     return 1;
   }
   cue(){
-    const g=this.game,p=g.p,keys=g.input.mode==='keys'&&!matchMedia('(pointer:coarse)').matches;
+    const g=this.game,p=g.p,coarse=matchMedia('(pointer:coarse)').matches,keys=g.input.mode==='keys'&&!coarse;
     this.highlight='';
     if(p.fallen)return null;
     if(g.balance.mode==='recovery'&&!this.completed.has('balance')){
@@ -3917,7 +3917,7 @@ class SurfOnboarding {
     if(p.airborne&&!this.completed.has('landing'))return {id:'landing',title:'ПРИЗЕМЛИСЬ РОВНО',line:g.input.mode==='gyro'?'Верни телефон в нейтраль.':keys?'Отпусти поворот.':'Отпусти палец — доска выровняется.'};
     if(!this.completed.has('steer')&&this.age<4){
       this.highlight=this.turnTried?'':'steer';
-      return {id:'steer',title:this.turnTried?'ВЕРНИ КУРС В ЦЕНТР':'ПОПРОБУЙ ПОВОРОТ',line:this.turnTried?(g.input.mode==='gyro'?'Верни телефон в нейтраль.':'Отпусти поворот — доска выпрямится.'):g.input.mode==='gyro'?'Слегка наклони телефон вбок.':keys?'Коротко нажми ← → или A D.':'Положи палец '+(g.input.jumpSide==='right'?'слева':'справа')+' и потяни вбок.'};
+      return {id:'steer',title:this.turnTried?'ВЕРНИ КУРС В ЦЕНТР':'ПОПРОБУЙ ПОВОРОТ',line:this.turnTried?(g.input.mode==='gyro'?'Верни телефон в нейтраль.':'Отпусти поворот — доска выпрямится.'):g.input.mode==='gyro'?'Наклони телефон. Крышки ‹ › — запасной руль.':keys?'Коротко нажми ← → или A D.':'Положи палец '+(g.input.jumpSide==='right'?'слева':'справа')+' и потяни вбок.'};
     }
     if(!this.completed.has('wave')&&p.z<260){
       const guide=g.waveRide.guidance();return {id:'wave',title:guide.label,line:'Лови склон рядом с белой пеной.'};
@@ -5787,6 +5787,7 @@ class SurfRush {
     this.meter.querySelectorAll('i').forEach((el,i)=>el.classList.toggle('lit',this.active>0||i<this.moves.size));
     this.meter.querySelector('small').textContent=g.collected+' крышек';
     this.meter.style.setProperty('--rush-left',this.active/3.6);
+    const jump=document.getElementById('jump-button');if(jump){jump.style.setProperty('--courage',this.active>0?1:Math.min(3,this.moves.size)/3);jump.classList.toggle('courage-full',this.active>0);}
     // One verbal signal owns the screen. The score and controls stay readable.
     const moment=document.getElementById('moment'),coach=document.getElementById('ride-coach'),toast=document.getElementById('chain-toast'),hint=document.getElementById('hint');
     const hasMoment=g.momentTime>0&&moment.classList.contains('visible'),hasCoach=!coach.classList.contains('hidden');
@@ -7559,8 +7560,8 @@ class PaperSurfGame {
     bindTap('replay-button',()=>this.start(false));
     bindTap('pause-button',()=>this.pause());
     const sound=document.getElementById('sound-button');
-    const renderSound=()=>{sound.setAttribute('aria-pressed',String(this.audio.isMuted));sound.setAttribute('aria-label',this.audio.isMuted?'Включить звук':'Отключить звук');sound.title=this.audio.isMuted?'Включить звук':'Отключить звук';};
-    bindTap('sound-button',()=>{if(this.audio.isMuted)this.audio.unlock();this.audio.toggleMute();renderSound();});renderSound();
+    const renderSound=()=>{sound.setAttribute('aria-pressed',String(this.audio.isMuted));sound.setAttribute('aria-label',this.audio.isMuted?'Включить звук':'Отключить звук');sound.title=this.audio.isMuted?'Включить звук':'Отключить звук';const ps=document.getElementById('pause-sound');if(ps){ps.textContent=this.audio.isMuted?'Звук: выключен':'Звук: включён';ps.setAttribute('aria-pressed',String(!this.audio.isMuted));}};
+    bindTap('sound-button',()=>{if(this.audio.isMuted)this.audio.unlock();this.audio.toggleMute();renderSound();});bindTap('pause-sound',()=>{if(this.audio.isMuted)this.audio.unlock();this.audio.toggleMute();renderSound();});renderSound();
     bindTap('resume-button',()=>this.resume());
     document.getElementById('pause-screen').addEventListener('keydown',e=>{
       if(e.code!=='Tab')return;
@@ -8102,7 +8103,7 @@ class PaperSurfGame {
   updateHUD() {
     this.duel.updateHUD();
     const pct=Math.round(this.mug.level*100);document.getElementById('beer-value').innerHTML=pct+'<span>%</span>';document.getElementById('beer-fill').style.width=pct+'%';
-    const scoreValue=document.getElementById('score-value'),scoreText=Math.round(this.score).toString().padStart(6,'0');
+    const scoreValue=document.getElementById('score-value'),scoreText=Math.round(this.score).toLocaleString('ru-RU').replace(/\s/g,'\u202f');
     scoreValue.textContent=scoreText;scoreValue.style.setProperty('--score-digits',scoreText.length);
     document.getElementById('caps-value').textContent=this.collected;
     document.getElementById('combo-value').textContent='×'+this.combo;

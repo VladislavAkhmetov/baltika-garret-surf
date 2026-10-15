@@ -20,7 +20,7 @@ class SurfOnboarding {
     return 1;
   }
   cue(){
-    const g=this.game,p=g.p,keys=g.input.mode==='keys'&&!matchMedia('(pointer:coarse)').matches;
+    const g=this.game,p=g.p,coarse=matchMedia('(pointer:coarse)').matches,keys=g.input.mode==='keys'&&!coarse;
     this.highlight='';
     if(p.fallen)return null;
     if(g.balance.mode==='recovery'&&!this.completed.has('balance')){
@@ -31,7 +31,7 @@ class SurfOnboarding {
     if(p.airborne&&!this.completed.has('landing'))return {id:'landing',title:'ПРИЗЕМЛИСЬ РОВНО',line:g.input.mode==='gyro'?'Верни телефон в нейтраль.':keys?'Отпусти поворот.':'Отпусти палец — доска выровняется.'};
     if(!this.completed.has('steer')&&this.age<4){
       this.highlight=this.turnTried?'':'steer';
-      return {id:'steer',title:this.turnTried?'ВЕРНИ КУРС В ЦЕНТР':'ПОПРОБУЙ ПОВОРОТ',line:this.turnTried?(g.input.mode==='gyro'?'Верни телефон в нейтраль.':'Отпусти поворот — доска выпрямится.'):g.input.mode==='gyro'?'Слегка наклони телефон вбок.':keys?'Коротко нажми ← → или A D.':'Положи палец '+(g.input.jumpSide==='right'?'слева':'справа')+' и потяни вбок.'};
+      return {id:'steer',title:this.turnTried?'ВЕРНИ КУРС В ЦЕНТР':'ПОПРОБУЙ ПОВОРОТ',line:this.turnTried?(g.input.mode==='gyro'?'Верни телефон в нейтраль.':'Отпусти поворот — доска выпрямится.'):g.input.mode==='gyro'?'Наклони телефон. Крышки ‹ › — запасной руль.':keys?'Коротко нажми ← → или A D.':'Положи палец '+(g.input.jumpSide==='right'?'слева':'справа')+' и потяни вбок.'};
     }
     if(!this.completed.has('wave')&&p.z<260){
       const guide=g.waveRide.guidance();return {id:'wave',title:guide.label,line:'Лови склон рядом с белой пеной.'};

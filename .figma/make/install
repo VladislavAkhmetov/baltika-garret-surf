@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+export PUPPETEER_SKIP_DOWNLOAD=1
+exec npm ci --no-audit --no-fund

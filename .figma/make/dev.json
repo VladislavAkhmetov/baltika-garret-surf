@@ -1,0 +1,4 @@
+{
+  "installOn": ["package.json", "package-lock.json"],
+  "restartOn": ["scripts/serve.js", "scripts/build-game.cjs"]
+}

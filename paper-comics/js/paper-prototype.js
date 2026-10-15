@@ -271,8 +271,8 @@ class PaperSurfGame {
     bindTap('replay-button',()=>this.start(false));
     bindTap('pause-button',()=>this.pause());
     const sound=document.getElementById('sound-button');
-    const renderSound=()=>{sound.setAttribute('aria-pressed',String(this.audio.isMuted));sound.setAttribute('aria-label',this.audio.isMuted?'Включить звук':'Отключить звук');sound.title=this.audio.isMuted?'Включить звук':'Отключить звук';};
-    bindTap('sound-button',()=>{if(this.audio.isMuted)this.audio.unlock();this.audio.toggleMute();renderSound();});renderSound();
+    const renderSound=()=>{sound.setAttribute('aria-pressed',String(this.audio.isMuted));sound.setAttribute('aria-label',this.audio.isMuted?'Включить звук':'Отключить звук');sound.title=this.audio.isMuted?'Включить звук':'Отключить звук';const ps=document.getElementById('pause-sound');if(ps){ps.textContent=this.audio.isMuted?'Звук: выключен':'Звук: включён';ps.setAttribute('aria-pressed',String(!this.audio.isMuted));}};
+    bindTap('sound-button',()=>{if(this.audio.isMuted)this.audio.unlock();this.audio.toggleMute();renderSound();});bindTap('pause-sound',()=>{if(this.audio.isMuted)this.audio.unlock();this.audio.toggleMute();renderSound();});renderSound();
     bindTap('resume-button',()=>this.resume());
     document.getElementById('pause-screen').addEventListener('keydown',e=>{
       if(e.code!=='Tab')return;
@@ -814,7 +814,7 @@ class PaperSurfGame {
   updateHUD() {
     this.duel.updateHUD();
     const pct=Math.round(this.mug.level*100);document.getElementById('beer-value').innerHTML=pct+'<span>%</span>';document.getElementById('beer-fill').style.width=pct+'%';
-    const scoreValue=document.getElementById('score-value'),scoreText=Math.round(this.score).toString().padStart(6,'0');
+    const scoreValue=document.getElementById('score-value'),scoreText=Math.round(this.score).toLocaleString('ru-RU').replace(/\s/g,'\u202f');
     scoreValue.textContent=scoreText;scoreValue.style.setProperty('--score-digits',scoreText.length);
     document.getElementById('caps-value').textContent=this.collected;
     document.getElementById('combo-value').textContent='×'+this.combo;

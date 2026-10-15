@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/../.."
+npm run build
+out=".figma/make/out"
+rm -rf "$out" && mkdir -p "$out"
+cp -R paper-comics "$out/paper-comics"
+cat > "$out/index.html" <<'HTML'
+<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=paper-comics/index.html"><script>location.replace('paper-comics/index.html'+location.search)</script><a href="paper-comics/index.html">Play</a>
+HTML
+[[ -f "$out/paper-comics/index.html" ]] || { echo "Expected build output at $out" >&2; exit 1; }
+figma make deploy-preview --build-dir "$out"
