@@ -18,8 +18,8 @@ class PaperSky {
   }
   update() {
     const camera = this.game.camera;
-    const width = this.game.renderer.domElement.clientWidth;
-    const height = this.game.renderer.domElement.clientHeight;
+    const width = this.game.viewWidth || this.game.renderer.domElement.clientWidth;
+    const height = this.game.viewHeight || this.game.renderer.domElement.clientHeight;
     if (!width || !height) return;
     camera.updateMatrixWorld();
     const focal = height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));

@@ -1484,6 +1484,49 @@ class SurfAudio {
     this.playSound('fanfare_win', { volume: 0.55, rate: 1.0 });
   }
 
+  playCountdownBeep(step = '3') {
+    if (!this.ctx || this.isMuted || !this.sfxGain) return;
+    const ctx = this.ctx, t = ctx.currentTime, duration = 0.85;
+    const master = ctx.createGain();
+
+    // Gentle volume: 'не громко' (ship's bell / рында)
+    master.gain.setValueAtTime(0.0001, t);
+    master.gain.linearRampToValueAtTime(0.18, t + 0.001);
+    master.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+    master.connect(this.sfxGain);
+
+    // Nautical bronze bell acoustic modes (C6 chime: hum, prime, minor 3rd tierce, quint, nominal, strike)
+    const f0 = 1046.5;
+    const modes = [
+      { freq: f0 * 0.50, level: 0.15, decay: 0.80 },
+      { freq: f0 * 1.00, level: 0.32, decay: 0.75 },
+      { freq: f0 * 1.19, level: 0.22, decay: 0.60 },
+      { freq: f0 * 1.50, level: 0.16, decay: 0.50 },
+      { freq: f0 * 2.00, level: 0.18, decay: 0.40 },
+      { freq: f0 * 2.74, level: 0.10, decay: 0.22 },
+      { freq: f0 * 3.82, level: 0.07, decay: 0.10 }
+    ];
+
+    const nodes = [master];
+    let first = null;
+
+    for (const m of modes) {
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(m.freq, t);
+      g.gain.setValueAtTime(m.level, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + m.decay);
+      osc.connect(g);
+      g.connect(master);
+      osc.start(t);
+      osc.stop(t + duration);
+      nodes.push(osc, g);
+      if (!first) first = osc;
+    }
+
+    this.trackSource(first, nodes, {gain: master, endsAt: t + duration});
+  }
+
   playStartHorn() {
     if (!this.ctx || this.isMuted || !this.sfxGain) return;
     const ctx=this.ctx,t=ctx.currentTime,duration=.88,filter=ctx.createBiquadFilter(),envelope=ctx.createGain();
@@ -2196,7 +2239,10 @@ class PaperWave {
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(1, 1);
     texture.anisotropy = 4;
-    const geometry = new THREE.PlaneGeometry(100, 232, 128, 192);
+    const isMobile = typeof matchMedia !== 'undefined' && matchMedia('(pointer:coarse)').matches;
+    const segX = isMobile ? 64 : 128;
+    const segZ = isMobile ? 96 : 192;
+    const geometry = new THREE.PlaneGeometry(100, 232, segX, segZ);
     geometry.rotateX(-Math.PI / 2);
     geometry.translate(22,0,0);
     // Spend horizontal detail around the route, rather than on the open sea.
@@ -2214,7 +2260,7 @@ class PaperWave {
     this.sea.frustumCulled = false;
     scene.add(this.sea);
     this.foamTexture=this.makeFoamTexture();
-    this.swellLips=this.waves.map(()=>this.makeLip(112));
+    this.swellLips=this.waves.map(()=>this.makeLip(isMobile ? 56 : 112));
     this.spray=this.waves.map(()=>{
       const mesh=new THREE.InstancedMesh(new THREE.SphereGeometry(.07,5,4),new THREE.MeshBasicMaterial({color:0xd8eee7,transparent:true,opacity:.65,depthWrite:false}),18);
       mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);scene.add(mesh);return mesh;
@@ -2508,6 +2554,7 @@ class PaperWave {
     mesh.visible=wave.to>playerZ-27&&wave.from<playerZ+205;
     if(!mesh.visible)return;
     const p=mesh.geometry.attributes.position,foam=mesh.geometry.attributes.waterFoam,n=mesh.userData.lengthSegments;
+    const factors=PaperWave.LIP_ROW_FACTORS;
     for(let j=0;j<=n;j++){
       const u=j/n,z=wave.from+u*(wave.to-wave.from),x=this.crestX(wave,z);
       const field=this.field(x,z);
@@ -2519,19 +2566,16 @@ class PaperWave {
       const h=this.height(x,z);
       const tangent=(this.crestX(wave,z+.1)-this.crestX(wave,z-.1))/.2;
       const nx=1/Math.sqrt(1+tangent*tangent),nz=-tangent*nx;
+      const crestBase=.42+breakAmount*.52,tipBase=breakAmount*.86;
+      const patch=(.84+.16*Math.sin(j*.19+this.time*.68+wave.id))*energy;
       for(let row=0;row<=12;row++){
-        // Closed outer/inner lip joins the same crest, rather than floating above it.
-        const t=row<=6?row/6:(row-6)/6,b=1-t;
-        const curl=row<=6?(3*b*b*t*1.05+3*b*t*t*2.45+t*t*t*2.25)*radius:
-          (b*b*b*2.25+3*b*b*t*1.45+3*b*t*t*.10)*radius;
-        const drop=row<=6?(3*b*b*t*.16-3*b*t*t*.04-t*t*t*.55)*radius:
-          (-b*b*b*.55-3*b*b*t*.28+3*b*t*t*.06)*radius;
+        const rf=factors[row];
+        const curl=rf.curlMul*radius,drop=rf.dropMul*radius;
         const index=row*(n+1)+j;
         p.setXYZ(index,-x-curl*nx,h+drop,z+curl*nz);
-        const crestFoam=Math.exp(-Math.pow((row/12-.24)/.19,2))*(.42+breakAmount*.52);
-        const tipFoam=Math.exp(-Math.pow((row/12-.50)/.13,2))*breakAmount*.86;
-        const patch=.84+.16*Math.sin(j*.19+this.time*.68+wave.id);
-        foam.setX(index,Math.max(crestFoam,tipFoam)*energy*patch);
+        const crestFoam=rf.crestWeight*crestBase;
+        const tipFoam=rf.tipWeight*tipBase;
+        foam.setX(index,Math.max(crestFoam,tipFoam)*patch);
       }
     }
     p.needsUpdate=foam.needsUpdate=true;mesh.geometry.computeVertexNormals();
@@ -2553,6 +2597,14 @@ class PaperWave {
     });
   }
 }
+PaperWave.LIP_ROW_FACTORS=Array.from({length:13},(_,row)=>{
+  const t=row<=6?row/6:(row-6)/6,b=1-t;
+  const curlMul=row<=6?(3*b*b*t*1.05+3*b*t*t*2.45+t*t*t*2.25):(b*b*b*2.25+3*b*b*t*1.45+3*b*t*t*.10);
+  const dropMul=row<=6?(3*b*b*t*.16-3*b*t*t*.04-t*t*t*.55):(-b*b*b*.55-3*b*b*t*.28+3*b*t*t*.06);
+  const crestWeight=Math.exp(-Math.pow((row/12-.24)/.19,2));
+  const tipWeight=Math.exp(-Math.pow((row/12-.50)/.13,2));
+  return {curlMul,dropMul,crestWeight,tipWeight};
+});
 
 window.PaperWave = PaperWave;
 
@@ -3151,7 +3203,8 @@ class HandBeer {
     const anchor=this.game.heroAnimator.currentGrip||{x:.85,y:1.0};
     this.pivot.position.set(anchor.x,anchor.y,.01);
     this.pivot.rotation.z=(anchor.angle||0)+this.roll;
-    const frame=Math.floor(this.game.time*30);
+    const fps=this.game.input?.mobile?(this.drops.length>0||this.peakSlosh>.08?22:16):30;
+    const frame=Math.floor(this.game.time*fps);
     if(frame!==this.printFrame){this.printFrame=frame;this.draw();this.texture.needsUpdate=true;}
   }
   outline(c){
@@ -3945,7 +3998,7 @@ class SurfJourney {
     this.screens=['start','setup','story'];
     this.heroes=[{name:'МАКС',available:true},{name:'ВИТЯ',available:false},{name:'СТАС',available:false}];
     this.locations=[{name:'БУХТА GARRET',available:true},{name:'СЕВЕРНЫЙ РИФ',available:false},{name:'НОЧНОЙ ПОРТ',available:false}];
-    this.storyVersion=new URLSearchParams(window.location.search).get('story')||'v6';
+    this.storyVersion=new URLSearchParams(window.location.search).get('story')||'v4';
     this.stories={
       v6:[
         {label:'Есть работа: смена в дальнем баре',panels:[
@@ -4030,9 +4083,9 @@ class SurfJourney {
     });
     if(new URLSearchParams(window.location.search).has('comic'))this.open('story');
   }
-  get story(){return this.stories[this.storyVersion]||this.stories.v6;}
+  get story(){return this.stories[this.storyVersion]||this.stories.v4;}
   toggleStoryVersion(){
-    this.storyVersion=this.storyVersion==='v6'?'v4':'v6';
+    this.storyVersion=this.storyVersion==='v4'?'v6':'v4';
     this.comicImages.clear();
     this.updateStoryToggleUI();
     this.renderStory();
@@ -4070,7 +4123,7 @@ class SurfJourney {
   }
   home(){this.game.audio.stopBGM();this.game.reset();this.game.renderMenuMeta();['pause-screen','result-screen','share-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));this.open('start');this.game.audio.startBGM();}
   loadComicImage(id){
-    const version=this.storyVersion||'v6';
+    const version=this.storyVersion||'v4';
     const key=id+'-'+version;
     if(this.comicImages.has(key))return this.comicImages.get(key);
     const actualVersion=(version==='v4'&&id==='shark')?'v5':version;
@@ -4561,14 +4614,14 @@ class ArcadeJuice {
   }
   afterRender(camera){if(this.offset.lengthSq()>0){camera.position.sub(this.offset);camera.updateMatrixWorld();this.offset.set(0,0,0);}}
   update(realDt){
-    const g=this.game,box=g.container.getBoundingClientRect();
+    const g=this.game,width=g.viewWidth||390,height=g.viewHeight||844;
     for(const w of this.words){
       if(w.life<=0)continue;
       w.life-=realDt;
       this.point.set(-w.x,w.y,w.z).project(g.camera);
       const visible=w.life>0&&this.point.z<1;
       if(!visible){w.el.classList.remove('visible');w.life=Math.min(w.life,0);continue;}
-      w.el.style.left=((this.point.x+1)/2*box.width).toFixed(1)+'px';w.el.style.top=((1-this.point.y)/2*box.height).toFixed(1)+'px';
+      w.el.style.left=((this.point.x+1)/2*width).toFixed(1)+'px';w.el.style.top=((1-this.point.y)/2*height).toFixed(1)+'px';
     }
     const frame=Math.floor(g.time*12);
     if(frame!==this.lineFrame&&this.lines){
@@ -5203,6 +5256,8 @@ class SpeedBlur {
     if(!this.supported)return;
     this.target=new THREE.WebGLRenderTarget(1,1,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,format:THREE.RGBAFormat,depthBuffer:true,stencilBuffer:false});
     this.target.depthTexture=new THREE.DepthTexture(1,1,THREE.UnsignedShortType);
+    const isMobile = game.input?.mobile || (typeof matchMedia !== 'undefined' && matchMedia('(pointer:coarse)').matches);
+    const maxSamples = isMobile ? 4 : 12;
     this.material=new THREE.ShaderMaterial({
       depthTest:false,depthWrite:false,
       uniforms:{uColor:{value:this.target.texture},uDepth:{value:this.target.depthTexture},uAmount:{value:0},uBurst:{value:0},uNear:{value:game.camera.near},uFar:{value:game.camera.far},uAspect:{value:1}},
@@ -5225,8 +5280,8 @@ class SpeedBlur {
           float amount=max(uAmount*edge*farMask*(1.0-warm*.9),burst*2.8);
           if(amount<.001){gl_FragColor=base;return;}
           vec4 sum=base;float weight=1.0;
-          for(int i=1;i<=12;i++){
-            float t=float(i)/12.0;vec2 uv=clamp(vUv-ray*amount*t*.075,vec2(.002),vec2(.998));
+          for(int i=1;i<=${maxSamples};i++){
+            float t=float(i)/${maxSamples}.0;vec2 uv=clamp(vUv-ray*amount*t*.075,vec2(.002),vec2(.998));
             float sampleDistance=distanceAt(uv);
             vec4 sampleColor=texture2D(uColor,uv);
             float safe=smoothstep(mix(23.0,5.0,uBurst),mix(35.0,12.0,uBurst),sampleDistance)*(1.0-step(.12,abs(sampleColor.a-base.a)));
@@ -7180,7 +7235,8 @@ class BeerDuel {
   update(){
     this.glass.visible=this.enabled;
     if(!this.enabled)return;
-    const frame=Math.floor(this.clock*24);if(frame===this.printFrame)return;this.printFrame=frame;
+    const fps=this.game.input?.mobile?16:24;
+    const frame=Math.floor(this.clock*fps);if(frame===this.printFrame)return;this.printFrame=frame;
     const c=this.glassCanvas.getContext('2d'),l=this.liquid;c.clearRect(0,0,128,200);
     const top=157-l.level*126;
     c.save();c.beginPath();c.moveTo(24,20);c.lineTo(103,20);c.lineTo(98,158);c.lineTo(30,158);c.closePath();c.clip();
@@ -7308,8 +7364,8 @@ class PaperSky {
   }
   update() {
     const camera = this.game.camera;
-    const width = this.game.renderer.domElement.clientWidth;
-    const height = this.game.renderer.domElement.clientHeight;
+    const width = this.game.viewWidth || this.game.renderer.domElement.clientWidth;
+    const height = this.game.viewHeight || this.game.renderer.domElement.clientHeight;
     if (!width || !height) return;
     camera.updateMatrixWorld();
     const focal = height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
@@ -7338,7 +7394,7 @@ window.PaperSky = PaperSky;
 
 ;
 // Source: js/paper-prototype.js
-const START_COUNTDOWN_DURATION=2;
+const START_COUNTDOWN_DURATION=3;
 
 class PaperSurfGame {
   constructor() {
@@ -7410,6 +7466,35 @@ class PaperSurfGame {
     this.demo=new DemoSetpieces(this);this.wave.currentField=(x,z)=>this.demo.currentAt(x,z);
     this.duel=new BeerDuel(this);
     this.container.classList.toggle('ribbon-ride',!this.flowTest);
+    this.viewWidth=390;this.viewHeight=844;
+    this.hudBeerValue=document.getElementById('beer-value');
+    this.hudBeerFill=document.getElementById('beer-fill');
+    this.hudScoreValue=document.getElementById('score-value');
+    this.hudCapsValue=document.getElementById('caps-value');
+    this.hudComboValue=document.getElementById('combo-value');
+    this.hudInputLabel=document.getElementById('input-label');
+    this.hudSpeedValue=document.getElementById('speed-value');
+    this.hudSpeedMeter=document.getElementById('speed-meter');
+    this.hudRouteFill=document.getElementById('route-fill');
+    this.hudRouteTicket=document.querySelector('.route-ticket');
+    this.hudCollectionValue=document.getElementById('collection-value');
+    this.hudWaveCaps=document.querySelectorAll('.wave-cap');
+    this.hudWeightDot=document.getElementById('weight-dot');
+    this.hudWeightLabel=document.getElementById('weight-label');
+    this.hudBalanceFill=document.getElementById('balance-fill');
+    this.hudBalanceLabel=document.getElementById('balance-label');
+    this.hudWaveFill=document.getElementById('wave-fill');
+    this.hudWaveTicket=document.querySelector('.wave-ticket');
+    this.hudWaveLabel=document.getElementById('wave-label');
+    this.hudWaveNumber=document.getElementById('wave-number');
+    this.hudWaveStatus=document.getElementById('wave-status');
+    this.hudWaveRemaining=document.getElementById('wave-remaining');
+    this.hudSharkThreat=document.getElementById('shark-threat');
+    this.hudSharkBar=this.hudSharkThreat?.querySelector('b');
+    this.hudSpillFlash=document.getElementById('spill-flash');
+    this.hudBeerMult=document.getElementById('beer-mult');
+    this.hudScoreTicket=document.querySelector('.score-ticket');
+    this._hudCache={};
     this.reset(); this.resize(); this.bindUI();
     this.journey=new SurfJourney(this);
     this.flowTest?.mount();
@@ -7715,6 +7800,9 @@ class PaperSurfGame {
     const el=document.getElementById('start-countdown');if(!el)return;
     el.textContent=label;el.classList.toggle('go',go);el.setAttribute('aria-hidden','false');
     el.classList.add('visible');el.classList.remove('beat');void el.offsetWidth;el.classList.add('beat');
+    if(!go){
+      this.audio.playCountdownBeep?.(label);
+    }
   }
   clearStartCountdown(){
     this.startCountdown=null;
@@ -7732,7 +7820,7 @@ class PaperSurfGame {
       this.showStartCountdown('СТАРТ!',true);
       return;
     }
-    const label=count.elapsed<1?'3':'2';
+    const label=count.elapsed<1?'3':count.elapsed<2?'2':'1';
     if(label!==count.label){count.label=label;this.showStartCountdown(label);}
   }
   tickStartCountdown(dt){
@@ -8153,36 +8241,109 @@ class PaperSurfGame {
   }
   updateHUD() {
     this.duel.updateHUD();
-    const pct=Math.round(this.mug.level*100);document.getElementById('beer-value').innerHTML=pct+'<span>%</span>';document.getElementById('beer-fill').style.width=pct+'%';
-    const scoreValue=document.getElementById('score-value'),scoreText=Math.round(this.score).toLocaleString('ru-RU').replace(/\s/g,'\u202f');
-    scoreValue.textContent=scoreText;scoreValue.style.setProperty('--score-digits',scoreText.length);
-    document.getElementById('caps-value').textContent=this.collected;
-    document.getElementById('combo-value').textContent='×'+this.combo;
-    document.getElementById('input-label').textContent=this.input.mode==='gyro'?'НАКЛОН: ↔ КУРС':this.input.mode==='touch'?'ТЯНИ: ↔ КУРС':'← → КУРС · ПРОБЕЛ ПРЫЖОК';
-    document.getElementById('speed-value').textContent=Math.round(this.p.speed);document.getElementById('speed-meter').style.width=THREE.MathUtils.clamp(this.p.speed/42*100,20,100)+'%';
-    document.getElementById('route-fill').style.width=Math.min(100,this.p.z/this.distance*100)+'%';
-    const routeTicket=document.querySelector('.route-ticket');routeTicket.setAttribute('aria-valuemax',this.distance);routeTicket.setAttribute('aria-valuenow',Math.min(this.distance,Math.round(this.p.z)));
-    routeTicket.setAttribute('aria-valuetext','До бара '+Math.max(0,Math.ceil(this.distance-this.p.z))+' метров');
-    const earned=Math.min(3,this.waveRide.totalCaught);document.getElementById('collection-value').textContent=earned+' / 3';
-    document.querySelectorAll('.wave-cap').forEach((cap,i)=>{cap.classList.toggle('earned',i<earned);cap.setAttribute('aria-label',i<earned?'Крышка волны получена':'Крышка волны ещё не получена');});
-    document.getElementById('weight-dot').style.left=(50+this.p.pitch*40)+'%';
-    document.getElementById('weight-label').textContent=this.p.pitch>.2?'ВЕС НА НОС':this.p.pitch<-.2?'ВЕС НА ХВОСТ':'ВЕС ПО ЦЕНТРУ';
-    document.getElementById('balance-fill').style.width=Math.min(100,this.p.balance*100)+'%';
-    document.getElementById('balance-label').textContent=this.p.recovering>0?'ВЫРУЛИВАЙ':this.p.balance>.6?(Math.abs(this.p.pitch)>.45?'ВЕС К ЦЕНТРУ':'ПЛАВНЕЕ КУРС'):this.p.balance>.3?'РАСТЁТ':'НИЗКИЙ';
-    const ride=this.waveRide;document.getElementById('wave-fill').style.width=ride.charge*100+'%';
-    const guidance=ride.guidance();document.querySelector('.wave-ticket').dataset.phase=guidance.phase;
-    document.getElementById('wave-label').textContent=guidance.label;document.getElementById('wave-number').textContent=guidance.number;
-    document.getElementById('wave-status').textContent=guidance.status;document.getElementById('wave-remaining').textContent=guidance.remaining;
+    const c=this._hudCache;
+    const pct=Math.round(this.mug.level*100);
+    if(c.pct!==pct){
+      c.pct=pct;
+      if(this.hudBeerValue)this.hudBeerValue.innerHTML=pct+'<span>%</span>';
+      if(this.hudBeerFill)this.hudBeerFill.style.width=pct+'%';
+    }
+    const scoreVal=Math.round(this.score);
+    if(c.score!==scoreVal){
+      c.score=scoreVal;
+      const scoreText=scoreVal.toLocaleString('ru-RU').replace(/\s/g,'\u202f');
+      if(this.hudScoreValue){
+        this.hudScoreValue.textContent=scoreText;
+        this.hudScoreValue.style.setProperty('--score-digits',scoreText.length);
+      }
+    }
+    if(c.collected!==this.collected){
+      c.collected=this.collected;
+      if(this.hudCapsValue)this.hudCapsValue.textContent=this.collected;
+    }
+    if(c.combo!==this.combo){
+      c.combo=this.combo;
+      if(this.hudComboValue)this.hudComboValue.textContent='×'+this.combo;
+    }
+    const inputMode=this.input.mode;
+    if(c.inputMode!==inputMode){
+      c.inputMode=inputMode;
+      if(this.hudInputLabel)this.hudInputLabel.textContent=inputMode==='gyro'?'НАКЛОН: ↔ КУРС':inputMode==='touch'?'ТЯНИ: ↔ КУРС':'← → КУРС · ПРОБЕЛ ПРЫЖОК';
+    }
+    const speedRound=Math.round(this.p.speed);
+    if(c.speed!==speedRound){
+      c.speed=speedRound;
+      if(this.hudSpeedValue)this.hudSpeedValue.textContent=speedRound;
+      if(this.hudSpeedMeter)this.hudSpeedMeter.style.width=THREE.MathUtils.clamp(this.p.speed/42*100,20,100)+'%';
+    }
+    const routePct=Math.min(100,Math.round(this.p.z/this.distance*100));
+    if(c.routePct!==routePct){
+      c.routePct=routePct;
+      if(this.hudRouteFill)this.hudRouteFill.style.width=routePct+'%';
+      if(this.hudRouteTicket){
+        const curZ=Math.min(this.distance,Math.round(this.p.z));
+        this.hudRouteTicket.setAttribute('aria-valuenow',curZ);
+        this.hudRouteTicket.setAttribute('aria-valuetext','До бара '+Math.max(0,Math.ceil(this.distance-this.p.z))+' метров');
+      }
+    }
+    const earned=Math.min(3,this.waveRide.totalCaught);
+    if(c.earned!==earned){
+      c.earned=earned;
+      if(this.hudCollectionValue)this.hudCollectionValue.textContent=earned+' / 3';
+      this.hudWaveCaps.forEach((cap,i)=>{
+        cap.classList.toggle('earned',i<earned);
+        cap.setAttribute('aria-label',i<earned?'Крышка волны получена':'Крышка волны ещё не получена');
+      });
+    }
+    const pitchVal=Math.round(this.p.pitch*40);
+    if(c.pitch!==pitchVal){
+      c.pitch=pitchVal;
+      if(this.hudWeightDot)this.hudWeightDot.style.left=(50+pitchVal)+'%';
+      if(this.hudWeightLabel)this.hudWeightLabel.textContent=this.p.pitch>.2?'ВЕС НА НОС':this.p.pitch<-.2?'ВЕС НА ХВОСТ':'ВЕС ПО ЦЕНТРУ';
+    }
+    const balPct=Math.min(100,Math.round(this.p.balance*100));
+    if(c.balance!==balPct){
+      c.balance=balPct;
+      if(this.hudBalanceFill)this.hudBalanceFill.style.width=balPct+'%';
+      if(this.hudBalanceLabel)this.hudBalanceLabel.textContent=this.p.recovering>0?'ВЫРУЛИВАЙ':this.p.balance>.6?(Math.abs(this.p.pitch)>.45?'ВЕС К ЦЕНТРУ':'ПЛАВНЕЕ КУРС'):this.p.balance>.3?'РАСТЁТ':'НИЗКИЙ';
+    }
+    const ride=this.waveRide;
+    const waveFill=Math.round(ride.charge*100);
+    if(c.waveFill!==waveFill){
+      c.waveFill=waveFill;
+      if(this.hudWaveFill)this.hudWaveFill.style.width=waveFill+'%';
+    }
+    const guidance=ride.guidance();
+    if(this.hudWaveTicket&&this.hudWaveTicket.dataset.phase!==guidance.phase)this.hudWaveTicket.dataset.phase=guidance.phase;
+    if(this.hudWaveLabel&&c.guidanceLabel!==guidance.label){c.guidanceLabel=guidance.label;this.hudWaveLabel.textContent=guidance.label;}
+    if(this.hudWaveNumber&&c.guidanceNumber!==guidance.number){c.guidanceNumber=guidance.number;this.hudWaveNumber.textContent=guidance.number;}
+    if(this.hudWaveStatus&&c.guidanceStatus!==guidance.status){c.guidanceStatus=guidance.status;this.hudWaveStatus.textContent=guidance.status;}
+    if(this.hudWaveRemaining&&c.guidanceRemaining!==guidance.remaining){c.guidanceRemaining=guidance.remaining;this.hudWaveRemaining.textContent=guidance.remaining;}
     this.updateCoach(guidance);
 
     this.container.classList.toggle('wave-caught',ride.caught);this.container.classList.toggle('unstable',this.p.balance>.6);
     const threat=this.world.threat(),danger=threat?THREE.MathUtils.clamp(1-Math.max(0,threat.gap)/36,0,1):0;
-    const fin=document.getElementById('shark-threat');fin.classList.toggle('visible',!!threat);fin.classList.toggle('close',danger>.7);fin.dataset.phase=threat?.shark.attackPhase||'chase';fin.querySelector('b').style.transform='scaleX('+danger+')';
-    document.getElementById('spill-flash').style.opacity=this.spillFlash;this.drawBeer();
+    if(this.hudSharkThreat){
+      this.hudSharkThreat.classList.toggle('visible',!!threat);
+      this.hudSharkThreat.classList.toggle('close',danger>.7);
+      this.hudSharkThreat.dataset.phase=threat?.shark.attackPhase||'chase';
+      if(this.hudSharkBar)this.hudSharkBar.style.transform='scaleX('+danger+')';
+    }
+    if(this.hudSpillFlash)this.hudSpillFlash.style.opacity=this.spillFlash;
+    this.drawBeer();
     this.balance.updateHUD();this.chain.render();
     this.rush.updateHUD();
-    const mult=document.getElementById('beer-mult'),label='×'+this.mug.multiplier;if(mult.textContent!==label){mult.textContent=label;mult.dataset.level=this.mug.multiplier;}mult.title='Бонус доставки '+label;mult.setAttribute('aria-label','Бонус доставки '+label);
-    document.querySelector('.score-ticket').classList.toggle('beaten',this.meta.challenge>0&&this.score>this.meta.challenge);
+    const label='×'+this.mug.multiplier;
+    if(this.hudBeerMult&&this.hudBeerMult.textContent!==label){
+      this.hudBeerMult.textContent=label;
+      this.hudBeerMult.dataset.level=this.mug.multiplier;
+      this.hudBeerMult.title='Бонус доставки '+label;
+      this.hudBeerMult.setAttribute('aria-label','Бонус доставки '+label);
+    }
+    if(this.hudScoreTicket){
+      const beaten=this.meta.challenge>0&&this.score>this.meta.challenge;
+      this.hudScoreTicket.classList.toggle('beaten',beaten);
+    }
   }
   updateCoach(guidance){
     const p=this.p,s=this.wave.sample(p.x,p.z),threat=this.world.threat(),lesson=this.onboarding.cue();
@@ -8223,7 +8384,16 @@ class PaperSurfGame {
     if(document.getElementById('coach-line').textContent!==line)document.getElementById('coach-line').textContent=line;
     if(coach.classList.contains('hidden')&&!(p.airborne&&this.jump.canSpin&&this.jump.tricks===0))this.onboarding.highlight='';this.onboarding.renderHighlight();
   }
-  resize() {const {width,height}=this.container.getBoundingClientRect();this.renderDirty=true;this.container.style.setProperty('--panel-size',Math.max(width,height)+'px');this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();this.paperSky.update();}
+  resize() {
+    const {width,height}=this.container.getBoundingClientRect();
+    this.viewWidth=width;this.viewHeight=height;
+    this.renderDirty=true;
+    this.container.style.setProperty('--panel-size',Math.max(width,height)+'px');
+    this.renderer.setSize(width,height,false);
+    this.camera.aspect=width/height;
+    this.camera.updateProjectionMatrix();
+    this.paperSky.update();
+  }
   animate(now) {
     requestAnimationFrame(this.animate);
     const realDt=this.lastTime?Math.min((now-this.lastTime)/1000,.25):1/60,dt=Math.min(realDt,.05);this.lastTime=now;
@@ -8253,7 +8423,7 @@ class PaperSurfGame {
     }
     this.wave.update(this.p.z,this.time);this.updateVisuals(dt);if(!countdownFrame)this.updateHUD();
     this.tickStartCountdown(realDt);
-    this.juice.beforeRender(this.camera,realDt);this.paperSky.update();this.speedBlur.render();this.juice.afterRender(this.camera);
+    this.juice.beforeRender(this.camera,realDt);this.speedBlur.render();this.juice.afterRender(this.camera);
     this.comics.capture();this.runComic.flush();
   }
 }

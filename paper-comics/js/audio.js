@@ -639,6 +639,49 @@ class SurfAudio {
     this.playSound('fanfare_win', { volume: 0.55, rate: 1.0 });
   }
 
+  playCountdownBeep(step = '3') {
+    if (!this.ctx || this.isMuted || !this.sfxGain) return;
+    const ctx = this.ctx, t = ctx.currentTime, duration = 0.85;
+    const master = ctx.createGain();
+
+    // Gentle volume: 'не громко' (ship's bell / рында)
+    master.gain.setValueAtTime(0.0001, t);
+    master.gain.linearRampToValueAtTime(0.18, t + 0.001);
+    master.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+    master.connect(this.sfxGain);
+
+    // Nautical bronze bell acoustic modes (C6 chime: hum, prime, minor 3rd tierce, quint, nominal, strike)
+    const f0 = 1046.5;
+    const modes = [
+      { freq: f0 * 0.50, level: 0.15, decay: 0.80 },
+      { freq: f0 * 1.00, level: 0.32, decay: 0.75 },
+      { freq: f0 * 1.19, level: 0.22, decay: 0.60 },
+      { freq: f0 * 1.50, level: 0.16, decay: 0.50 },
+      { freq: f0 * 2.00, level: 0.18, decay: 0.40 },
+      { freq: f0 * 2.74, level: 0.10, decay: 0.22 },
+      { freq: f0 * 3.82, level: 0.07, decay: 0.10 }
+    ];
+
+    const nodes = [master];
+    let first = null;
+
+    for (const m of modes) {
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(m.freq, t);
+      g.gain.setValueAtTime(m.level, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + m.decay);
+      osc.connect(g);
+      g.connect(master);
+      osc.start(t);
+      osc.stop(t + duration);
+      nodes.push(osc, g);
+      if (!first) first = osc;
+    }
+
+    this.trackSource(first, nodes, {gain: master, endsAt: t + duration});
+  }
+
   playStartHorn() {
     if (!this.ctx || this.isMuted || !this.sfxGain) return;
     const ctx=this.ctx,t=ctx.currentTime,duration=.88,filter=ctx.createBiquadFilter(),envelope=ctx.createGain();

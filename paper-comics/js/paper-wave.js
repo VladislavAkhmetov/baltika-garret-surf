@@ -16,7 +16,10 @@ class PaperWave {
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(1, 1);
     texture.anisotropy = 4;
-    const geometry = new THREE.PlaneGeometry(100, 232, 128, 192);
+    const isMobile = typeof matchMedia !== 'undefined' && matchMedia('(pointer:coarse)').matches;
+    const segX = isMobile ? 64 : 128;
+    const segZ = isMobile ? 96 : 192;
+    const geometry = new THREE.PlaneGeometry(100, 232, segX, segZ);
     geometry.rotateX(-Math.PI / 2);
     geometry.translate(22,0,0);
     // Spend horizontal detail around the route, rather than on the open sea.
@@ -34,7 +37,7 @@ class PaperWave {
     this.sea.frustumCulled = false;
     scene.add(this.sea);
     this.foamTexture=this.makeFoamTexture();
-    this.swellLips=this.waves.map(()=>this.makeLip(112));
+    this.swellLips=this.waves.map(()=>this.makeLip(isMobile ? 56 : 112));
     this.spray=this.waves.map(()=>{
       const mesh=new THREE.InstancedMesh(new THREE.SphereGeometry(.07,5,4),new THREE.MeshBasicMaterial({color:0xd8eee7,transparent:true,opacity:.65,depthWrite:false}),18);
       mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);scene.add(mesh);return mesh;
@@ -328,6 +331,7 @@ class PaperWave {
     mesh.visible=wave.to>playerZ-27&&wave.from<playerZ+205;
     if(!mesh.visible)return;
     const p=mesh.geometry.attributes.position,foam=mesh.geometry.attributes.waterFoam,n=mesh.userData.lengthSegments;
+    const factors=PaperWave.LIP_ROW_FACTORS;
     for(let j=0;j<=n;j++){
       const u=j/n,z=wave.from+u*(wave.to-wave.from),x=this.crestX(wave,z);
       const field=this.field(x,z);
@@ -339,19 +343,16 @@ class PaperWave {
       const h=this.height(x,z);
       const tangent=(this.crestX(wave,z+.1)-this.crestX(wave,z-.1))/.2;
       const nx=1/Math.sqrt(1+tangent*tangent),nz=-tangent*nx;
+      const crestBase=.42+breakAmount*.52,tipBase=breakAmount*.86;
+      const patch=(.84+.16*Math.sin(j*.19+this.time*.68+wave.id))*energy;
       for(let row=0;row<=12;row++){
-        // Closed outer/inner lip joins the same crest, rather than floating above it.
-        const t=row<=6?row/6:(row-6)/6,b=1-t;
-        const curl=row<=6?(3*b*b*t*1.05+3*b*t*t*2.45+t*t*t*2.25)*radius:
-          (b*b*b*2.25+3*b*b*t*1.45+3*b*t*t*.10)*radius;
-        const drop=row<=6?(3*b*b*t*.16-3*b*t*t*.04-t*t*t*.55)*radius:
-          (-b*b*b*.55-3*b*b*t*.28+3*b*t*t*.06)*radius;
+        const rf=factors[row];
+        const curl=rf.curlMul*radius,drop=rf.dropMul*radius;
         const index=row*(n+1)+j;
         p.setXYZ(index,-x-curl*nx,h+drop,z+curl*nz);
-        const crestFoam=Math.exp(-Math.pow((row/12-.24)/.19,2))*(.42+breakAmount*.52);
-        const tipFoam=Math.exp(-Math.pow((row/12-.50)/.13,2))*breakAmount*.86;
-        const patch=.84+.16*Math.sin(j*.19+this.time*.68+wave.id);
-        foam.setX(index,Math.max(crestFoam,tipFoam)*energy*patch);
+        const crestFoam=rf.crestWeight*crestBase;
+        const tipFoam=rf.tipWeight*tipBase;
+        foam.setX(index,Math.max(crestFoam,tipFoam)*patch);
       }
     }
     p.needsUpdate=foam.needsUpdate=true;mesh.geometry.computeVertexNormals();
@@ -373,5 +374,13 @@ class PaperWave {
     });
   }
 }
+PaperWave.LIP_ROW_FACTORS=Array.from({length:13},(_,row)=>{
+  const t=row<=6?row/6:(row-6)/6,b=1-t;
+  const curlMul=row<=6?(3*b*b*t*1.05+3*b*t*t*2.45+t*t*t*2.25):(b*b*b*2.25+3*b*b*t*1.45+3*b*t*t*.10);
+  const dropMul=row<=6?(3*b*b*t*.16-3*b*t*t*.04-t*t*t*.55):(-b*b*b*.55-3*b*b*t*.28+3*b*t*t*.06);
+  const crestWeight=Math.exp(-Math.pow((row/12-.24)/.19,2));
+  const tipWeight=Math.exp(-Math.pow((row/12-.50)/.13,2));
+  return {curlMul,dropMul,crestWeight,tipWeight};
+});
 
 window.PaperWave = PaperWave;

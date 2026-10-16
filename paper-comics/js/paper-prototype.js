@@ -1,4 +1,4 @@
-const START_COUNTDOWN_DURATION=2;
+const START_COUNTDOWN_DURATION=3;
 
 class PaperSurfGame {
   constructor() {
@@ -70,6 +70,35 @@ class PaperSurfGame {
     this.demo=new DemoSetpieces(this);this.wave.currentField=(x,z)=>this.demo.currentAt(x,z);
     this.duel=new BeerDuel(this);
     this.container.classList.toggle('ribbon-ride',!this.flowTest);
+    this.viewWidth=390;this.viewHeight=844;
+    this.hudBeerValue=document.getElementById('beer-value');
+    this.hudBeerFill=document.getElementById('beer-fill');
+    this.hudScoreValue=document.getElementById('score-value');
+    this.hudCapsValue=document.getElementById('caps-value');
+    this.hudComboValue=document.getElementById('combo-value');
+    this.hudInputLabel=document.getElementById('input-label');
+    this.hudSpeedValue=document.getElementById('speed-value');
+    this.hudSpeedMeter=document.getElementById('speed-meter');
+    this.hudRouteFill=document.getElementById('route-fill');
+    this.hudRouteTicket=document.querySelector('.route-ticket');
+    this.hudCollectionValue=document.getElementById('collection-value');
+    this.hudWaveCaps=document.querySelectorAll('.wave-cap');
+    this.hudWeightDot=document.getElementById('weight-dot');
+    this.hudWeightLabel=document.getElementById('weight-label');
+    this.hudBalanceFill=document.getElementById('balance-fill');
+    this.hudBalanceLabel=document.getElementById('balance-label');
+    this.hudWaveFill=document.getElementById('wave-fill');
+    this.hudWaveTicket=document.querySelector('.wave-ticket');
+    this.hudWaveLabel=document.getElementById('wave-label');
+    this.hudWaveNumber=document.getElementById('wave-number');
+    this.hudWaveStatus=document.getElementById('wave-status');
+    this.hudWaveRemaining=document.getElementById('wave-remaining');
+    this.hudSharkThreat=document.getElementById('shark-threat');
+    this.hudSharkBar=this.hudSharkThreat?.querySelector('b');
+    this.hudSpillFlash=document.getElementById('spill-flash');
+    this.hudBeerMult=document.getElementById('beer-mult');
+    this.hudScoreTicket=document.querySelector('.score-ticket');
+    this._hudCache={};
     this.reset(); this.resize(); this.bindUI();
     this.journey=new SurfJourney(this);
     this.flowTest?.mount();
@@ -375,6 +404,9 @@ class PaperSurfGame {
     const el=document.getElementById('start-countdown');if(!el)return;
     el.textContent=label;el.classList.toggle('go',go);el.setAttribute('aria-hidden','false');
     el.classList.add('visible');el.classList.remove('beat');void el.offsetWidth;el.classList.add('beat');
+    if(!go){
+      this.audio.playCountdownBeep?.(label);
+    }
   }
   clearStartCountdown(){
     this.startCountdown=null;
@@ -392,7 +424,7 @@ class PaperSurfGame {
       this.showStartCountdown('СТАРТ!',true);
       return;
     }
-    const label=count.elapsed<1?'3':'2';
+    const label=count.elapsed<1?'3':count.elapsed<2?'2':'1';
     if(label!==count.label){count.label=label;this.showStartCountdown(label);}
   }
   tickStartCountdown(dt){
@@ -813,36 +845,109 @@ class PaperSurfGame {
   }
   updateHUD() {
     this.duel.updateHUD();
-    const pct=Math.round(this.mug.level*100);document.getElementById('beer-value').innerHTML=pct+'<span>%</span>';document.getElementById('beer-fill').style.width=pct+'%';
-    const scoreValue=document.getElementById('score-value'),scoreText=Math.round(this.score).toLocaleString('ru-RU').replace(/\s/g,'\u202f');
-    scoreValue.textContent=scoreText;scoreValue.style.setProperty('--score-digits',scoreText.length);
-    document.getElementById('caps-value').textContent=this.collected;
-    document.getElementById('combo-value').textContent='×'+this.combo;
-    document.getElementById('input-label').textContent=this.input.mode==='gyro'?'НАКЛОН: ↔ КУРС':this.input.mode==='touch'?'ТЯНИ: ↔ КУРС':'← → КУРС · ПРОБЕЛ ПРЫЖОК';
-    document.getElementById('speed-value').textContent=Math.round(this.p.speed);document.getElementById('speed-meter').style.width=THREE.MathUtils.clamp(this.p.speed/42*100,20,100)+'%';
-    document.getElementById('route-fill').style.width=Math.min(100,this.p.z/this.distance*100)+'%';
-    const routeTicket=document.querySelector('.route-ticket');routeTicket.setAttribute('aria-valuemax',this.distance);routeTicket.setAttribute('aria-valuenow',Math.min(this.distance,Math.round(this.p.z)));
-    routeTicket.setAttribute('aria-valuetext','До бара '+Math.max(0,Math.ceil(this.distance-this.p.z))+' метров');
-    const earned=Math.min(3,this.waveRide.totalCaught);document.getElementById('collection-value').textContent=earned+' / 3';
-    document.querySelectorAll('.wave-cap').forEach((cap,i)=>{cap.classList.toggle('earned',i<earned);cap.setAttribute('aria-label',i<earned?'Крышка волны получена':'Крышка волны ещё не получена');});
-    document.getElementById('weight-dot').style.left=(50+this.p.pitch*40)+'%';
-    document.getElementById('weight-label').textContent=this.p.pitch>.2?'ВЕС НА НОС':this.p.pitch<-.2?'ВЕС НА ХВОСТ':'ВЕС ПО ЦЕНТРУ';
-    document.getElementById('balance-fill').style.width=Math.min(100,this.p.balance*100)+'%';
-    document.getElementById('balance-label').textContent=this.p.recovering>0?'ВЫРУЛИВАЙ':this.p.balance>.6?(Math.abs(this.p.pitch)>.45?'ВЕС К ЦЕНТРУ':'ПЛАВНЕЕ КУРС'):this.p.balance>.3?'РАСТЁТ':'НИЗКИЙ';
-    const ride=this.waveRide;document.getElementById('wave-fill').style.width=ride.charge*100+'%';
-    const guidance=ride.guidance();document.querySelector('.wave-ticket').dataset.phase=guidance.phase;
-    document.getElementById('wave-label').textContent=guidance.label;document.getElementById('wave-number').textContent=guidance.number;
-    document.getElementById('wave-status').textContent=guidance.status;document.getElementById('wave-remaining').textContent=guidance.remaining;
+    const c=this._hudCache;
+    const pct=Math.round(this.mug.level*100);
+    if(c.pct!==pct){
+      c.pct=pct;
+      if(this.hudBeerValue)this.hudBeerValue.innerHTML=pct+'<span>%</span>';
+      if(this.hudBeerFill)this.hudBeerFill.style.width=pct+'%';
+    }
+    const scoreVal=Math.round(this.score);
+    if(c.score!==scoreVal){
+      c.score=scoreVal;
+      const scoreText=scoreVal.toLocaleString('ru-RU').replace(/\s/g,'\u202f');
+      if(this.hudScoreValue){
+        this.hudScoreValue.textContent=scoreText;
+        this.hudScoreValue.style.setProperty('--score-digits',scoreText.length);
+      }
+    }
+    if(c.collected!==this.collected){
+      c.collected=this.collected;
+      if(this.hudCapsValue)this.hudCapsValue.textContent=this.collected;
+    }
+    if(c.combo!==this.combo){
+      c.combo=this.combo;
+      if(this.hudComboValue)this.hudComboValue.textContent='×'+this.combo;
+    }
+    const inputMode=this.input.mode;
+    if(c.inputMode!==inputMode){
+      c.inputMode=inputMode;
+      if(this.hudInputLabel)this.hudInputLabel.textContent=inputMode==='gyro'?'НАКЛОН: ↔ КУРС':inputMode==='touch'?'ТЯНИ: ↔ КУРС':'← → КУРС · ПРОБЕЛ ПРЫЖОК';
+    }
+    const speedRound=Math.round(this.p.speed);
+    if(c.speed!==speedRound){
+      c.speed=speedRound;
+      if(this.hudSpeedValue)this.hudSpeedValue.textContent=speedRound;
+      if(this.hudSpeedMeter)this.hudSpeedMeter.style.width=THREE.MathUtils.clamp(this.p.speed/42*100,20,100)+'%';
+    }
+    const routePct=Math.min(100,Math.round(this.p.z/this.distance*100));
+    if(c.routePct!==routePct){
+      c.routePct=routePct;
+      if(this.hudRouteFill)this.hudRouteFill.style.width=routePct+'%';
+      if(this.hudRouteTicket){
+        const curZ=Math.min(this.distance,Math.round(this.p.z));
+        this.hudRouteTicket.setAttribute('aria-valuenow',curZ);
+        this.hudRouteTicket.setAttribute('aria-valuetext','До бара '+Math.max(0,Math.ceil(this.distance-this.p.z))+' метров');
+      }
+    }
+    const earned=Math.min(3,this.waveRide.totalCaught);
+    if(c.earned!==earned){
+      c.earned=earned;
+      if(this.hudCollectionValue)this.hudCollectionValue.textContent=earned+' / 3';
+      this.hudWaveCaps.forEach((cap,i)=>{
+        cap.classList.toggle('earned',i<earned);
+        cap.setAttribute('aria-label',i<earned?'Крышка волны получена':'Крышка волны ещё не получена');
+      });
+    }
+    const pitchVal=Math.round(this.p.pitch*40);
+    if(c.pitch!==pitchVal){
+      c.pitch=pitchVal;
+      if(this.hudWeightDot)this.hudWeightDot.style.left=(50+pitchVal)+'%';
+      if(this.hudWeightLabel)this.hudWeightLabel.textContent=this.p.pitch>.2?'ВЕС НА НОС':this.p.pitch<-.2?'ВЕС НА ХВОСТ':'ВЕС ПО ЦЕНТРУ';
+    }
+    const balPct=Math.min(100,Math.round(this.p.balance*100));
+    if(c.balance!==balPct){
+      c.balance=balPct;
+      if(this.hudBalanceFill)this.hudBalanceFill.style.width=balPct+'%';
+      if(this.hudBalanceLabel)this.hudBalanceLabel.textContent=this.p.recovering>0?'ВЫРУЛИВАЙ':this.p.balance>.6?(Math.abs(this.p.pitch)>.45?'ВЕС К ЦЕНТРУ':'ПЛАВНЕЕ КУРС'):this.p.balance>.3?'РАСТЁТ':'НИЗКИЙ';
+    }
+    const ride=this.waveRide;
+    const waveFill=Math.round(ride.charge*100);
+    if(c.waveFill!==waveFill){
+      c.waveFill=waveFill;
+      if(this.hudWaveFill)this.hudWaveFill.style.width=waveFill+'%';
+    }
+    const guidance=ride.guidance();
+    if(this.hudWaveTicket&&this.hudWaveTicket.dataset.phase!==guidance.phase)this.hudWaveTicket.dataset.phase=guidance.phase;
+    if(this.hudWaveLabel&&c.guidanceLabel!==guidance.label){c.guidanceLabel=guidance.label;this.hudWaveLabel.textContent=guidance.label;}
+    if(this.hudWaveNumber&&c.guidanceNumber!==guidance.number){c.guidanceNumber=guidance.number;this.hudWaveNumber.textContent=guidance.number;}
+    if(this.hudWaveStatus&&c.guidanceStatus!==guidance.status){c.guidanceStatus=guidance.status;this.hudWaveStatus.textContent=guidance.status;}
+    if(this.hudWaveRemaining&&c.guidanceRemaining!==guidance.remaining){c.guidanceRemaining=guidance.remaining;this.hudWaveRemaining.textContent=guidance.remaining;}
     this.updateCoach(guidance);
 
     this.container.classList.toggle('wave-caught',ride.caught);this.container.classList.toggle('unstable',this.p.balance>.6);
     const threat=this.world.threat(),danger=threat?THREE.MathUtils.clamp(1-Math.max(0,threat.gap)/36,0,1):0;
-    const fin=document.getElementById('shark-threat');fin.classList.toggle('visible',!!threat);fin.classList.toggle('close',danger>.7);fin.dataset.phase=threat?.shark.attackPhase||'chase';fin.querySelector('b').style.transform='scaleX('+danger+')';
-    document.getElementById('spill-flash').style.opacity=this.spillFlash;this.drawBeer();
+    if(this.hudSharkThreat){
+      this.hudSharkThreat.classList.toggle('visible',!!threat);
+      this.hudSharkThreat.classList.toggle('close',danger>.7);
+      this.hudSharkThreat.dataset.phase=threat?.shark.attackPhase||'chase';
+      if(this.hudSharkBar)this.hudSharkBar.style.transform='scaleX('+danger+')';
+    }
+    if(this.hudSpillFlash)this.hudSpillFlash.style.opacity=this.spillFlash;
+    this.drawBeer();
     this.balance.updateHUD();this.chain.render();
     this.rush.updateHUD();
-    const mult=document.getElementById('beer-mult'),label='×'+this.mug.multiplier;if(mult.textContent!==label){mult.textContent=label;mult.dataset.level=this.mug.multiplier;}mult.title='Бонус доставки '+label;mult.setAttribute('aria-label','Бонус доставки '+label);
-    document.querySelector('.score-ticket').classList.toggle('beaten',this.meta.challenge>0&&this.score>this.meta.challenge);
+    const label='×'+this.mug.multiplier;
+    if(this.hudBeerMult&&this.hudBeerMult.textContent!==label){
+      this.hudBeerMult.textContent=label;
+      this.hudBeerMult.dataset.level=this.mug.multiplier;
+      this.hudBeerMult.title='Бонус доставки '+label;
+      this.hudBeerMult.setAttribute('aria-label','Бонус доставки '+label);
+    }
+    if(this.hudScoreTicket){
+      const beaten=this.meta.challenge>0&&this.score>this.meta.challenge;
+      this.hudScoreTicket.classList.toggle('beaten',beaten);
+    }
   }
   updateCoach(guidance){
     const p=this.p,s=this.wave.sample(p.x,p.z),threat=this.world.threat(),lesson=this.onboarding.cue();
@@ -883,7 +988,16 @@ class PaperSurfGame {
     if(document.getElementById('coach-line').textContent!==line)document.getElementById('coach-line').textContent=line;
     if(coach.classList.contains('hidden')&&!(p.airborne&&this.jump.canSpin&&this.jump.tricks===0))this.onboarding.highlight='';this.onboarding.renderHighlight();
   }
-  resize() {const {width,height}=this.container.getBoundingClientRect();this.renderDirty=true;this.container.style.setProperty('--panel-size',Math.max(width,height)+'px');this.renderer.setSize(width,height,false);this.camera.aspect=width/height;this.camera.updateProjectionMatrix();this.paperSky.update();}
+  resize() {
+    const {width,height}=this.container.getBoundingClientRect();
+    this.viewWidth=width;this.viewHeight=height;
+    this.renderDirty=true;
+    this.container.style.setProperty('--panel-size',Math.max(width,height)+'px');
+    this.renderer.setSize(width,height,false);
+    this.camera.aspect=width/height;
+    this.camera.updateProjectionMatrix();
+    this.paperSky.update();
+  }
   animate(now) {
     requestAnimationFrame(this.animate);
     const realDt=this.lastTime?Math.min((now-this.lastTime)/1000,.25):1/60,dt=Math.min(realDt,.05);this.lastTime=now;
@@ -913,7 +1027,7 @@ class PaperSurfGame {
     }
     this.wave.update(this.p.z,this.time);this.updateVisuals(dt);if(!countdownFrame)this.updateHUD();
     this.tickStartCountdown(realDt);
-    this.juice.beforeRender(this.camera,realDt);this.paperSky.update();this.speedBlur.render();this.juice.afterRender(this.camera);
+    this.juice.beforeRender(this.camera,realDt);this.speedBlur.render();this.juice.afterRender(this.camera);
     this.comics.capture();this.runComic.flush();
   }
 }

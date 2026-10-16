@@ -5,7 +5,7 @@ class SurfJourney {
     this.screens=['start','setup','story'];
     this.heroes=[{name:'МАКС',available:true},{name:'ВИТЯ',available:false},{name:'СТАС',available:false}];
     this.locations=[{name:'БУХТА GARRET',available:true},{name:'СЕВЕРНЫЙ РИФ',available:false},{name:'НОЧНОЙ ПОРТ',available:false}];
-    this.storyVersion=new URLSearchParams(window.location.search).get('story')||'v6';
+    this.storyVersion=new URLSearchParams(window.location.search).get('story')||'v4';
     this.stories={
       v6:[
         {label:'Есть работа: смена в дальнем баре',panels:[
@@ -90,9 +90,9 @@ class SurfJourney {
     });
     if(new URLSearchParams(window.location.search).has('comic'))this.open('story');
   }
-  get story(){return this.stories[this.storyVersion]||this.stories.v6;}
+  get story(){return this.stories[this.storyVersion]||this.stories.v4;}
   toggleStoryVersion(){
-    this.storyVersion=this.storyVersion==='v6'?'v4':'v6';
+    this.storyVersion=this.storyVersion==='v4'?'v6':'v4';
     this.comicImages.clear();
     this.updateStoryToggleUI();
     this.renderStory();
@@ -130,7 +130,7 @@ class SurfJourney {
   }
   home(){this.game.audio.stopBGM();this.game.reset();this.game.renderMenuMeta();['pause-screen','result-screen','share-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));this.open('start');this.game.audio.startBGM();}
   loadComicImage(id){
-    const version=this.storyVersion||'v6';
+    const version=this.storyVersion||'v4';
     const key=id+'-'+version;
     if(this.comicImages.has(key))return this.comicImages.get(key);
     const actualVersion=(version==='v4'&&id==='shark')?'v5':version;

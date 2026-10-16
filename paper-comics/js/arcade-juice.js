@@ -53,14 +53,14 @@ class ArcadeJuice {
   }
   afterRender(camera){if(this.offset.lengthSq()>0){camera.position.sub(this.offset);camera.updateMatrixWorld();this.offset.set(0,0,0);}}
   update(realDt){
-    const g=this.game,box=g.container.getBoundingClientRect();
+    const g=this.game,width=g.viewWidth||390,height=g.viewHeight||844;
     for(const w of this.words){
       if(w.life<=0)continue;
       w.life-=realDt;
       this.point.set(-w.x,w.y,w.z).project(g.camera);
       const visible=w.life>0&&this.point.z<1;
       if(!visible){w.el.classList.remove('visible');w.life=Math.min(w.life,0);continue;}
-      w.el.style.left=((this.point.x+1)/2*box.width).toFixed(1)+'px';w.el.style.top=((1-this.point.y)/2*box.height).toFixed(1)+'px';
+      w.el.style.left=((this.point.x+1)/2*width).toFixed(1)+'px';w.el.style.top=((1-this.point.y)/2*height).toFixed(1)+'px';
     }
     const frame=Math.floor(g.time*12);
     if(frame!==this.lineFrame&&this.lines){

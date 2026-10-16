@@ -187,7 +187,8 @@ class BeerDuel {
   update(){
     this.glass.visible=this.enabled;
     if(!this.enabled)return;
-    const frame=Math.floor(this.clock*24);if(frame===this.printFrame)return;this.printFrame=frame;
+    const fps=this.game.input?.mobile?16:24;
+    const frame=Math.floor(this.clock*fps);if(frame===this.printFrame)return;this.printFrame=frame;
     const c=this.glassCanvas.getContext('2d'),l=this.liquid;c.clearRect(0,0,128,200);
     const top=157-l.level*126;
     c.save();c.beginPath();c.moveTo(24,20);c.lineTo(103,20);c.lineTo(98,158);c.lineTo(30,158);c.closePath();c.clip();

@@ -58,7 +58,8 @@ class HandBeer {
     const anchor=this.game.heroAnimator.currentGrip||{x:.85,y:1.0};
     this.pivot.position.set(anchor.x,anchor.y,.01);
     this.pivot.rotation.z=(anchor.angle||0)+this.roll;
-    const frame=Math.floor(this.game.time*30);
+    const fps=this.game.input?.mobile?(this.drops.length>0||this.peakSlosh>.08?22:16):30;
+    const frame=Math.floor(this.game.time*fps);
     if(frame!==this.printFrame){this.printFrame=frame;this.draw();this.texture.needsUpdate=true;}
   }
   outline(c){

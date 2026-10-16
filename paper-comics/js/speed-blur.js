@@ -8,6 +8,8 @@ class SpeedBlur {
     if(!this.supported)return;
     this.target=new THREE.WebGLRenderTarget(1,1,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,format:THREE.RGBAFormat,depthBuffer:true,stencilBuffer:false});
     this.target.depthTexture=new THREE.DepthTexture(1,1,THREE.UnsignedShortType);
+    const isMobile = game.input?.mobile || (typeof matchMedia !== 'undefined' && matchMedia('(pointer:coarse)').matches);
+    const maxSamples = isMobile ? 4 : 12;
     this.material=new THREE.ShaderMaterial({
       depthTest:false,depthWrite:false,
       uniforms:{uColor:{value:this.target.texture},uDepth:{value:this.target.depthTexture},uAmount:{value:0},uBurst:{value:0},uNear:{value:game.camera.near},uFar:{value:game.camera.far},uAspect:{value:1}},
@@ -30,8 +32,8 @@ class SpeedBlur {
           float amount=max(uAmount*edge*farMask*(1.0-warm*.9),burst*2.8);
           if(amount<.001){gl_FragColor=base;return;}
           vec4 sum=base;float weight=1.0;
-          for(int i=1;i<=12;i++){
-            float t=float(i)/12.0;vec2 uv=clamp(vUv-ray*amount*t*.075,vec2(.002),vec2(.998));
+          for(int i=1;i<=${maxSamples};i++){
+            float t=float(i)/${maxSamples}.0;vec2 uv=clamp(vUv-ray*amount*t*.075,vec2(.002),vec2(.998));
             float sampleDistance=distanceAt(uv);
             vec4 sampleColor=texture2D(uColor,uv);
             float safe=smoothstep(mix(23.0,5.0,uBurst),mix(35.0,12.0,uBurst),sampleDistance)*(1.0-step(.12,abs(sampleColor.a-base.a)));
