@@ -7,12 +7,12 @@
 .comic-toolbar button:focus-visible,.comic-nav button:focus-visible{outline:3px solid #ffcb32;outline-offset:2px}
 .comic-book{width:min(100% - 20px,900px);flex:1;min-height:0;position:relative;background:var(--comic-paper);border:5px solid var(--comic-paper);filter:drop-shadow(0 8px 12px #0004);container-type:size;isolation:isolate}
 .comic-page{position:absolute;inset:0;display:grid;grid-template-rows:36% 27% 37%;background:var(--comic-paper);overflow:hidden}
-.comic-panel{position:relative;min-height:0;overflow:hidden;background:#dac794;isolation:isolate;margin:0}
-.comic-panel:nth-child(1){grid-row:1;clip-path:polygon(0 0,100% 0,100% 89%,0 100%);margin-bottom:-14px;z-index:3}
-.comic-panel:nth-child(2){grid-row:2;clip-path:polygon(0 11%,100% 0,100% 100%,0 86%);margin-top:-8px;margin-bottom:-13px;z-index:2}
-.comic-panel:nth-child(3){grid-row:3;clip-path:polygon(0 0,100% 10%,100% 100%,0 100%);margin-top:-5px;z-index:1}
-.comic-panel img{position:absolute;width:100%;height:100%;inset:0;object-fit:cover;object-position:center;display:block}
-.comic-panel::after{content:'';position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 2px #092f4450;mix-blend-mode:multiply;z-index:1}
+.comic-panel{position:relative;min-height:0;overflow:visible;background:transparent;margin:0}
+.comic-panel:nth-child(1){grid-row:1;margin-bottom:-14px;z-index:1;--panel-clip:polygon(0 0,100% 0,100% 89%,0 100%)}
+.comic-panel:nth-child(2){grid-row:2;margin-top:-8px;margin-bottom:-13px;z-index:2;--panel-clip:polygon(0 11%,100% 0,100% 100%,0 86%)}
+.comic-panel:nth-child(3){grid-row:3;margin-top:-5px;z-index:3;--panel-clip:polygon(0 0,100% 10%,100% 100%,0 100%)}
+.comic-panel img{position:absolute;width:100%;height:100%;inset:0;object-fit:cover;object-position:center;display:block;clip-path:var(--panel-clip);background:#dac794}
+.comic-panel::after{content:'';position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 2px #092f4450;mix-blend-mode:multiply;z-index:1;clip-path:var(--panel-clip)}
 .comic-bubble{position:absolute;z-index:3;margin:0;padding:12px 17px;background:var(--comic-paper);border:3px solid var(--comic-ink);border-radius:48% 44% 47% 42% / 43% 48% 44% 49%;box-shadow:3px 3px 0 #092f4428;text-align:center;font:700 clamp(20px,3.25cqw,31px)/1.08 Rubik,sans-serif;white-space:pre-line;letter-spacing:-.6px;transform:rotate(-2deg)}
 .comic-bubble::before,.comic-bubble::after{content:'';position:absolute;clip-path:polygon(0 0,100% 0,10% 100%);width:30px;height:27px;left:22%;top:calc(100% - 3px);background:var(--comic-ink)}
 .comic-bubble::after{width:22px;height:21px;left:calc(22% + 3px);top:calc(100% - 5px);background:var(--comic-paper)}
@@ -40,24 +40,37 @@
 /* V6 Comic Panels */
 .comic-cards .comic-bubble{display:none !important}
 .comic-cards img{object-position:50% 50%}
-.comic-job .comic-bubble{right:4%;top:6%;max-width:58%}
-.comic-job .comic-bubble-2{right:6%;top:50%;max-width:54%;font-size:clamp(17px,2.8cqw,26px)}
+
+.bubble-tail{position:absolute;pointer-events:none;z-index:2;overflow:visible}
+.has-svg-tail::before,.has-svg-tail::after{display:none !important}
+
+/* Panel 2: Job - Tony speaking from the left */
+.comic-job .comic-bubble{right:4%;top:-12%;left:auto;max-width:50%;padding:8px 12px;font-size:clamp(14px,2.2cqw,19px);line-height:1.15;transform:rotate(-1deg)}
+.comic-job .tail-left{left:-27px;top:55%;width:32px;height:28px}
 .comic-job img{object-position:50% 45%}
-.comic-wager .comic-bubble-1{left:4%;top:8%;max-width:44%;transform:rotate(-3deg)}
-.comic-wager .comic-bubble-2{right:4%;top:6%;max-width:50%;transform:rotate(2deg)}
-.comic-wager .comic-bubble-3{left:6%;bottom:8%;top:auto;max-width:52%;font-size:clamp(16px,2.6cqw,24px)}
+
+/* Panel 3: Wager - Max on the left, Boris on the right */
+.comic-wager .comic-bubble-1{left:2%;top:-7%;right:auto;max-width:48%;padding:6px 8px;font-size:clamp(12px,1.9cqw,16px);line-height:1.12;transform:rotate(-2deg)}
+.comic-wager .comic-bubble-1 .tail-down-right{bottom:-24px;left:45%;width:32px;height:30px}
+.comic-wager .comic-bubble-2{right:2%;top:-6%;left:auto;max-width:46%;padding:6px 8px;font-size:clamp(12px,1.9cqw,16px);line-height:1.12;transform:rotate(2deg)}
+.comic-wager .comic-bubble-2 .tail-down-left-boris{bottom:-24px;left:18%;width:32px;height:30px}
 .comic-wager img{object-position:50% 40%}
-.comic-jetski-start .comic-bubble{left:4%;top:9%;max-width:54%}
-.comic-jetski-start .comic-bubble::before,.comic-jetski-start .comic-bubble::after{left:77%;transform:rotate(-30deg)}
+
+/* Panel 4: Jetski Start - Boris speaking, bubble in the open sky on the right */
+.comic-jetski-start .comic-bubble{right:4%;top:6%;left:auto;max-width:46%;padding:8px 14px;font-size:clamp(16px,2.5cqw,23px);transform:rotate(2deg)}
+.comic-jetski-start .tail-left-down{left:-28px;top:25%;width:34px;height:30px}
 .comic-jetski-start img{object-position:50% 37%}
-.comic-umbrella-crab .comic-bubble{right:6%;top:8%;max-width:54%}
-.comic-umbrella-crab .comic-bubble::before,.comic-umbrella-crab .comic-bubble::after{left:72%;transform:rotate(-20deg)}
+
+/* Panel 5: Umbrella Crab - Crab speaking from bottom-left on board */
+.comic-umbrella-crab .comic-bubble{left:3%;top:38%;right:auto;max-width:38%;padding:7px 11px;font-size:clamp(14px,2.1cqw,19px);transform:rotate(-2deg)}
+.comic-umbrella-crab .tail-down-crab{bottom:-25px;left:36%;width:32px;height:30px}
 .comic-umbrella-crab img{object-position:50% 50%}
-.comic-shift-launch .comic-bubble{left:5%;top:8%;max-width:54%}
-.comic-shift-launch .comic-sfx{right:6%;bottom:12%;left:auto;transform:rotate(8deg)}
+
+/* Panel 6: Shift Launch - Max speaking, bubble in the open sky on the right */
+.comic-shift-launch .comic-bubble{right:3%;top:14%;left:auto;max-width:46%;padding:7px 12px;font-size:clamp(15px,2.3cqw,22px);transform:rotate(2deg)}
+.comic-shift-launch .tail-left-high{left:-27px;top:28%;width:32px;height:26px}
+.comic-shift-launch .comic-sfx{right:6%;bottom:8%;left:auto;transform:rotate(8deg)}
 .comic-shift-launch img{object-position:50% 50%}
-.story-version-btn{margin-left:52px;font:600 12px Rubik,sans-serif;color:var(--comic-ink);background:var(--comic-paper);border:2px solid var(--comic-ink);border-radius:6px;padding:4px 9px;cursor:pointer;box-shadow:2px 2px 0 #092f4420;transition:transform .1s ease;white-space:nowrap}
-.story-version-btn:hover{transform:scale(1.04)}
 .comic-page[data-comic-page="1"]{grid-template-rows:30% 34% 36%}
 .comic-nav{position:relative;z-index:4;flex-shrink:0;display:flex;justify-content:center;width:100%;padding:12px 14px max(14px,env(safe-area-inset-bottom));}
 .comic-nav #story-next{min-height:54px;width:min(100%,420px);font:400 22px 'Russo One',Impact,sans-serif;transform:rotate(-1deg);padding:10px 24px}
@@ -70,13 +83,13 @@
  .comic-toolbar{max-width:920px;height:58px}
  .comic-book{width:min(100% - 36px,calc((100dvh - 154px)*1.12),900px)}
  .comic-page{grid-template-columns:43% 57%;grid-template-rows:48% 52%;}
- .comic-panel:nth-child(1){grid-column:1/3;grid-row:1;margin-bottom:-4px;clip-path:polygon(0 0,100% 0,100% 91%,0 100%)}
- .comic-panel:nth-child(2){grid-column:1;grid-row:2;margin:0 3px 0 0;clip-path:polygon(0 1%,100% 0,92% 100%,0 100%)}
- .comic-panel:nth-child(3){grid-column:2;grid-row:2;margin:-22px 0 0 -12px;clip-path:polygon(4% 5%,100% 0,100% 100%,0 100%)}
+ .comic-panel:nth-child(1){grid-column:1/3;grid-row:1;margin-bottom:-4px;--panel-clip:polygon(0 0,100% 0,100% 91%,0 100%)}
+ .comic-panel:nth-child(2){grid-column:1;grid-row:2;margin:0 3px 0 0;--panel-clip:polygon(0 1%,100% 0,92% 100%,0 100%)}
+ .comic-panel:nth-child(3){grid-column:2;grid-row:2;margin:-22px 0 0 -12px;--panel-clip:polygon(4% 5%,100% 0,100% 100%,0 100%)}
  .comic-page[data-comic-page="1"]{grid-template-columns:53% 47%;grid-template-rows:53% 47%}
- .comic-page[data-comic-page="1"] .comic-panel:nth-child(1){grid-column:1;grid-row:1;clip-path:polygon(0 0,100% 0,93% 100%,0 96%);margin:0 3px -8px 0}
- .comic-page[data-comic-page="1"] .comic-panel:nth-child(2){grid-column:2;grid-row:1;clip-path:polygon(5% 0,100% 0,100% 98%,0 100%);margin:0 0 -5px -12px}
- .comic-page[data-comic-page="1"] .comic-panel:nth-child(3){grid-column:1/3;grid-row:2;clip-path:polygon(0 0,100% 3%,100% 100%,0 100%);margin:3px 0 0}
+ .comic-page[data-comic-page="1"] .comic-panel:nth-child(1){grid-column:1;grid-row:1;--panel-clip:polygon(0 0,100% 0,93% 100%,0 96%);margin:0 3px -8px 0}
+ .comic-page[data-comic-page="1"] .comic-panel:nth-child(2){grid-column:2;grid-row:1;--panel-clip:polygon(5% 0,100% 0,100% 98%,0 100%);margin:0 0 -5px -12px}
+ .comic-page[data-comic-page="1"] .comic-panel:nth-child(3){grid-column:1/3;grid-row:2;--panel-clip:polygon(0 0,100% 3%,100% 100%,0 100%);margin:3px 0 0}
  .comic-max img{object-position:65% 35%}.comic-crab img{object-position:66% 50%}
  .comic-bubble{font-size:clamp(22px,3.55cqw,31px)}
  .comic-max .comic-bubble{top:6%;max-width:83%}
@@ -98,9 +111,9 @@
  .comic-toolbar{height:44px;padding:0 12px}.comic-toolbar button{min-height:40px}
  .comic-book{width:calc(100% - 20px);border-width:3px}
  .comic-page,.comic-page[data-comic-page="1"]{grid-template-columns:repeat(3,1fr);grid-template-rows:100%}
- .comic-panel:nth-child(1){grid-column:1;grid-row:1;margin:0 -8px 0 0;clip-path:polygon(0 0,100% 0,92% 100%,0 100%)}
- .comic-panel:nth-child(2){grid-column:2;grid-row:1;margin:0 -8px 0 -8px;clip-path:polygon(6% 0,100% 0,94% 100%,0 100%)}
- .comic-panel:nth-child(3){grid-column:3;grid-row:1;margin:0 0 0 -8px;clip-path:polygon(6% 0,100% 0,100% 100%,0 100%)}
+ .comic-panel:nth-child(1){grid-column:1;grid-row:1;margin:0 -8px 0 0;--panel-clip:polygon(0 0,100% 0,92% 100%,0 100%)}
+ .comic-panel:nth-child(2){grid-column:2;grid-row:1;margin:0 -8px 0 -8px;--panel-clip:polygon(6% 0,100% 0,94% 100%,0 100%)}
+ .comic-panel:nth-child(3){grid-column:3;grid-row:1;margin:0 0 0 -8px;--panel-clip:polygon(6% 0,100% 0,100% 100%,0 100%)}
  .comic-bubble{font-size:20px;padding:10px 12px;border-width:2.5px}
  .comic-panel .comic-bubble{left:9%;right:5%;top:4%;max-width:86%}
  .comic-panel .comic-bubble-embedded{opacity:1}
@@ -114,5 +127,12 @@
  .comic-boris img{object-position:65% 50%}.comic-shark img{object-position:43% 60%}
  .comic-panel .comic-sfx{font-size:26px;left:12%;bottom:8%}
  .comic-nav{padding:7px 14px}.comic-nav #story-next{width:300px;min-height:44px;font-size:19px;padding:8px 16px}
+ .comic-job .comic-bubble{top:3%;left:auto;right:4%;max-width:88%;font-size:12px;padding:4px 7px}
+ .comic-wager .comic-bubble-1{top:3%;left:3%;right:auto;max-width:48%;font-size:11px;padding:4px 6px}
+ .comic-wager .comic-bubble-2{top:3%;right:3%;left:auto;max-width:48%;font-size:11px;padding:4px 6px}
+ .comic-jetski-start .comic-bubble{top:2%;right:3%;left:auto;max-width:80%;font-size:12px;padding:4px 7px}
+ .comic-umbrella-crab .comic-bubble{top:2%;left:3%;right:auto;max-width:80%;font-size:12px;padding:4px 7px}
+ .comic-shift-launch .comic-bubble{top:2%;right:3%;left:auto;max-width:80%;font-size:12px;padding:4px 7px}
+ .comic-shift-launch .comic-sfx{right:3%;bottom:4%;font-size:18px}
 }
 @media(prefers-reduced-motion:reduce){.story-enter .comic-panel img{animation:none}}

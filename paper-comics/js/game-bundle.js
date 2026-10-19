@@ -2234,8 +2234,9 @@ class PaperWave {
     const loader=new THREE.TextureLoader();
     let resolveWater,rejectWater;
     this.ready=new Promise((resolve,reject)=>{resolveWater=resolve;rejectWater=reject;});
-    this.ready.catch(()=>{});
-    const texture = loader.load('assets/comics/water-surface-v5.png',resolveWater,undefined,()=>rejectWater(Error('Не удалось загрузить воду')));
+    const texture = loader.load('assets/comics/water-surface-v5.webp',resolveWater,undefined,()=>{
+      loader.load('assets/comics/water-surface-v5.png',resolveWater,undefined,()=>rejectWater(Error('Не удалось загрузить воду')));
+    });
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(1, 1);
     texture.anisotropy = 4;
@@ -3162,9 +3163,15 @@ class HandBeer {
     this.game=game;this.liquid=game.mug;this.roll=0;this.rollVelocity=0;this.drops=[];this.printFrame=-1;
     this.canvas=document.createElement('canvas');this.canvas.width=384;this.canvas.height=480;this.ctx=this.canvas.getContext('2d');
     this.texture=new THREE.CanvasTexture(this.canvas);this.texture.minFilter=THREE.LinearFilter;this.texture.generateMipmaps=false;
-    this.frame=new Image();
-    this.ready=new Promise((resolve,reject)=>{this.frame.onload=()=>{this.draw();this.texture.needsUpdate=true;resolve();};this.frame.onerror=()=>reject(new Error('Не удалось загрузить кружку'));});
-    this.ready.catch(()=>{});this.frame.src='assets/comics/mug-paper-frame.png';
+    this.frame=new Image();let frameFallback=false;
+    this.ready=new Promise((resolve,reject)=>{
+      this.frame.onload=()=>{this.draw();this.texture.needsUpdate=true;resolve();};
+      this.frame.onerror=()=>{
+        if(!frameFallback){frameFallback=true;this.frame.src='assets/comics/mug-paper-frame.png';}
+        else reject(new Error('Не удалось загрузить кружку'));
+      };
+    });
+    this.ready.catch(()=>{});this.frame.src='assets/comics/mug-paper-frame.webp';
     this.pivot=new THREE.Group();
     this.mesh=new THREE.Mesh(new THREE.PlaneGeometry(1.12,1.4),new THREE.MeshBasicMaterial({map:this.texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
     this.mesh.scale.set(1,1,1);
@@ -3389,7 +3396,7 @@ class ComicsWorld {
         this.hazards.filter(h=>h.jetCard).forEach(h=>{h.jetCard.material.map.dispose();h.jetView=-1;});resolve();
       },undefined,()=>reject(Error('Аквабайк недоступен')));
     }),...this.hazards.filter(h=>h.fin).map(h=>new Promise((resolve,reject)=>{
-      new THREE.TextureLoader().load('assets/comics/shark-directions-sheet.png',texture=>{
+      new THREE.TextureLoader().load('assets/comics/shark-directions-sheet.webp',texture=>{
         texture.minFilter=THREE.LinearFilter;texture.generateMipmaps=false;texture.userData={directionAtlas:true};
         h.fin.material.map.dispose();h.fin.material.map=texture;resolve();
       },undefined,()=>reject(Error('Плавники недоступны')));
@@ -3648,7 +3655,13 @@ class ComicDirector {
     this.detail=document.getElementById('comic-detail');this.detailCtx=this.detail.getContext('2d');this.face=document.getElementById('comic-face-cutout');
     this.images={};this.sequence=0;
     this.ready=Promise.all(['crest','save','transfer'].map(variant=>new Promise((resolve,reject)=>{
-      const image=new Image();image.onload=()=>{this.images[variant]=image;resolve();};image.onerror=()=>reject(Error('Крупный план '+variant+' недоступен'));image.src='assets/comics/hero-'+variant+'-close.png';
+      const image=new Image();let fallback=false;
+      image.onload=()=>{this.images[variant]=image;resolve();};
+      image.onerror=()=>{
+        if(!fallback){fallback=true;image.src='assets/comics/hero-'+variant+'-close.png';}
+        else reject(Error('Крупный план '+variant+' недоступен'));
+      };
+      image.src='assets/comics/hero-'+variant+'-close.webp';
     })));
     this.ready.catch(error=>{this.error=error;});this.reset();
   }
@@ -3660,7 +3673,7 @@ class ComicDirector {
     if(this.game.reducedMotion){this.cooldown=8;this.game.moment(word,sub,false,1);return true;}
     this.active=this.pending=true;this.elapsed=0;this.timeScale=0;this.cooldown=8;
     document.getElementById('comic-word').textContent=word;document.getElementById('comic-caption').textContent=sub;
-    this.art.src=this.images[variant]?.src||'assets/comics/hero-crest-close.png';this.face.src=this.art.src;
+    this.art.src=this.images[variant]?.src||'assets/comics/hero-crest-close.webp';this.face.src=this.art.src;
     this.el.dataset.variant=variant;this.el.classList.toggle('reverse',this.sequence++%2===1);this.el.classList.add('visible');
     if(navigator.vibrate)navigator.vibrate([20,30,35]);this.game.audio.playSlam();return true;
   }
@@ -3992,36 +4005,42 @@ window.SurfOnboarding=SurfOnboarding;
 ;
 // Source: js/surf-journey.js
 /* Game carousels, two comic pages and launch. */
+const COMIC_TAIL_SVGS = {
+  'left': '<svg class="bubble-tail tail-left" viewBox="0 0 32 28" aria-hidden="true"><path d="M 30 2 C 20 6, 10 11, 0 14 C 10 17, 20 22, 30 26 Z" fill="var(--comic-paper)"/><path d="M 30 2 C 20 6, 10 11, 0 14 C 10 17, 20 22, 30 26" fill="none" stroke="var(--comic-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'left-high': '<svg class="bubble-tail tail-left-high" viewBox="0 0 32 26" aria-hidden="true"><path d="M 30 2 C 18 5, 9 6, 0 8 C 10 12, 20 17, 30 22 Z" fill="var(--comic-paper)"/><path d="M 30 2 C 18 5, 9 6, 0 8 C 10 12, 20 17, 30 22" fill="none" stroke="var(--comic-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'left-down': '<svg class="bubble-tail tail-left-down" viewBox="0 0 34 30" aria-hidden="true"><path d="M 32 2 C 22 7, 12 14, 2 20 C 14 20, 22 23, 32 28 Z" fill="var(--comic-paper)"/><path d="M 32 2 C 22 7, 12 14, 2 20 C 14 20, 22 23, 32 28" fill="none" stroke="var(--comic-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'down-right': '<svg class="bubble-tail tail-down-right" viewBox="0 0 32 30" aria-hidden="true"><path d="M 2 2 C 8 12, 17 20, 28 28 C 22 20, 18 10, 28 2 Z" fill="var(--comic-paper)"/><path d="M 2 2 C 8 12, 17 20, 28 28 C 22 20, 18 10, 28 2" fill="none" stroke="var(--comic-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'down-left-boris': '<svg class="bubble-tail tail-down-left-boris" viewBox="0 0 32 30" aria-hidden="true"><path d="M 4 2 C 10 11, 14 18, 24 28 C 18 19, 15 10, 26 2 Z" fill="var(--comic-paper)"/><path d="M 4 2 C 10 11, 14 18, 24 28 C 18 19, 15 10, 26 2" fill="none" stroke="var(--comic-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'down-crab': '<svg class="bubble-tail tail-down-crab" viewBox="0 0 32 30" aria-hidden="true"><path d="M 2 2 C 8 12, 16 19, 27 27 C 21 19, 18 10, 27 2 Z" fill="var(--comic-paper)"/><path d="M 2 2 C 8 12, 16 19, 27 27 C 21 19, 18 10, 27 2" fill="none" stroke="var(--comic-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+};
 class SurfJourney {
   constructor(game) {
     this.game=game;this.page=0;this.screen='start';this.heroIndex=this.locationIndex=0;
     this.screens=['start','setup','story'];
     this.heroes=[{name:'МАКС',available:true},{name:'ВИТЯ',available:false},{name:'СТАС',available:false}];
     this.locations=[{name:'БУХТА GARRET',available:true},{name:'СЕВЕРНЫЙ РИФ',available:false},{name:'НОЧНОЙ ПОРТ',available:false}];
-    this.storyVersion=new URLSearchParams(window.location.search).get('story')||'v4';
+    this.storyVersion=new URLSearchParams(window.location.search).get('story')||'v6';
     this.stories={
       v6:[
         {label:'Есть работа: смена в дальнем баре',panels:[
           {id:'cards',alt:'Макс и Борис скучают за картами на стойке бара Tony’s Garret'},
           {id:'job',alt:'Тони указывает на дальний бар и предлагает парням подработать',lines:[
-            {speaker:'Тони',line:'Парни, на дальнем\nпляже все пить хотят!'},
-            {speaker:'Тони',line:'Кто подработает\nв баре до закрытия?'}
+            {speaker:'Тони',line:'Парни, на дальнем\nпляже все пить хотят!\nКто подработает до закрытия?',tail:'left'}
           ]},
           {id:'wager',alt:'Макс и Борис скрепляют пари рукопожатием перед полными бокалами',lines:[
-            {speaker:'Борис',line:'Берёмся!'},
-            {speaker:'Макс',line:'Кто больше довезёт —\nза стойку!'},
-            {speaker:'Борис',line:'Проигравшему —\nуборка и посуда!'}
+            {speaker:'Макс',line:'По полному бокалу!\nКто не расплещет\nи довезёт больше\u00A0—\nправит баром!',tail:'down-right'},
+            {speaker:'Борис',line:'Принято!\nА\u00A0лузер моет\nвсю посуду!',tail:'down-left-boris'}
           ]}
         ]},
         {label:'До смены — по волнам',panels:[
           {id:'jetski-start',alt:'Борис садится на красно-белый аквабайк с бокалом в держателе',lines:[
-            {speaker:'Борис',line:'Готовься мыть\nстаканы!'}
+            {speaker:'Борис',line:'Готовься мыть\nстаканы!',tail:'left-down'}
           ]},
           {id:'umbrella-crab',alt:'Макс поднимает доску из тени зонта, краб Клешня держится за хвост',lines:[
-            {speaker:'Клешня',line:'Эй! Я тут\nотдыхал!'}
+            {speaker:'Клешня',line:'Эй! Я тут\nотдыхал!',tail:'down-crab'}
           ]},
           {id:'shift-launch',alt:'Макс на сёрфе и Борис на аквабайке мчатся по волнам на смену к дальнему пляжу',lines:[
-            {speaker:'Макс',line:'Держись, Клешня!\nНас ждут!'}
+            {speaker:'Макс',line:'Держись, Клешня!\nНас ждут!',tail:'left-high'}
           ],sound:'ПОГНАЛИ!'}
         ]}
       ],
@@ -4083,9 +4102,9 @@ class SurfJourney {
     });
     if(new URLSearchParams(window.location.search).has('comic'))this.open('story');
   }
-  get story(){return this.stories[this.storyVersion]||this.stories.v4;}
+  get story(){return this.stories[this.storyVersion]||this.stories.v6;}
   toggleStoryVersion(){
-    this.storyVersion=this.storyVersion==='v4'?'v6':'v4';
+    this.storyVersion=this.storyVersion==='v6'?'v4':'v6';
     this.comicImages.clear();
     this.updateStoryToggleUI();
     this.renderStory();
@@ -4123,7 +4142,7 @@ class SurfJourney {
   }
   home(){this.game.audio.stopBGM();this.game.reset();this.game.renderMenuMeta();['pause-screen','result-screen','share-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));this.open('start');this.game.audio.startBGM();}
   loadComicImage(id){
-    const version=this.storyVersion||'v4';
+    const version=this.storyVersion||'v6';
     const key=id+'-'+version;
     if(this.comicImages.has(key))return this.comicImages.get(key);
     const actualVersion=(version==='v4'&&id==='shark')?'v5':version;
@@ -4157,10 +4176,14 @@ class SurfJourney {
       if(p.lines&&p.lines.length){
         p.lines.forEach((l,idx)=>{
           const bubble=document.createElement('p');bubble.className='comic-bubble comic-bubble-'+(idx+1)+(l.speaker?' speaker-'+l.speaker.toLowerCase():'');
-          bubble.textContent=l.line;bubble.setAttribute('aria-label',(l.speaker?l.speaker+': ':'')+l.line.replace(/\n/g,' '));panel.append(bubble);
+          bubble.textContent=l.line;bubble.setAttribute('aria-label',(l.speaker?l.speaker+': ':'')+l.line.replace(/\n/g,' '));
+          if(l.tail&&COMIC_TAIL_SVGS[l.tail]){bubble.classList.add('has-svg-tail');bubble.insertAdjacentHTML('beforeend',COMIC_TAIL_SVGS[l.tail]);}
+          panel.append(bubble);
         });
       }else if(p.line){
-        const bubble=document.createElement('p');bubble.className='comic-bubble'+(p.embeddedDialogue?' comic-bubble-embedded':'');bubble.textContent=p.line;bubble.setAttribute('aria-label',(p.speaker?p.speaker+': ':'')+p.line.replace(/\n/g,' '));panel.append(bubble);
+        const bubble=document.createElement('p');bubble.className='comic-bubble'+(p.embeddedDialogue?' comic-bubble-embedded':'');bubble.textContent=p.line;bubble.setAttribute('aria-label',(p.speaker?p.speaker+': ':'')+p.line.replace(/\n/g,' '));
+        if(p.tail&&COMIC_TAIL_SVGS[p.tail]){bubble.classList.add('has-svg-tail');bubble.insertAdjacentHTML('beforeend',COMIC_TAIL_SVGS[p.tail]);}
+        panel.append(bubble);
       }
       if(p.sound){const sound=document.createElement('span');sound.className='comic-sfx';sound.textContent=p.sound;panel.append(sound);}
       book.append(panel);
@@ -5343,7 +5366,9 @@ class RivalCast {
     ];
     const loader=new THREE.TextureLoader();
     this.ready=Promise.all(this.profiles.map(profile=>new Promise((resolve,reject)=>{
-      loader.load('assets/comics/'+(profile.file||'rival-'+profile.id+'.png'),texture=>{
+      const fileName=profile.file||('rival-'+profile.id+'.png');
+      const webpName=fileName.replace(/\.png$/,'.webp');
+      const onLoaded=texture=>{
         texture.minFilter=THREE.LinearFilter;texture.generateMipmaps=false;
         const image=texture.image,canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;
         const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);const pixels=ctx.getImageData(0,0,image.width,image.height).data;
@@ -5363,7 +5388,10 @@ class RivalCast {
         }
         if(profile.parts)Object.assign(profile,{texture:cutouts[0].texture,width:cutouts[0].width,foot:cutouts[0].foot,contacts:cutouts[0].contacts});
         resolve();
-      },undefined,()=>reject(Error('Не удалось загрузить соперника '+profile.id)));
+      };
+      loader.load('assets/comics/'+webpName,onLoaded,undefined,()=>{
+        loader.load('assets/comics/'+fileName,onLoaded,undefined,()=>reject(Error('Не удалось загрузить соперника '+profile.id)));
+      });
     })));
     this.ready.catch(()=>{});
   }
@@ -7273,9 +7301,13 @@ class SkyAdvertiser {
     const ropeGeometry=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(9*3),3));
     this.rope=new THREE.Line(ropeGeometry,new THREE.LineBasicMaterial({color:0xded8ba,transparent:true,opacity:.72,fog:false,depthWrite:false}));this.group.add(this.rope);
     this.ready=Promise.all([
-      new Promise((resolve,reject)=>new THREE.TextureLoader().load('assets/comics/seaplane-lime-v3.png',texture=>{
-        this.fitAircraft(texture);this.aircraft.material.map=texture;this.aircraft.material.needsUpdate=true;resolve();
-      },undefined,()=>reject(new Error('Не удалось загрузить дальний самолёт')))),
+      new Promise((resolve,reject)=>{
+        const onLoaded=texture=>{this.fitAircraft(texture);this.aircraft.material.map=texture;this.aircraft.material.needsUpdate=true;resolve();};
+        const loader=new THREE.TextureLoader();
+        loader.load('assets/comics/seaplane-lime-v3.webp',onLoaded,undefined,()=>{
+          loader.load('assets/comics/seaplane-lime-v3.png',onLoaded,undefined,()=>reject(new Error('Не удалось загрузить дальний самолёт')));
+        });
+      }),
       new Promise((resolve,reject)=>new THREE.ImageLoader().load('assets/comics/baltika-logo-reference.png',logo=>{
         this.banner.material.map=this.makeBanner(logo);this.banner.material.needsUpdate=true;resolve();
       },undefined,()=>reject(new Error('Не удалось загрузить логотип Балтики'))))

@@ -15,9 +15,13 @@ class SkyAdvertiser {
     const ropeGeometry=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(9*3),3));
     this.rope=new THREE.Line(ropeGeometry,new THREE.LineBasicMaterial({color:0xded8ba,transparent:true,opacity:.72,fog:false,depthWrite:false}));this.group.add(this.rope);
     this.ready=Promise.all([
-      new Promise((resolve,reject)=>new THREE.TextureLoader().load('assets/comics/seaplane-lime-v3.png',texture=>{
-        this.fitAircraft(texture);this.aircraft.material.map=texture;this.aircraft.material.needsUpdate=true;resolve();
-      },undefined,()=>reject(new Error('Не удалось загрузить дальний самолёт')))),
+      new Promise((resolve,reject)=>{
+        const onLoaded=texture=>{this.fitAircraft(texture);this.aircraft.material.map=texture;this.aircraft.material.needsUpdate=true;resolve();};
+        const loader=new THREE.TextureLoader();
+        loader.load('assets/comics/seaplane-lime-v3.webp',onLoaded,undefined,()=>{
+          loader.load('assets/comics/seaplane-lime-v3.png',onLoaded,undefined,()=>reject(new Error('Не удалось загрузить дальний самолёт')));
+        });
+      }),
       new Promise((resolve,reject)=>new THREE.ImageLoader().load('assets/comics/baltika-logo-reference.png',logo=>{
         this.banner.material.map=this.makeBanner(logo);this.banner.material.needsUpdate=true;resolve();
       },undefined,()=>reject(new Error('Не удалось загрузить логотип Балтики'))))

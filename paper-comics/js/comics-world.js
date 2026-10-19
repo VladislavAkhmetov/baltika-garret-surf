@@ -20,7 +20,7 @@ class ComicsWorld {
         this.hazards.filter(h=>h.jetCard).forEach(h=>{h.jetCard.material.map.dispose();h.jetView=-1;});resolve();
       },undefined,()=>reject(Error('Аквабайк недоступен')));
     }),...this.hazards.filter(h=>h.fin).map(h=>new Promise((resolve,reject)=>{
-      new THREE.TextureLoader().load('assets/comics/shark-directions-sheet.png',texture=>{
+      new THREE.TextureLoader().load('assets/comics/shark-directions-sheet.webp',texture=>{
         texture.minFilter=THREE.LinearFilter;texture.generateMipmaps=false;texture.userData={directionAtlas:true};
         h.fin.material.map.dispose();h.fin.material.map=texture;resolve();
       },undefined,()=>reject(Error('Плавники недоступны')));
@@ -279,7 +279,13 @@ class ComicDirector {
     this.detail=document.getElementById('comic-detail');this.detailCtx=this.detail.getContext('2d');this.face=document.getElementById('comic-face-cutout');
     this.images={};this.sequence=0;
     this.ready=Promise.all(['crest','save','transfer'].map(variant=>new Promise((resolve,reject)=>{
-      const image=new Image();image.onload=()=>{this.images[variant]=image;resolve();};image.onerror=()=>reject(Error('Крупный план '+variant+' недоступен'));image.src='assets/comics/hero-'+variant+'-close.png';
+      const image=new Image();let fallback=false;
+      image.onload=()=>{this.images[variant]=image;resolve();};
+      image.onerror=()=>{
+        if(!fallback){fallback=true;image.src='assets/comics/hero-'+variant+'-close.png';}
+        else reject(Error('Крупный план '+variant+' недоступен'));
+      };
+      image.src='assets/comics/hero-'+variant+'-close.webp';
     })));
     this.ready.catch(error=>{this.error=error;});this.reset();
   }
@@ -291,7 +297,7 @@ class ComicDirector {
     if(this.game.reducedMotion){this.cooldown=8;this.game.moment(word,sub,false,1);return true;}
     this.active=this.pending=true;this.elapsed=0;this.timeScale=0;this.cooldown=8;
     document.getElementById('comic-word').textContent=word;document.getElementById('comic-caption').textContent=sub;
-    this.art.src=this.images[variant]?.src||'assets/comics/hero-crest-close.png';this.face.src=this.art.src;
+    this.art.src=this.images[variant]?.src||'assets/comics/hero-crest-close.webp';this.face.src=this.art.src;
     this.el.dataset.variant=variant;this.el.classList.toggle('reverse',this.sequence++%2===1);this.el.classList.add('visible');
     if(navigator.vibrate)navigator.vibrate([20,30,35]);this.game.audio.playSlam();return true;
   }

@@ -13,7 +13,9 @@ class RivalCast {
     ];
     const loader=new THREE.TextureLoader();
     this.ready=Promise.all(this.profiles.map(profile=>new Promise((resolve,reject)=>{
-      loader.load('assets/comics/'+(profile.file||'rival-'+profile.id+'.png'),texture=>{
+      const fileName=profile.file||('rival-'+profile.id+'.png');
+      const webpName=fileName.replace(/\.png$/,'.webp');
+      const onLoaded=texture=>{
         texture.minFilter=THREE.LinearFilter;texture.generateMipmaps=false;
         const image=texture.image,canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;
         const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);const pixels=ctx.getImageData(0,0,image.width,image.height).data;
@@ -33,7 +35,10 @@ class RivalCast {
         }
         if(profile.parts)Object.assign(profile,{texture:cutouts[0].texture,width:cutouts[0].width,foot:cutouts[0].foot,contacts:cutouts[0].contacts});
         resolve();
-      },undefined,()=>reject(Error('Не удалось загрузить соперника '+profile.id)));
+      };
+      loader.load('assets/comics/'+webpName,onLoaded,undefined,()=>{
+        loader.load('assets/comics/'+fileName,onLoaded,undefined,()=>reject(Error('Не удалось загрузить соперника '+profile.id)));
+      });
     })));
     this.ready.catch(()=>{});
   }

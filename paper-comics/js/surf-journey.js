@@ -1,34 +1,40 @@
 /* Game carousels, two comic pages and launch. */
+const COMIC_TAIL_SVGS = {
+  'left': '<svg class="bubble-tail tail-left" viewBox="0 0 32 28" aria-hidden="true"><path d="M 30 2 C 20 6, 10 11, 0 14 C 10 17, 20 22, 30 26 Z" fill="var(--comic-paper)"/><path d="M 30 2 C 20 6, 10 11, 0 14 C 10 17, 20 22, 30 26" fill="none" stroke="var(--comic-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'left-high': '<svg class="bubble-tail tail-left-high" viewBox="0 0 32 26" aria-hidden="true"><path d="M 30 2 C 18 5, 9 6, 0 8 C 10 12, 20 17, 30 22 Z" fill="var(--comic-paper)"/><path d="M 30 2 C 18 5, 9 6, 0 8 C 10 12, 20 17, 30 22" fill="none" stroke="var(--comic-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'left-down': '<svg class="bubble-tail tail-left-down" viewBox="0 0 34 30" aria-hidden="true"><path d="M 32 2 C 22 7, 12 14, 2 20 C 14 20, 22 23, 32 28 Z" fill="var(--comic-paper)"/><path d="M 32 2 C 22 7, 12 14, 2 20 C 14 20, 22 23, 32 28" fill="none" stroke="var(--comic-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'down-right': '<svg class="bubble-tail tail-down-right" viewBox="0 0 32 30" aria-hidden="true"><path d="M 2 2 C 8 12, 17 20, 28 28 C 22 20, 18 10, 28 2 Z" fill="var(--comic-paper)"/><path d="M 2 2 C 8 12, 17 20, 28 28 C 22 20, 18 10, 28 2" fill="none" stroke="var(--comic-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'down-left-boris': '<svg class="bubble-tail tail-down-left-boris" viewBox="0 0 32 30" aria-hidden="true"><path d="M 4 2 C 10 11, 14 18, 24 28 C 18 19, 15 10, 26 2 Z" fill="var(--comic-paper)"/><path d="M 4 2 C 10 11, 14 18, 24 28 C 18 19, 15 10, 26 2" fill="none" stroke="var(--comic-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'down-crab': '<svg class="bubble-tail tail-down-crab" viewBox="0 0 32 30" aria-hidden="true"><path d="M 2 2 C 8 12, 16 19, 27 27 C 21 19, 18 10, 27 2 Z" fill="var(--comic-paper)"/><path d="M 2 2 C 8 12, 16 19, 27 27 C 21 19, 18 10, 27 2" fill="none" stroke="var(--comic-ink)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+};
 class SurfJourney {
   constructor(game) {
     this.game=game;this.page=0;this.screen='start';this.heroIndex=this.locationIndex=0;
     this.screens=['start','setup','story'];
     this.heroes=[{name:'МАКС',available:true},{name:'ВИТЯ',available:false},{name:'СТАС',available:false}];
     this.locations=[{name:'БУХТА GARRET',available:true},{name:'СЕВЕРНЫЙ РИФ',available:false},{name:'НОЧНОЙ ПОРТ',available:false}];
-    this.storyVersion=new URLSearchParams(window.location.search).get('story')||'v4';
+    this.storyVersion=new URLSearchParams(window.location.search).get('story')||'v6';
     this.stories={
       v6:[
         {label:'Есть работа: смена в дальнем баре',panels:[
           {id:'cards',alt:'Макс и Борис скучают за картами на стойке бара Tony’s Garret'},
           {id:'job',alt:'Тони указывает на дальний бар и предлагает парням подработать',lines:[
-            {speaker:'Тони',line:'Парни, на дальнем\nпляже все пить хотят!'},
-            {speaker:'Тони',line:'Кто подработает\nв баре до закрытия?'}
+            {speaker:'Тони',line:'Парни, на дальнем\nпляже все пить хотят!\nКто подработает до закрытия?',tail:'left'}
           ]},
           {id:'wager',alt:'Макс и Борис скрепляют пари рукопожатием перед полными бокалами',lines:[
-            {speaker:'Борис',line:'Берёмся!'},
-            {speaker:'Макс',line:'Кто больше довезёт —\nза стойку!'},
-            {speaker:'Борис',line:'Проигравшему —\nуборка и посуда!'}
+            {speaker:'Макс',line:'По полному бокалу!\nКто не расплещет\nи довезёт больше\u00A0—\nправит баром!',tail:'down-right'},
+            {speaker:'Борис',line:'Принято!\nА\u00A0лузер моет\nвсю посуду!',tail:'down-left-boris'}
           ]}
         ]},
         {label:'До смены — по волнам',panels:[
           {id:'jetski-start',alt:'Борис садится на красно-белый аквабайк с бокалом в держателе',lines:[
-            {speaker:'Борис',line:'Готовься мыть\nстаканы!'}
+            {speaker:'Борис',line:'Готовься мыть\nстаканы!',tail:'left-down'}
           ]},
           {id:'umbrella-crab',alt:'Макс поднимает доску из тени зонта, краб Клешня держится за хвост',lines:[
-            {speaker:'Клешня',line:'Эй! Я тут\nотдыхал!'}
+            {speaker:'Клешня',line:'Эй! Я тут\nотдыхал!',tail:'down-crab'}
           ]},
           {id:'shift-launch',alt:'Макс на сёрфе и Борис на аквабайке мчатся по волнам на смену к дальнему пляжу',lines:[
-            {speaker:'Макс',line:'Держись, Клешня!\nНас ждут!'}
+            {speaker:'Макс',line:'Держись, Клешня!\nНас ждут!',tail:'left-high'}
           ],sound:'ПОГНАЛИ!'}
         ]}
       ],
@@ -90,9 +96,9 @@ class SurfJourney {
     });
     if(new URLSearchParams(window.location.search).has('comic'))this.open('story');
   }
-  get story(){return this.stories[this.storyVersion]||this.stories.v4;}
+  get story(){return this.stories[this.storyVersion]||this.stories.v6;}
   toggleStoryVersion(){
-    this.storyVersion=this.storyVersion==='v4'?'v6':'v4';
+    this.storyVersion=this.storyVersion==='v6'?'v4':'v6';
     this.comicImages.clear();
     this.updateStoryToggleUI();
     this.renderStory();
@@ -130,7 +136,7 @@ class SurfJourney {
   }
   home(){this.game.audio.stopBGM();this.game.reset();this.game.renderMenuMeta();['pause-screen','result-screen','share-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));this.open('start');this.game.audio.startBGM();}
   loadComicImage(id){
-    const version=this.storyVersion||'v4';
+    const version=this.storyVersion||'v6';
     const key=id+'-'+version;
     if(this.comicImages.has(key))return this.comicImages.get(key);
     const actualVersion=(version==='v4'&&id==='shark')?'v5':version;
@@ -164,10 +170,14 @@ class SurfJourney {
       if(p.lines&&p.lines.length){
         p.lines.forEach((l,idx)=>{
           const bubble=document.createElement('p');bubble.className='comic-bubble comic-bubble-'+(idx+1)+(l.speaker?' speaker-'+l.speaker.toLowerCase():'');
-          bubble.textContent=l.line;bubble.setAttribute('aria-label',(l.speaker?l.speaker+': ':'')+l.line.replace(/\n/g,' '));panel.append(bubble);
+          bubble.textContent=l.line;bubble.setAttribute('aria-label',(l.speaker?l.speaker+': ':'')+l.line.replace(/\n/g,' '));
+          if(l.tail&&COMIC_TAIL_SVGS[l.tail]){bubble.classList.add('has-svg-tail');bubble.insertAdjacentHTML('beforeend',COMIC_TAIL_SVGS[l.tail]);}
+          panel.append(bubble);
         });
       }else if(p.line){
-        const bubble=document.createElement('p');bubble.className='comic-bubble'+(p.embeddedDialogue?' comic-bubble-embedded':'');bubble.textContent=p.line;bubble.setAttribute('aria-label',(p.speaker?p.speaker+': ':'')+p.line.replace(/\n/g,' '));panel.append(bubble);
+        const bubble=document.createElement('p');bubble.className='comic-bubble'+(p.embeddedDialogue?' comic-bubble-embedded':'');bubble.textContent=p.line;bubble.setAttribute('aria-label',(p.speaker?p.speaker+': ':'')+p.line.replace(/\n/g,' '));
+        if(p.tail&&COMIC_TAIL_SVGS[p.tail]){bubble.classList.add('has-svg-tail');bubble.insertAdjacentHTML('beforeend',COMIC_TAIL_SVGS[p.tail]);}
+        panel.append(bubble);
       }
       if(p.sound){const sound=document.createElement('span');sound.className='comic-sfx';sound.textContent=p.sound;panel.append(sound);}
       book.append(panel);

@@ -11,8 +11,9 @@ class PaperWave {
     const loader=new THREE.TextureLoader();
     let resolveWater,rejectWater;
     this.ready=new Promise((resolve,reject)=>{resolveWater=resolve;rejectWater=reject;});
-    this.ready.catch(()=>{});
-    const texture = loader.load('assets/comics/water-surface-v5.png',resolveWater,undefined,()=>rejectWater(Error('Не удалось загрузить воду')));
+    const texture = loader.load('assets/comics/water-surface-v5.webp',resolveWater,undefined,()=>{
+      loader.load('assets/comics/water-surface-v5.png',resolveWater,undefined,()=>rejectWater(Error('Не удалось загрузить воду')));
+    });
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(1, 1);
     texture.anisotropy = 4;

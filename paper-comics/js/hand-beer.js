@@ -17,9 +17,15 @@ class HandBeer {
     this.game=game;this.liquid=game.mug;this.roll=0;this.rollVelocity=0;this.drops=[];this.printFrame=-1;
     this.canvas=document.createElement('canvas');this.canvas.width=384;this.canvas.height=480;this.ctx=this.canvas.getContext('2d');
     this.texture=new THREE.CanvasTexture(this.canvas);this.texture.minFilter=THREE.LinearFilter;this.texture.generateMipmaps=false;
-    this.frame=new Image();
-    this.ready=new Promise((resolve,reject)=>{this.frame.onload=()=>{this.draw();this.texture.needsUpdate=true;resolve();};this.frame.onerror=()=>reject(new Error('Не удалось загрузить кружку'));});
-    this.ready.catch(()=>{});this.frame.src='assets/comics/mug-paper-frame.png';
+    this.frame=new Image();let frameFallback=false;
+    this.ready=new Promise((resolve,reject)=>{
+      this.frame.onload=()=>{this.draw();this.texture.needsUpdate=true;resolve();};
+      this.frame.onerror=()=>{
+        if(!frameFallback){frameFallback=true;this.frame.src='assets/comics/mug-paper-frame.png';}
+        else reject(new Error('Не удалось загрузить кружку'));
+      };
+    });
+    this.ready.catch(()=>{});this.frame.src='assets/comics/mug-paper-frame.webp';
     this.pivot=new THREE.Group();
     this.mesh=new THREE.Mesh(new THREE.PlaneGeometry(1.12,1.4),new THREE.MeshBasicMaterial({map:this.texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
     this.mesh.scale.set(1,1,1);
