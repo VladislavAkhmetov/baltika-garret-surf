@@ -14,7 +14,10 @@ class SkyAdvertiser {
     this.banner.name='baltika-tow-banner';this.group.add(this.banner);
     const ropeGeometry=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(9*3),3));
     this.rope=new THREE.Line(ropeGeometry,new THREE.LineBasicMaterial({color:0xded8ba,transparent:true,opacity:.72,fog:false,depthWrite:false}));this.group.add(this.rope);
-    this.ready=Promise.all([
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    this._readyPromise=Promise.all([
       new Promise((resolve,reject)=>{
         const onLoaded=texture=>{this.fitAircraft(texture);this.aircraft.material.map=texture;this.aircraft.material.needsUpdate=true;resolve();};
         const loader=new THREE.TextureLoader();
@@ -25,8 +28,15 @@ class SkyAdvertiser {
       new Promise((resolve,reject)=>new THREE.ImageLoader().load('assets/comics/baltika-logo-reference.png',logo=>{
         this.banner.material.map=this.makeBanner(logo);this.banner.material.needsUpdate=true;resolve();
       },undefined,()=>reject(new Error('Не удалось загрузить логотип Балтики'))))
-    ]).then(()=>{this.group.visible=true;this.update();game.renderDirty=true;});
-    this.ready.catch(()=>{});
+    ]).then(()=>{this.group.visible=true;this.update();this.game.renderDirty=true;});
+    this._readyPromise.catch(()=>{});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   fitAircraft(texture){
     const image=texture.image,canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;

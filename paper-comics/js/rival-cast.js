@@ -11,8 +11,11 @@ class RivalCast {
       {id:'couple',file:'rival-couple-tandem-v4.png',name:'МИША И НИКА',kind:'wobbly',color:0xd7f3ee,height:3.2,line:'МЫ НА ОДНОЙ ВОЛНЕ!',couple:true,
         parts:[{half:0,height:3.2,soles:[[242,825],[620,857]],deckX:-.17,deckY:-1},{half:1,height:3.55,soles:[[1275,824],[1544,858]],deckX:.17,deckY:1}]}
     ];
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
     const loader=new THREE.TextureLoader();
-    this.ready=Promise.all(this.profiles.map(profile=>new Promise((resolve,reject)=>{
+    this._readyPromise=Promise.all(this.profiles.map(profile=>new Promise((resolve,reject)=>{
       const fileName=profile.file||('rival-'+profile.id+'.png');
       const webpName=fileName.replace(/\.png$/,'.webp');
       const onLoaded=texture=>{
@@ -40,7 +43,14 @@ class RivalCast {
         loader.load('assets/comics/'+fileName,onLoaded,undefined,()=>reject(Error('Не удалось загрузить соперника '+profile.id)));
       });
     })));
-    this.ready.catch(()=>{});
+    this._readyPromise.catch(()=>{});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   reset(){
     const start=((Math.max(1,this.run)-1)%2)*2;

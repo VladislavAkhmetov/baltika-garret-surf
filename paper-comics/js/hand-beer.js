@@ -17,25 +17,35 @@ class HandBeer {
     this.game=game;this.liquid=game.mug;this.roll=0;this.rollVelocity=0;this.drops=[];this.printFrame=-1;
     this.canvas=document.createElement('canvas');this.canvas.width=384;this.canvas.height=480;this.ctx=this.canvas.getContext('2d');
     this.texture=new THREE.CanvasTexture(this.canvas);this.texture.minFilter=THREE.LinearFilter;this.texture.generateMipmaps=false;
-    this.frame=new Image();let frameFallback=false;
-    this.ready=new Promise((resolve,reject)=>{
+    this.frame=new Image();
+    this.pivot=new THREE.Group();
+    this.mesh=new THREE.Mesh(new THREE.PlaneGeometry(1.12,1.4),new THREE.MeshBasicMaterial({map:this.texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
+    this.mesh.scale.set(1,1,1);
+    this.gripCanvas={x:332,y:230};
+    this.mesh.position.set((.5-this.gripCanvas.x/384)*1.12,(this.gripCanvas.y/480-.5)*1.4,-.015);
+    this.mesh.renderOrder=2;this.pivot.add(this.mesh);game.player.card.add(this.pivot);
+    this.liquid.addSpillListener((side,amount)=>this.emit(side,amount));
+    this.reset();
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    let frameFallback=false;
+    this._readyPromise=new Promise((resolve,reject)=>{
       this.frame.onload=()=>{this.draw();this.texture.needsUpdate=true;resolve();};
       this.frame.onerror=()=>{
         if(!frameFallback){frameFallback=true;this.frame.src='assets/comics/mug-paper-frame.png';}
         else reject(new Error('Не удалось загрузить кружку'));
       };
     });
-    this.ready.catch(()=>{});this.frame.src='assets/comics/mug-paper-frame.webp';
-    this.pivot=new THREE.Group();
-    this.mesh=new THREE.Mesh(new THREE.PlaneGeometry(1.12,1.4),new THREE.MeshBasicMaterial({map:this.texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
-    this.mesh.scale.set(1,1,1);
-    // Rear view: glass to the left of the right hand, handle to its right.
-    // Rotate at the gripped handle bar, not the centre of the glass.
-    this.gripCanvas={x:332,y:230};
-    this.mesh.position.set((.5-this.gripCanvas.x/384)*1.12,(this.gripCanvas.y/480-.5)*1.4,-.015);
-    this.mesh.renderOrder=2;this.pivot.add(this.mesh);game.player.card.add(this.pivot);
-    this.liquid.addSpillListener((side,amount)=>this.emit(side,amount));
-    this.reset();
+    this._readyPromise.catch(()=>{});
+    this.frame.src='assets/comics/mug-paper-frame.webp';
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   reset(){this.roll=0;this.rollVelocity=0;this.drops=[];this.spillBudget=0;this.printFrame=-1;this.peakSlosh=0;this.draw();}
   emit(side,amount){

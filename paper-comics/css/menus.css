@@ -84,6 +84,7 @@
 }
 .title-screen::before {
   display: none !important;
+  background-image: none !important;
 }
 
 .title-poster-stage {

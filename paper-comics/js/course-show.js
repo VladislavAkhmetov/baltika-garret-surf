@@ -14,9 +14,36 @@ class CourseShow {
     ];
     this.colors={sky:new THREE.Color(),fog:new THREE.Color(),deep:new THREE.Color(),clear:new THREE.Color()};
     this.colorA=new THREE.Color();this.colorB=new THREE.Color();
-    this.assets=[];this.textureCache=new Map();this.makePromenade();this.makeGates();this.makeHarbor();this.makeBar();
-    this.ready=Promise.all(this.assets);this.ready.catch(()=>{});
+    this.assets=[];this.cutoutTasks=[];this.textureCache=new Map();this.makePromenade();this.makeGates();this.makeHarbor();this.makeBar();
     this.mount();this.reset();
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    const loader = new THREE.TextureLoader();
+    const promises = (this.cutoutTasks || []).map(task => {
+      const file = task.file;
+      if (!this.textureCache.has(file)) {
+        this.textureCache.set(file, new Promise((resolve, reject) => {
+          loader.load('assets/comics/' + file.replace(/\.png$/, '.webp'), resolve, undefined, () => {
+            loader.load('assets/comics/' + file, resolve, undefined, () => reject(Error('Не удалось загрузить декорацию ' + file)));
+          });
+        }));
+      }
+      return this.textureCache.get(file).then(texture => {
+        task.material.map = texture;
+        task.material.needsUpdate = true;
+        this.game.renderDirty = true;
+      });
+    });
+    this._readyPromise = Promise.all(promises);
+    this._readyPromise.catch(() => {});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   ink(color){if(!this.materials.has(color))this.materials.set(color,this.game.trickRoute.makeInk(color));return this.materials.get(color);}
   box(parent,x,y,z,w,h,d,color){
@@ -30,8 +57,7 @@ class CourseShow {
   cutout(file,parent,x,y,z,width,height){
     const material=new THREE.SpriteMaterial({transparent:true,alphaTest:.12,depthWrite:false,fog:true});
     const mesh=new THREE.Sprite(material);mesh.center.set(.5,0);mesh.position.set(x,y,z);mesh.scale.set(width,height,1);parent.add(mesh);
-    if(!this.textureCache.has(file))this.textureCache.set(file,new Promise((resolve,reject)=>new THREE.TextureLoader().load('assets/comics/'+file.replace(/\.png$/,'.webp'),resolve,undefined,()=>new THREE.TextureLoader().load('assets/comics/'+file,resolve,undefined,()=>reject(Error('Не удалось загрузить декорацию '+file))))));
-    this.assets.push(this.textureCache.get(file).then(texture=>{material.map=texture;material.needsUpdate=true;this.game.renderDirty=true;}));
+    this.cutoutTasks.push({file, material});
     return mesh;
   }
   pennants(parent,from,to,y,z,count=12){

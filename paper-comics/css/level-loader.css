@@ -1,0 +1,200 @@
+/* Level preloader screen between comic and 3D gameplay */
+.level-loader-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 28;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f4ebd4;
+  overflow: hidden;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+
+.level-loader-screen.hidden {
+  display: none !important;
+}
+
+.level-loader-screen.fade-out {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.loader-backdrop {
+  position: absolute;
+  inset: 0;
+  background: url('../assets/sprites/sky-paper-grain.svg') center / 180px 180px;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.loader-stage {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  max-width: 440px;
+  padding: max(20px, calc(env(safe-area-inset-top) + 12px)) 20px max(24px, calc(env(safe-area-inset-bottom) + 12px));
+  box-sizing: border-box;
+}
+
+.loader-art {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  min-height: 180px;
+  max-height: 52vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.loader-sun {
+  position: absolute;
+  width: min(75vw, 280px);
+  aspect-ratio: 1;
+  top: 12%;
+  left: 50%;
+  transform: translateX(-50%) rotate(-6deg);
+  background: #ffc43d url('../assets/sprites/sky-paper-grain.svg') center / 160px 160px;
+  -webkit-mask: url('../assets/sprites/sky-paper-disc.svg') center / 100% 100% no-repeat;
+  mask: url('../assets/sprites/sky-paper-disc.svg') center / 100% 100% no-repeat;
+  opacity: 0.95;
+}
+
+.loader-wave {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 120%;
+  max-width: 420px;
+  transform: translateX(-50%);
+  object-fit: contain;
+  z-index: 2;
+  filter: drop-shadow(2px 5px 3px rgba(25, 59, 68, 0.22));
+  animation: waveRock 2.6s ease-in-out infinite alternate;
+}
+
+.loader-hero {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  width: 150px;
+  height: auto;
+  transform: translateX(-50%);
+  z-index: 3;
+  filter: drop-shadow(3px 6px 2px rgba(25, 59, 68, 0.25));
+  animation: heroRide 2.6s ease-in-out infinite alternate;
+}
+
+@keyframes waveRock {
+  0% {
+    transform: translateX(-50%) translateY(0) rotate(-1.5deg) scale(1);
+  }
+  100% {
+    transform: translateX(-50%) translateY(-10px) rotate(1.8deg) scale(1.02);
+  }
+}
+
+@keyframes heroRide {
+  0% {
+    transform: translateX(-48%) translateY(0) rotate(-2deg);
+  }
+  100% {
+    transform: translateX(-52%) translateY(-12px) rotate(3deg);
+  }
+}
+
+.loader-card {
+  position: relative;
+  z-index: 4;
+  width: 100%;
+  padding: 22px 20px 22px;
+  background: #fffdf8 url('../assets/comics/paper-panel-v2.webp') center / cover;
+  clip-path: var(--paper-edge);
+  filter: drop-shadow(2px 4px 1px rgba(20, 59, 75, 0.28));
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.loader-title {
+  margin: 0 0 16px;
+  font-family: 'Russo One', Impact, sans-serif;
+  font-size: clamp(22px, 6.2cqw, 30px);
+  line-height: 1.18;
+  color: #173842;
+  letter-spacing: -0.02em;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-shadow: 1px 2px 0 rgba(255, 255, 255, 0.8);
+  transform: rotate(-1deg);
+}
+
+.loader-title.pop {
+  animation: titlePop 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.2);
+}
+
+@keyframes titlePop {
+  0% {
+    transform: scale(0.92) rotate(-2.5deg);
+    opacity: 0.5;
+  }
+  60% {
+    transform: scale(1.04) rotate(1.5deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(-1deg);
+    opacity: 1;
+  }
+}
+
+.loader-bar-wrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.loader-bar-track {
+  width: 100%;
+  height: 20px;
+  background: #dbd2be;
+  border: 2.5px solid #1a3c46;
+  border-radius: 14px;
+  padding: 2.5px;
+  box-sizing: border-box;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.loader-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #f56e38 0%, #ffb627 100%);
+  border-radius: 9px;
+  transition: width 0.22s cubic-bezier(0.2, 0.9, 0.4, 1);
+}
+
+.loader-percent-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.loader-percent {
+  font-family: 'Russo One', Impact, sans-serif;
+  font-size: 16px;
+  color: #cf5630;
+  letter-spacing: 0.5px;
+}

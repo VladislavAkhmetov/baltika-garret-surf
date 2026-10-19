@@ -173,6 +173,27 @@
       <nav class="comic-nav" aria-label="Страницы комикса"><button id="story-next" class="yellow-button" data-primary>ДАЛЬШЕ →</button></nav>
       <p id="story-error" class="story-error paper hidden" role="alert"></p>
     </section>
+    <section id="loader-screen" class="screen journey menu-screen level-loader-screen hidden" aria-label="Загрузка уровня" role="status">
+      <div class="loader-backdrop"></div>
+      <div class="loader-stage">
+        <div class="loader-art" aria-hidden="true">
+          <div class="loader-sun"></div>
+          <img class="loader-wave" src="assets/comics/level-wave-cutout.webp" onerror="this.onerror=null;this.src='assets/comics/wave-swell-cutout-v5.webp'" alt="">
+          <img class="loader-hero" src="assets/comics/hero-crest-close.webp" alt="">
+        </div>
+        <div class="loader-card paper">
+          <h2 class="loader-title" id="loader-title">РИСУЕМ ВОЛНУ…</h2>
+          <div class="loader-bar-wrap">
+            <div class="loader-bar-track">
+              <div class="loader-bar-fill" id="loader-progress-bar" style="width: 0%;"></div>
+            </div>
+            <div class="loader-percent-wrap">
+              <span class="loader-percent" id="loader-percent">0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
     <section id="pause-screen" class="screen hidden" role="dialog" aria-modal="true" aria-labelledby="pause-title">
       <div class="pause-card">
         <header class="pause-heading"><span class="eyebrow">Ⅱ ПАУЗА</span><h2 id="pause-title">ВЫДОХНИ.</h2></header>

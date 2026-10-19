@@ -29,7 +29,7 @@ class SurfJump {
     this.trickKind=this.canSpecial?'flip':this.takeoffRamp?.type==='side'?'cork':'spin';this.spinStarted=true;this.spinRequest=0;
     this.spinDirection=this.trickKind==='flip'?-1:this.game.p.lean<0?-1:1;
     this.spinDuration=this.trickKind==='flip'?.86:this.game.assist?THREE.MathUtils.clamp(this.flightRemaining*.72,.20,.62):.68;
-    this.game.audio?.playSpin(this.spinDirection);this.game.audio?.playCrowdAwe(!!this.takeoffRamp);
+    this.game.audio?.playSpin(this.spinDirection);if(!this.takeoffRamp)this.game.audio?.playCrowdAwe();
   }
   release(){}
   launchRamp(line,surface,pop=false){
@@ -44,7 +44,7 @@ class SurfJump {
     this.launchStrength=THREE.MathUtils.clamp((p.jumpVelocity-7)/7.8,0,1);this.landingPulse=0;
     p.airborne=true;p.takeoffHeight=surface.height;p.y=surface.height+.06;p.airY=.06;p.crouch=.7;
     g.trailPoints=[];this.jumps++;g.heroAnimator.beginTurn(0);g.emit(18,.85,true);
-    g.audio.beginRampFlight();g.audio.playJump(this.launchStrength);g.juice.punch(2.8);g.juice.buzz(18);
+    g.audio.beginRampFlight();g.audio.playJump(this.launchStrength);g.audio.playCrowdAwe(true);g.juice.punch(2.8);g.juice.buzz(18);
     this.updateButton();
   }
   step(dt,surface){
@@ -100,7 +100,7 @@ class SurfJump {
         if(this.takeoffRamp)g.audio?.endRampFlight();
         if(g.audio)g.audio.playLanding(clean>.72,impact);
         if(clean>.72){
-          if(this.spinCompleted)g.audio?.playCrowdApplause(this.trickKind==='flip',!!this.takeoffRamp);
+          if(this.spinCompleted||this.takeoffRamp)g.audio?.playCrowdApplause(this.trickKind==='flip',!!this.takeoffRamp);
           if(!this.spinCompleted){g.juice.punch(1.4);g.juice.buzz(16);}
           if(g.assist)g.balance.immunity=Math.max(g.balance.immunity,.65);
           this.cleanLandings++;

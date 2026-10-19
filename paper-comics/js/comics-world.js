@@ -1,13 +1,18 @@
 class ComicsWorld {
   constructor(game) {
     this.game=game;this.scene=game.scene;
-    this.jetskiTexture=new THREE.TextureLoader().load('assets/comics/jetski-boris-v2.webp');
-    this.jetskiTexture.minFilter=THREE.LinearFilter;this.jetskiTexture.generateMipmaps=false;
+    this.jetskiTexture = new THREE.Texture();
+    this.jetViews = [];
     this.makeBeach();this.floatingProps=new FloatingProps(game);
     this.hazards=COMICS_COURSE.hazards.map((config,i)=>this.makeHazard(config,i));
-    this.ready=Promise.all([new Promise((resolve,reject)=>{
+    this.wakeRides=0;this.reset();
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    this._readyPromise = Promise.all([new Promise((resolve,reject)=>{
       new THREE.TextureLoader().load('assets/comics/jetski-boris-v2.webp',texture=>{
-        // The generated atlas has unequal columns: equal thirds cut the craft in half.
+        this.jetskiTexture = texture;
+        texture.minFilter=THREE.LinearFilter;texture.generateMipmaps=false;
         const image=texture.image,canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;
         const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);const pixels=ctx.getImageData(0,0,image.width,image.height).data;
         this.jetViews=[[0,842],[842,1650],[1650,2172]].map(([from,to])=>{
@@ -17,7 +22,7 @@ class ComicsWorld {
           map.repeat.set(width/image.width,height/image.height);map.offset.set(left/image.width,1-(bottom+1)/image.height);map.needsUpdate=true;
           return {map,width:3*width/height,height:3,bounds:{left,right,top,bottom}};
         });
-        this.hazards.filter(h=>h.jetCard).forEach(h=>{h.jetCard.material.map.dispose();h.jetView=-1;});resolve();
+        this.hazards.filter(h=>h.jetCard).forEach(h=>{h.jetCard.material.map.dispose();h.jetCard.material.map=this.jetViews[0]?.map||texture;h.jetView=-1;});resolve();
       },undefined,()=>reject(Error('Аквабайк недоступен')));
     }),...this.hazards.filter(h=>h.fin).map(h=>new Promise((resolve,reject)=>{
       new THREE.TextureLoader().load('assets/comics/shark-directions-sheet.webp',texture=>{
@@ -25,8 +30,14 @@ class ComicsWorld {
         h.fin.material.map.dispose();h.fin.material.map=texture;resolve();
       },undefined,()=>reject(Error('Плавники недоступны')));
     }))]);
-    this.ready.catch(error=>{this.error=error;});
-    this.wakeRides=0;this.reset();
+    this._readyPromise.catch(error=>{this.error=error;});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   material(color) {return this.game.paperToon.material(color);}
   makeBeach() {
@@ -278,7 +289,11 @@ class ComicDirector {
     this.snapshot=document.getElementById('comic-snapshot');this.ctx=this.snapshot.getContext('2d');
     this.detail=document.getElementById('comic-detail');this.detailCtx=this.detail.getContext('2d');this.face=document.getElementById('comic-face-cutout');
     this.images={};this.sequence=0;
-    this.ready=Promise.all(['crest','save','transfer'].map(variant=>new Promise((resolve,reject)=>{
+    this.reset();
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    this._readyPromise = Promise.all(['crest','save','transfer'].map(variant=>new Promise((resolve,reject)=>{
       const image=new Image();let fallback=false;
       image.onload=()=>{this.images[variant]=image;resolve();};
       image.onerror=()=>{
@@ -287,7 +302,14 @@ class ComicDirector {
       };
       image.src='assets/comics/hero-'+variant+'-close.webp';
     })));
-    this.ready.catch(error=>{this.error=error;});this.reset();
+    this._readyPromise.catch(error=>{this.error=error;});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   reset(){this.active=this.pending=false;this.elapsed=this.cooldown=0;this.timeScale=1;this.triggerCount=0;this.lastEvent=null;this.el.classList.remove('visible');}
   trigger(word,sub,variant='crest',priority=1){

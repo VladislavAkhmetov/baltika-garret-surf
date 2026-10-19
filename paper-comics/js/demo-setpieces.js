@@ -10,11 +10,22 @@ class DemoSetpieces {
     this.boxGeometry=new THREE.BoxGeometry(1,1,1);this.sphereGeometry=new THREE.SphereGeometry(1,12,8);
     this.makeLighthouse();this.makeWreck();this.makeArch();
     this.dolphinPod=new DolphinPod(game);this.dolphins=this.dolphinPod.dolphins;
-    this.ready=Promise.all([game.rush.ready.then(()=>this.applyRockPrint()),this.dolphinPod.ready]);this.ready.catch(()=>{});
     this.currents=[{id:'lighthouse',from:365,to:425,offset:1.9},{id:'arch',from:766,to:846,offset:-1.9}].map(c=>this.makeCurrent(c));
     this.spray=new THREE.InstancedMesh(new THREE.SphereGeometry(.09,5,4),new THREE.MeshBasicMaterial({color:0xfff1d2,transparent:true,opacity:.7,depthWrite:false}),48);
     this.spray.frustumCulled=false;this.spray.instanceMatrix.setUsage(THREE.DynamicDrawUsage);game.scene.add(this.spray);
     this.dummy=new THREE.Object3D();this.point=new THREE.Vector3();this.reset();
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    this._readyPromise=Promise.all([this.game.rush.ready.then(()=>this.applyRockPrint()),this.dolphinPod.ready]);
+    this._readyPromise.catch(()=>{});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   ink(color){if(!this.materials.has(color))this.materials.set(color,this.game.paperToon.material(color));return this.materials.get(color);}
   mesh(parent,geometry,color,position=[0,0,0],scale=null){

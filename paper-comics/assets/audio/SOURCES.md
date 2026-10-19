@@ -1,3 +1,8 @@
+# Music
+
+- `bgm_surf_rock.mp3`: **Surf Shimmy** by Kevin MacLeod (incompetech.com), Licensed under Creative Commons: By Attribution 4.0 License. High-energy 170 BPM surf rock playing during the surf run.
+- `bgm_menu_surf.mp3`: **Surf Inspector** by Kevin MacLeod (incompetech.com), Licensed under Creative Commons: By Attribution 4.0 License. Mellow 120 BPM surf groove (twangy guitar, vibraphone, bass, and drums) playing softly on the start screen and comic pages.
+
 # Crowd reactions
 
 The landing reactions use recordings from [Mixkit's applause collection](https://mixkit.co/free-sound-effects/applause/), obtained on 14 October 2026.

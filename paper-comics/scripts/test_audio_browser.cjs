@@ -33,6 +33,7 @@ async function run() {
       await game.start(false);
       game.state = 'paused';
       const a = game.audio;
+      await a.ready;
       const ready = Object.keys(a.manifest).every(name => a.buffers[name]?.duration > 0);
       const mutedStart = a.bgmPlaying && !a.bgmAudio;
       a.toggleMute();

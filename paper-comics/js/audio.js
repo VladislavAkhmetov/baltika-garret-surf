@@ -32,6 +32,11 @@ class SurfAudio {
     // HTML5 BGM Audio element
     this.bgmAudio = null;
     this.bgmMediaNode = null;
+    this.menuAudio = null;
+    this.menuMediaNode = null;
+    this.menuBgmPlaying = false;
+    this.menuGain = null;
+    this.initGestureResume();
     
     // Base asset path (works in both root and paper-comics/)
     this.basePath = 'assets/audio/';
@@ -112,6 +117,10 @@ class SurfAudio {
       this.bgmGain.gain.setValueAtTime(0.35, this.ctx.currentTime);
       this.bgmGain.connect(this.sceneGain);
 
+      this.menuGain = this.ctx.createGain();
+      this.menuGain.gain.setValueAtTime(0.22, this.ctx.currentTime);
+      this.menuGain.connect(this.masterGain);
+
       this.crowdGain = this.ctx.createGain();
       this.crowdGain.gain.setValueAtTime(0.55, this.ctx.currentTime);
       this.crowdGain.connect(this.masterGain);
@@ -135,6 +144,9 @@ class SurfAudio {
       if (this.bgmPlaying && this.bgmAudio && this.bgmAudio.paused && !this.isMuted) {
         this.bgmAudio.play().catch(() => {});
       }
+      if (this.menuBgmPlaying && this.menuAudio && this.menuAudio.paused && !this.isMuted) {
+        this.menuAudio.play().catch(() => {});
+      }
     };
     ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(evt => {
       window.addEventListener(evt, resume, {passive: true});
@@ -149,6 +161,9 @@ class SurfAudio {
     if (!this.isMuted && this.bgmPlaying && this.bgmAudio && this.bgmAudio.paused) {
       this.bgmAudio.play().catch(() => {});
     }
+    if (!this.isMuted && this.menuBgmPlaying && this.menuAudio && this.menuAudio.paused) {
+      this.menuAudio.play().catch(() => {});
+    }
   }
 
   toggleMute() {
@@ -160,9 +175,13 @@ class SurfAudio {
     if (this.bgmAudio) {
       this.bgmAudio.muted = this.isMuted;
     }
+    if (this.menuAudio) {
+      this.menuAudio.muted = this.isMuted;
+    }
     if (this.isMuted) this.stopOneShots();
     // A race can start muted before the music element has ever been created.
     if (!this.isMuted && this.bgmPlaying) this.startBGM();
+    if (!this.isMuted && this.menuBgmPlaying) this.startMenuBGM();
     return this.isMuted;
   }
 
@@ -348,6 +367,7 @@ class SurfAudio {
   }
 
   startBGM() {
+    this.stopMenuBGM();
     this.bgmPlaying = true;
     this.rideActive = true;
     if (this.ambientGain) this.ambientGain.gain.setTargetAtTime(0.9, this.ctx.currentTime, 0.12);
@@ -391,6 +411,60 @@ class SurfAudio {
     this.stopRivalMusic();
     if (this.bgmAudio) {
       this.bgmAudio.pause();
+    }
+  }
+
+  // --- Start & Comic Screen BGM ---
+
+  startMenuBgm() {
+    this.startMenuBGM();
+  }
+
+  stopMenuBgm() {
+    this.stopMenuBGM();
+  }
+
+  startMenuBGM() {
+    this.menuBgmPlaying = true;
+    if (this.bgmPlaying) {
+      this.stopBGM();
+    }
+    if (this.isMuted) return;
+
+    if (!this.menuAudio) {
+      this.menuAudio = new Audio(this.basePath + 'bgm_menu_surf.mp3');
+      this.menuAudio.loop = true;
+      this.menuAudio.muted = this.isMuted;
+      this.menuAudio.volume = 0.22;
+
+      try {
+        if (this.ctx && !this.menuMediaNode && this.menuGain) {
+          this.menuMediaNode = this.ctx.createMediaElementSource(this.menuAudio);
+          this.menuMediaNode.connect(this.menuGain);
+          this.menuAudio.volume = 1.0;
+        }
+      } catch (e) {
+        this.menuAudio.volume = 0.22;
+      }
+    }
+
+    if (this.menuAudio) {
+      this.menuAudio.muted = this.isMuted;
+      if (this.menuAudio.paused) {
+        const playPromise = this.menuAudio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(e => {
+            // Autoplay policy waiting for user interaction
+          });
+        }
+      }
+    }
+  }
+
+  stopMenuBGM() {
+    this.menuBgmPlaying = false;
+    if (this.menuAudio) {
+      this.menuAudio.pause();
     }
   }
 

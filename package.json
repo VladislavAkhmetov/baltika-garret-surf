@@ -49,6 +49,7 @@
     "test:cast-polish": "node paper-comics/scripts/test_cast-polish.cjs"
   },
   "dependencies": {
+    "lamejs": "^1.2.1",
     "puppeteer-core": "^24.43.1"
   }
 }

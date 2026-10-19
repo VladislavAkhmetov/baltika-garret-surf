@@ -877,6 +877,11 @@ class SurfAudio {
     // HTML5 BGM Audio element
     this.bgmAudio = null;
     this.bgmMediaNode = null;
+    this.menuAudio = null;
+    this.menuMediaNode = null;
+    this.menuBgmPlaying = false;
+    this.menuGain = null;
+    this.initGestureResume();
     
     // Base asset path (works in both root and paper-comics/)
     this.basePath = 'assets/audio/';
@@ -957,6 +962,10 @@ class SurfAudio {
       this.bgmGain.gain.setValueAtTime(0.35, this.ctx.currentTime);
       this.bgmGain.connect(this.sceneGain);
 
+      this.menuGain = this.ctx.createGain();
+      this.menuGain.gain.setValueAtTime(0.22, this.ctx.currentTime);
+      this.menuGain.connect(this.masterGain);
+
       this.crowdGain = this.ctx.createGain();
       this.crowdGain.gain.setValueAtTime(0.55, this.ctx.currentTime);
       this.crowdGain.connect(this.masterGain);
@@ -980,6 +989,9 @@ class SurfAudio {
       if (this.bgmPlaying && this.bgmAudio && this.bgmAudio.paused && !this.isMuted) {
         this.bgmAudio.play().catch(() => {});
       }
+      if (this.menuBgmPlaying && this.menuAudio && this.menuAudio.paused && !this.isMuted) {
+        this.menuAudio.play().catch(() => {});
+      }
     };
     ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(evt => {
       window.addEventListener(evt, resume, {passive: true});
@@ -994,6 +1006,9 @@ class SurfAudio {
     if (!this.isMuted && this.bgmPlaying && this.bgmAudio && this.bgmAudio.paused) {
       this.bgmAudio.play().catch(() => {});
     }
+    if (!this.isMuted && this.menuBgmPlaying && this.menuAudio && this.menuAudio.paused) {
+      this.menuAudio.play().catch(() => {});
+    }
   }
 
   toggleMute() {
@@ -1005,9 +1020,13 @@ class SurfAudio {
     if (this.bgmAudio) {
       this.bgmAudio.muted = this.isMuted;
     }
+    if (this.menuAudio) {
+      this.menuAudio.muted = this.isMuted;
+    }
     if (this.isMuted) this.stopOneShots();
     // A race can start muted before the music element has ever been created.
     if (!this.isMuted && this.bgmPlaying) this.startBGM();
+    if (!this.isMuted && this.menuBgmPlaying) this.startMenuBGM();
     return this.isMuted;
   }
 
@@ -1193,6 +1212,7 @@ class SurfAudio {
   }
 
   startBGM() {
+    this.stopMenuBGM();
     this.bgmPlaying = true;
     this.rideActive = true;
     if (this.ambientGain) this.ambientGain.gain.setTargetAtTime(0.9, this.ctx.currentTime, 0.12);
@@ -1236,6 +1256,60 @@ class SurfAudio {
     this.stopRivalMusic();
     if (this.bgmAudio) {
       this.bgmAudio.pause();
+    }
+  }
+
+  // --- Start & Comic Screen BGM ---
+
+  startMenuBgm() {
+    this.startMenuBGM();
+  }
+
+  stopMenuBgm() {
+    this.stopMenuBGM();
+  }
+
+  startMenuBGM() {
+    this.menuBgmPlaying = true;
+    if (this.bgmPlaying) {
+      this.stopBGM();
+    }
+    if (this.isMuted) return;
+
+    if (!this.menuAudio) {
+      this.menuAudio = new Audio(this.basePath + 'bgm_menu_surf.mp3');
+      this.menuAudio.loop = true;
+      this.menuAudio.muted = this.isMuted;
+      this.menuAudio.volume = 0.22;
+
+      try {
+        if (this.ctx && !this.menuMediaNode && this.menuGain) {
+          this.menuMediaNode = this.ctx.createMediaElementSource(this.menuAudio);
+          this.menuMediaNode.connect(this.menuGain);
+          this.menuAudio.volume = 1.0;
+        }
+      } catch (e) {
+        this.menuAudio.volume = 0.22;
+      }
+    }
+
+    if (this.menuAudio) {
+      this.menuAudio.muted = this.isMuted;
+      if (this.menuAudio.paused) {
+        const playPromise = this.menuAudio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(e => {
+            // Autoplay policy waiting for user interaction
+          });
+        }
+      }
+    }
+  }
+
+  stopMenuBGM() {
+    this.menuBgmPlaying = false;
+    if (this.menuAudio) {
+      this.menuAudio.pause();
     }
   }
 
@@ -2231,15 +2305,11 @@ class PaperWave {
     this.wakeField = null;this.currentField=null;
     this.peelFront = null;
     this.lastPrintFrame = -1;
-    const loader=new THREE.TextureLoader();
-    let resolveWater,rejectWater;
-    this.ready=new Promise((resolve,reject)=>{resolveWater=resolve;rejectWater=reject;});
-    const texture = loader.load('assets/comics/water-surface-v5.webp',resolveWater,undefined,()=>{
-      loader.load('assets/comics/water-surface-v5.png',resolveWater,undefined,()=>rejectWater(Error('Не удалось загрузить воду')));
-    });
+    const texture = new THREE.Texture();
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(1, 1);
     texture.anisotropy = 4;
+    this.waterTexture = texture;
     const isMobile = typeof matchMedia !== 'undefined' && matchMedia('(pointer:coarse)').matches;
     const segX = isMobile ? 64 : 128;
     const segZ = isMobile ? 96 : 192;
@@ -2597,6 +2667,37 @@ class PaperWave {
       mesh.instanceMatrix.needsUpdate=true;
     });
   }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    let resolveWater, rejectWater;
+    this._readyPromise = new Promise((resolve, reject) => { resolveWater = resolve; rejectWater = reject; });
+    const loader = new THREE.TextureLoader();
+    loader.load('assets/comics/water-surface-v5.webp', tex => {
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(1, 1);
+      tex.anisotropy = 4;
+      this.waterTexture.image = tex.image;
+      this.waterTexture.needsUpdate = true;
+      resolveWater(this.waterTexture);
+    }, undefined, () => {
+      loader.load('assets/comics/water-surface-v5.png', tex => {
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(1, 1);
+        tex.anisotropy = 4;
+        this.waterTexture.image = tex.image;
+        this.waterTexture.needsUpdate = true;
+        resolveWater(this.waterTexture);
+      }, undefined, () => rejectWater(Error('Не удалось загрузить воду')));
+    });
+    this._readyPromise.catch(() => {});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
+  }
 }
 PaperWave.LIP_ROW_FACTORS=Array.from({length:13},(_,row)=>{
   const t=row<=6?row/6:(row-6)/6,b=1-t;
@@ -2807,12 +2908,6 @@ class HeroAnimator {
     this.footAnchor=new THREE.Vector3();this.stance=new THREE.Vector3();this.deckAnchor=new THREE.Vector3();
     this.cameraRight=new THREE.Vector3();this.cameraUp=new THREE.Vector3();this.deckX=new THREE.Vector3();this.deckY=new THREE.Vector3();
     this.deckTurn=new THREE.Quaternion();this.deckBase=new THREE.Quaternion();this.deckBest=new THREE.Quaternion();
-    this.ready=Promise.all(Object.entries(this.poseDefinitions).map(([key,definition])=>new Promise((resolve,reject)=>{
-      const image=new Image();let fallbackTried=false;
-      image.onload=()=>resolve([key,image]);
-      image.onerror=()=>{if(!fallbackTried){fallbackTried=true;image.src=definition.src;}else reject(new Error('Не удалось загрузить позу персонажа: '+key));};
-      image.src=definition.src.replace(/\.png$/,'.webp');
-    }))).then(entries=>this.buildAtlases(Object.fromEntries(entries)));
     const card=game.player.card;
     card.geometry.dispose();card.geometry=new THREE.PlaneGeometry(this.width,this.height);
     card.material.depthWrite=false;card.renderOrder=3;
@@ -2820,7 +2915,29 @@ class HeroAnimator {
     this.fingers=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({transparent:true,alphaTest:.25,depthWrite:false,side:THREE.DoubleSide}));
     this.fingers.position.z=.085;this.fingers.renderOrder=6;this.fingers.visible=false;card.add(this.fingers);
     this.fingerTextures={};
-    this.ready.then(()=>{for(const [key,t] of Object.entries(this.atlases)){this.fingerTextures[key]=t.clone();this.fingerTextures[key].needsUpdate=true;}this.apply('trim',0);}).catch(error=>{this.error=error;});
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    this._readyPromise = Promise.all(Object.entries(this.poseDefinitions).map(([key,definition])=>new Promise((resolve,reject)=>{
+      const image=new Image();let fallbackTried=false;
+      image.onload=()=>resolve([key,image]);
+      image.onerror=()=>{if(!fallbackTried){fallbackTried=true;image.src=definition.src;}else reject(new Error('Не удалось загрузить позу персонажа: '+key));};
+      image.src=definition.src.replace(/\.png$/,'.webp');
+    }))).then(entries=>this.buildAtlases(Object.fromEntries(entries)));
+    this._readyPromise.then(()=>{
+      for(const [key,t] of Object.entries(this.atlases)){
+        this.fingerTextures[key]=t.clone();
+        this.fingerTextures[key].needsUpdate=true;
+      }
+      this.apply('trim',0);
+    }).catch(error=>{this.error=error;});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   cleanCutout(image){
     const canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;
@@ -3039,8 +3156,12 @@ class CrabCompanion {
     this.tail=new THREE.Vector3(.30,-1.78,.075);this.anchor=new THREE.Vector3();
     this.boardUp=new THREE.Vector3();this.cameraUp=new THREE.Vector3();this.cameraRight=new THREE.Vector3();
     this.speechPoint=new THREE.Vector3();this.callout=document.getElementById('crab-callout');
-    const loader=new THREE.TextureLoader();
-    const crabReady=new Promise((resolve,reject)=>loader.load('assets/comics/crab-kleshnya-sheet-v1.webp',texture=>{
+    this.reset();
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    const loader = new THREE.TextureLoader();
+    const crabReady = new Promise((resolve,reject)=>loader.load('assets/comics/crab-kleshnya-sheet-v1.webp',texture=>{
       texture.minFilter=texture.magFilter=THREE.LinearFilter;texture.generateMipmaps=false;
       this.image=texture.image;this.textures={};
       for(const name of ['rest','raised']){
@@ -3050,9 +3171,15 @@ class CrabCompanion {
       }
       this.setPose('rest');resolve();
     },undefined,()=>reject(Error('Не удалось загрузить Клешню'))));
-    this.ready=Promise.all([crabReady,game.boardReady]);
-    this.ready.then(()=>{game.renderDirty=true;}).catch(()=>{});
-    this.reset();
+    this._readyPromise = Promise.all([crabReady, this.game.boardReady]);
+    this._readyPromise.then(()=>{this.game.renderDirty=true;}).catch(()=>{});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   reset(){
     this.pose='';this.raisedUntil=0;this.bubbleUntil=0;this.priority=0;this.lastSpoken=-100;this.lastEvents={};this.lineIndex={};this.heard=new Set();
@@ -3163,25 +3290,35 @@ class HandBeer {
     this.game=game;this.liquid=game.mug;this.roll=0;this.rollVelocity=0;this.drops=[];this.printFrame=-1;
     this.canvas=document.createElement('canvas');this.canvas.width=384;this.canvas.height=480;this.ctx=this.canvas.getContext('2d');
     this.texture=new THREE.CanvasTexture(this.canvas);this.texture.minFilter=THREE.LinearFilter;this.texture.generateMipmaps=false;
-    this.frame=new Image();let frameFallback=false;
-    this.ready=new Promise((resolve,reject)=>{
+    this.frame=new Image();
+    this.pivot=new THREE.Group();
+    this.mesh=new THREE.Mesh(new THREE.PlaneGeometry(1.12,1.4),new THREE.MeshBasicMaterial({map:this.texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
+    this.mesh.scale.set(1,1,1);
+    this.gripCanvas={x:332,y:230};
+    this.mesh.position.set((.5-this.gripCanvas.x/384)*1.12,(this.gripCanvas.y/480-.5)*1.4,-.015);
+    this.mesh.renderOrder=2;this.pivot.add(this.mesh);game.player.card.add(this.pivot);
+    this.liquid.addSpillListener((side,amount)=>this.emit(side,amount));
+    this.reset();
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    let frameFallback=false;
+    this._readyPromise=new Promise((resolve,reject)=>{
       this.frame.onload=()=>{this.draw();this.texture.needsUpdate=true;resolve();};
       this.frame.onerror=()=>{
         if(!frameFallback){frameFallback=true;this.frame.src='assets/comics/mug-paper-frame.png';}
         else reject(new Error('Не удалось загрузить кружку'));
       };
     });
-    this.ready.catch(()=>{});this.frame.src='assets/comics/mug-paper-frame.webp';
-    this.pivot=new THREE.Group();
-    this.mesh=new THREE.Mesh(new THREE.PlaneGeometry(1.12,1.4),new THREE.MeshBasicMaterial({map:this.texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
-    this.mesh.scale.set(1,1,1);
-    // Rear view: glass to the left of the right hand, handle to its right.
-    // Rotate at the gripped handle bar, not the centre of the glass.
-    this.gripCanvas={x:332,y:230};
-    this.mesh.position.set((.5-this.gripCanvas.x/384)*1.12,(this.gripCanvas.y/480-.5)*1.4,-.015);
-    this.mesh.renderOrder=2;this.pivot.add(this.mesh);game.player.card.add(this.pivot);
-    this.liquid.addSpillListener((side,amount)=>this.emit(side,amount));
-    this.reset();
+    this._readyPromise.catch(()=>{});
+    this.frame.src='assets/comics/mug-paper-frame.webp';
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   reset(){this.roll=0;this.rollVelocity=0;this.drops=[];this.spillBudget=0;this.printFrame=-1;this.peakSlosh=0;this.draw();}
   emit(side,amount){
@@ -3377,13 +3514,18 @@ window.FloatingProps=FloatingProps;
 class ComicsWorld {
   constructor(game) {
     this.game=game;this.scene=game.scene;
-    this.jetskiTexture=new THREE.TextureLoader().load('assets/comics/jetski-boris-v2.webp');
-    this.jetskiTexture.minFilter=THREE.LinearFilter;this.jetskiTexture.generateMipmaps=false;
+    this.jetskiTexture = new THREE.Texture();
+    this.jetViews = [];
     this.makeBeach();this.floatingProps=new FloatingProps(game);
     this.hazards=COMICS_COURSE.hazards.map((config,i)=>this.makeHazard(config,i));
-    this.ready=Promise.all([new Promise((resolve,reject)=>{
+    this.wakeRides=0;this.reset();
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    this._readyPromise = Promise.all([new Promise((resolve,reject)=>{
       new THREE.TextureLoader().load('assets/comics/jetski-boris-v2.webp',texture=>{
-        // The generated atlas has unequal columns: equal thirds cut the craft in half.
+        this.jetskiTexture = texture;
+        texture.minFilter=THREE.LinearFilter;texture.generateMipmaps=false;
         const image=texture.image,canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;
         const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);const pixels=ctx.getImageData(0,0,image.width,image.height).data;
         this.jetViews=[[0,842],[842,1650],[1650,2172]].map(([from,to])=>{
@@ -3393,7 +3535,7 @@ class ComicsWorld {
           map.repeat.set(width/image.width,height/image.height);map.offset.set(left/image.width,1-(bottom+1)/image.height);map.needsUpdate=true;
           return {map,width:3*width/height,height:3,bounds:{left,right,top,bottom}};
         });
-        this.hazards.filter(h=>h.jetCard).forEach(h=>{h.jetCard.material.map.dispose();h.jetView=-1;});resolve();
+        this.hazards.filter(h=>h.jetCard).forEach(h=>{h.jetCard.material.map.dispose();h.jetCard.material.map=this.jetViews[0]?.map||texture;h.jetView=-1;});resolve();
       },undefined,()=>reject(Error('Аквабайк недоступен')));
     }),...this.hazards.filter(h=>h.fin).map(h=>new Promise((resolve,reject)=>{
       new THREE.TextureLoader().load('assets/comics/shark-directions-sheet.webp',texture=>{
@@ -3401,8 +3543,14 @@ class ComicsWorld {
         h.fin.material.map.dispose();h.fin.material.map=texture;resolve();
       },undefined,()=>reject(Error('Плавники недоступны')));
     }))]);
-    this.ready.catch(error=>{this.error=error;});
-    this.wakeRides=0;this.reset();
+    this._readyPromise.catch(error=>{this.error=error;});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   material(color) {return this.game.paperToon.material(color);}
   makeBeach() {
@@ -3654,7 +3802,11 @@ class ComicDirector {
     this.snapshot=document.getElementById('comic-snapshot');this.ctx=this.snapshot.getContext('2d');
     this.detail=document.getElementById('comic-detail');this.detailCtx=this.detail.getContext('2d');this.face=document.getElementById('comic-face-cutout');
     this.images={};this.sequence=0;
-    this.ready=Promise.all(['crest','save','transfer'].map(variant=>new Promise((resolve,reject)=>{
+    this.reset();
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    this._readyPromise = Promise.all(['crest','save','transfer'].map(variant=>new Promise((resolve,reject)=>{
       const image=new Image();let fallback=false;
       image.onload=()=>{this.images[variant]=image;resolve();};
       image.onerror=()=>{
@@ -3663,7 +3815,14 @@ class ComicDirector {
       };
       image.src='assets/comics/hero-'+variant+'-close.webp';
     })));
-    this.ready.catch(error=>{this.error=error;});this.reset();
+    this._readyPromise.catch(error=>{this.error=error;});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   reset(){this.active=this.pending=false;this.elapsed=this.cooldown=0;this.timeScale=1;this.triggerCount=0;this.lastEvent=null;this.el.classList.remove('visible');}
   trigger(word,sub,variant='crest',priority=1){
@@ -3725,7 +3884,7 @@ class SurfJump {
     this.trickKind=this.canSpecial?'flip':this.takeoffRamp?.type==='side'?'cork':'spin';this.spinStarted=true;this.spinRequest=0;
     this.spinDirection=this.trickKind==='flip'?-1:this.game.p.lean<0?-1:1;
     this.spinDuration=this.trickKind==='flip'?.86:this.game.assist?THREE.MathUtils.clamp(this.flightRemaining*.72,.20,.62):.68;
-    this.game.audio?.playSpin(this.spinDirection);this.game.audio?.playCrowdAwe(!!this.takeoffRamp);
+    this.game.audio?.playSpin(this.spinDirection);if(!this.takeoffRamp)this.game.audio?.playCrowdAwe();
   }
   release(){}
   launchRamp(line,surface,pop=false){
@@ -3740,7 +3899,7 @@ class SurfJump {
     this.launchStrength=THREE.MathUtils.clamp((p.jumpVelocity-7)/7.8,0,1);this.landingPulse=0;
     p.airborne=true;p.takeoffHeight=surface.height;p.y=surface.height+.06;p.airY=.06;p.crouch=.7;
     g.trailPoints=[];this.jumps++;g.heroAnimator.beginTurn(0);g.emit(18,.85,true);
-    g.audio.beginRampFlight();g.audio.playJump(this.launchStrength);g.juice.punch(2.8);g.juice.buzz(18);
+    g.audio.beginRampFlight();g.audio.playJump(this.launchStrength);g.audio.playCrowdAwe(true);g.juice.punch(2.8);g.juice.buzz(18);
     this.updateButton();
   }
   step(dt,surface){
@@ -3796,7 +3955,7 @@ class SurfJump {
         if(this.takeoffRamp)g.audio?.endRampFlight();
         if(g.audio)g.audio.playLanding(clean>.72,impact);
         if(clean>.72){
-          if(this.spinCompleted)g.audio?.playCrowdApplause(this.trickKind==='flip',!!this.takeoffRamp);
+          if(this.spinCompleted||this.takeoffRamp)g.audio?.playCrowdApplause(this.trickKind==='flip',!!this.takeoffRamp);
           if(!this.spinCompleted){g.juice.punch(1.4);g.juice.buzz(16);}
           if(g.assist)g.balance.immunity=Math.max(g.balance.immunity,.65);
           this.cleanLandings++;
@@ -4016,7 +4175,7 @@ const COMIC_TAIL_SVGS = {
 class SurfJourney {
   constructor(game) {
     this.game=game;this.page=0;this.screen='start';this.heroIndex=this.locationIndex=0;
-    this.screens=['start','setup','story'];
+    this.screens=['start','setup','story','loader'];
     this.heroes=[{name:'МАКС',available:true},{name:'ВИТЯ',available:false},{name:'СТАС',available:false}];
     this.locations=[{name:'БУХТА GARRET',available:true},{name:'СЕВЕРНЫЙ РИФ',available:false},{name:'НОЧНОЙ ПОРТ',available:false}];
     this.storyVersion=new URLSearchParams(window.location.search).get('story')||'v6';
@@ -4115,8 +4274,61 @@ class SurfJourney {
   }
   prefetchPage(pageIndex){
     const s=this.story[pageIndex];
-    if(!s)return;
-    s.panels.forEach(p=>this.loadComicImage(p.id).catch(()=>{}));
+    if(!s)return Promise.resolve();
+    return Promise.all(s.panels.map(p=>this.loadComicImage(p.id).catch(()=>{})));
+  }
+  preloadStoryFlow(){
+    if(this._storyFlowPreload)return this._storyFlowPreload;
+    const hero=new Image();hero.decoding='async';hero.src='assets/comics/hero-crest-close.webp';
+    const loc=new Image();loc.decoding='async';loc.src='assets/comics/story-panels-v2.webp';
+    const wave=new Image();wave.decoding='async';wave.src='assets/comics/level-wave-cutout.webp';
+    const p1=new Promise(r=>{hero.onload=hero.onerror=r;});
+    const p2=new Promise(r=>{loc.onload=loc.onerror=r;});
+    const p3=new Promise(r=>{wave.onload=wave.onerror=r;});
+    const pPage0=this.prefetchPage(0);
+    const pPage1=this.prefetchPage(1);
+    this._storyFlowPreload=Promise.all([p1,p2,p3,pPage0,pPage1]);
+    return this._storyFlowPreload;
+  }
+  setLoaderProgress(pct){
+    const bar=document.getElementById('loader-progress-bar'),percentEl=document.getElementById('loader-percent');
+    const clamped=Math.min(100,Math.max(0,Math.round(pct)));
+    if(bar)bar.style.width=clamped+'%';
+    if(percentEl)percentEl.textContent=clamped+'%';
+  }
+  getShuffledPhrases(){
+    const list=[...(SurfJourney.funnyPhrases||[])];
+    for(let i=list.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [list[i],list[j]]=[list[j],list[i]];
+    }
+    if(this._lastFirstPhrase&&list[0]===this._lastFirstPhrase&&list.length>1){
+      const swapIdx=1+Math.floor(Math.random()*(list.length-1));
+      [list[0],list[swapIdx]]=[list[swapIdx],list[0]];
+    }
+    this._lastFirstPhrase=list[0];
+    return list;
+  }
+  stopPhraseRotator(){
+    if(this._phraseInterval){clearInterval(this._phraseInterval);this._phraseInterval=null;}
+  }
+  startPhraseRotator(){
+    this.stopPhraseRotator();
+    const phrases=this.getShuffledPhrases();
+    let idx=0;
+    const titleEl=document.getElementById('loader-title');
+    const updateTitle=(text)=>{
+      if(!titleEl)return;
+      titleEl.classList.remove('pop');
+      void titleEl.offsetWidth;
+      titleEl.textContent=text;
+      titleEl.classList.add('pop');
+    };
+    if(phrases.length)updateTitle(phrases[0]);
+    this._phraseInterval=setInterval(()=>{
+      idx=(idx+1)%phrases.length;
+      updateTitle(phrases[idx]);
+    },1500);
   }
   cycle(type,direction){const list=type==='hero'?this.heroes:this.locations,key=type==='hero'?'heroIndex':'locationIndex';this[key]=(this[key]+direction+list.length)%list.length;this.renderSelection();}
   renderSelection(){
@@ -4129,18 +4341,25 @@ class SurfJourney {
     const available=this.heroes[this.heroIndex].available&&this.locations[this.locationIndex].available,b=document.getElementById('setup-next');b.disabled=!available;b.textContent=available?'ПРОДОЛЖИТЬ':'ЗАКРЫТО';
     const assist=document.getElementById('assist-toggle');assist.textContent='Сложность: '+(this.game.assist?'обычная':'высокая');assist.setAttribute('aria-pressed',!this.game.assist);assist.setAttribute('aria-label','Сложность: '+(this.game.assist?'обычная. Включить высокую':'высокая. Включить обычную'));
   }
-  hideAll(){this.screens.forEach(name=>document.getElementById(name+'-screen').classList.add('hidden'));}
+  hideAll(){this.stopPhraseRotator();this.screens.forEach(name=>document.getElementById(name+'-screen')?.classList.add('hidden'));}
   open(name){
     if(name==='character'||name==='location')name='setup';
     this.game.state='start';this.game.input.reset();this.game.jump.cancel();this.game.comics.reset();
     this.game.onboarding.clearHighlight();this.launchFailed=false;document.getElementById('story-error').classList.add('hidden');
     this.game.container.classList.remove('playing');this.hideAll();this.screen=name;
-    document.getElementById(name+'-screen').classList.remove('hidden');
+    document.getElementById(name+'-screen')?.classList.remove('hidden');
     if(name==='story'){this.updateStoryToggleUI();this.renderStory();}
-    if(name==='setup'){this.renderSelection();this.prefetchPage(0);}
+    if(name==='setup'){this.renderSelection();this.prefetchPage(0);this.prefetchPage(1);}
+    if(name==='loader'){
+      this.startPhraseRotator();
+      this.setLoaderProgress(5);
+    }
     (document.querySelector('#'+name+'-screen [data-primary]')||document.querySelector('#'+name+'-screen button'))?.focus({preventScroll:true});
+    if(['start','setup','story'].includes(name)){
+      this.game.audio?.startMenuBGM();
+    }
   }
-  home(){this.game.audio.stopBGM();this.game.reset();this.game.renderMenuMeta();['pause-screen','result-screen','share-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));this.open('start');this.game.audio.startBGM();}
+  home(){this.game.audio.stopBGM();this.game.reset();this.game.renderMenuMeta();['pause-screen','result-screen','share-screen'].forEach(id=>document.getElementById(id).classList.add('hidden'));this.open('start');}
   loadComicImage(id){
     const version=this.storyVersion||'v6';
     const key=id+'-'+version;
@@ -4168,7 +4387,15 @@ class SurfJourney {
     const s=this.story[this.page],el=document.getElementById('story-screen'),book=document.getElementById('comic-page'),version=++this.storyRender;
     el.dataset.page=this.page;book.dataset.comicPage=this.page;book.setAttribute('aria-label',s.label);book.replaceChildren();
     const loading=document.getElementById('comic-loading'),retry=document.getElementById('comic-retry');
-    loading.hidden=false;loading.querySelector('span').textContent='РИСУЕМ ВОЛНУ…';retry.hidden=true;
+    loading.hidden=true;retry.hidden=true;
+    let isInstant=false;
+    const showLoadingTimer=setTimeout(()=>{
+      if(!isInstant&&version===this.storyRender){
+        loading.hidden=false;
+        loading.querySelector('span').textContent='ЗАГРУЗКА…';
+        retry.hidden=true;
+      }
+    },120);
     book.setAttribute('aria-busy','true');
     if(this.page+1<this.story.length)this.prefetchPage(this.page+1);
     const ready=s.panels.map(p=>{
@@ -4190,9 +4417,11 @@ class SurfJourney {
       return this.loadComicImage(p.id).then(image=>{if(version!==this.storyRender)return;image.alt=p.alt;panel.prepend(image);});
     });
     Promise.all(ready).then(()=>{
-      if(version!==this.storyRender)return;loading.hidden=true;book.removeAttribute('aria-busy');
+      if(version!==this.storyRender)return;
+      isInstant=true;clearTimeout(showLoadingTimer);loading.hidden=true;book.removeAttribute('aria-busy');
     }).catch(()=>{
-      if(version!==this.storyRender)return;loading.querySelector('span').textContent='КАДР НЕ ЗАГРУЗИЛСЯ';retry.hidden=false;book.removeAttribute('aria-busy');
+      if(version!==this.storyRender)return;
+      isInstant=true;clearTimeout(showLoadingTimer);loading.hidden=false;loading.querySelector('span').textContent='КАДР НЕ ЗАГРУЗИЛСЯ';retry.hidden=false;book.removeAttribute('aria-busy');
     });
     document.getElementById('story-next').textContent=this.page===this.story.length-1?'НА ВОЛНУ ↗':'ДАЛЬШЕ →';
     document.getElementById('story-prev').setAttribute('aria-label',this.page?'Предыдущая страница комикса':'Вернуться к выбору');
@@ -4205,14 +4434,39 @@ class SurfJourney {
     document.getElementById('story-error').classList.add('hidden');
     const buttons=['story-next','story-skip','story-prev'].map(id=>document.getElementById(id));buttons.forEach(b=>b.disabled=true);
     document.getElementById('story-screen').setAttribute('aria-busy','true');buttons[0].textContent='НА ВОДУ…';
-    try{await this.game.start(true);}finally{
+    this.open('loader');
+    this.setLoaderProgress(10);
+    try{
+      await this.game.start(true,pct=>this.setLoaderProgress(pct));
+    }catch(error){
+      console.error(error);
+      this.showError('Игра не загрузилась. Проверь соединение и нажми «Повторить», чтобы загрузить её заново.');
+    }finally{
+      this.stopPhraseRotator();
       this.launching=false;buttons.forEach(b=>b.disabled=false);document.getElementById('story-screen').removeAttribute('aria-busy');
       buttons[0].textContent=this.launchFailed?'ПОВТОРИТЬ':this.page===this.story.length-1?'НА ВОЛНУ ↗':'ДАЛЬШЕ →';
-      if(this.game.state==='playing'){this.screen='playing';this.game.container.focus({preventScroll:true});}
+      if(this.game.state==='playing'||this.game.state==='countdown'){
+        const loader=document.getElementById('loader-screen');
+        if(loader){
+          loader.classList.add('fade-out');
+          setTimeout(()=>{loader.classList.add('hidden');loader.classList.remove('fade-out');},350);
+        }
+        this.screen='playing';this.game.container.focus({preventScroll:true});
+      }
     }
   }
-  showError(text){this.open('story');this.launchFailed=true;const el=document.getElementById('story-error');el.textContent=text;el.classList.remove('hidden');document.getElementById('story-next').textContent='ПОВТОРИТЬ';}
+  showError(text){this.stopPhraseRotator();this.open('story');this.launchFailed=true;const el=document.getElementById('story-error');el.textContent=text;el.classList.remove('hidden');document.getElementById('story-next').textContent='ПОВТОРИТЬ';}
 }
+SurfJourney.funnyPhrases=[
+  'РИСУЕМ ВОЛНУ…',
+  'РАССТАВЛЯЕМ БУЙКИ…',
+  'НАПОЛНЯЕМ СТАКАНЫ…',
+  'БУДИМ КРАБА…',
+  'ЗАВОДИМ АКВАБАЙК…',
+  'ОТГОНЯЕМ АКУЛ…',
+  'НАТИРАЕМ ДОСКУ…',
+  'ПРОВЕРЯЕМ ПЕНУ…'
+];
 window.SurfJourney=SurfJourney;
 
 
@@ -5372,8 +5626,11 @@ class RivalCast {
       {id:'couple',file:'rival-couple-tandem-v4.png',name:'МИША И НИКА',kind:'wobbly',color:0xd7f3ee,height:3.2,line:'МЫ НА ОДНОЙ ВОЛНЕ!',couple:true,
         parts:[{half:0,height:3.2,soles:[[242,825],[620,857]],deckX:-.17,deckY:-1},{half:1,height:3.55,soles:[[1275,824],[1544,858]],deckX:.17,deckY:1}]}
     ];
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
     const loader=new THREE.TextureLoader();
-    this.ready=Promise.all(this.profiles.map(profile=>new Promise((resolve,reject)=>{
+    this._readyPromise=Promise.all(this.profiles.map(profile=>new Promise((resolve,reject)=>{
       const fileName=profile.file||('rival-'+profile.id+'.png');
       const webpName=fileName.replace(/\.png$/,'.webp');
       const onLoaded=texture=>{
@@ -5401,7 +5658,14 @@ class RivalCast {
         loader.load('assets/comics/'+fileName,onLoaded,undefined,()=>reject(Error('Не удалось загрузить соперника '+profile.id)));
       });
     })));
-    this.ready.catch(()=>{});
+    this._readyPromise.catch(()=>{});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   reset(){
     const start=((Math.max(1,this.run)-1)%2)*2;
@@ -5743,10 +6007,8 @@ class SurfRush {
     this.makeScenery();this.reset();
   }
   makeScenery(){
-    const g=this.game,loader=new THREE.TextureLoader();
-    this.ready=new Promise((resolve,reject)=>loader.load('assets/comics/sea-stack-v10.webp',texture=>{
-      texture.minFilter=THREE.LinearMipmapLinearFilter;
-      g.setpiece?.setRockTexture(texture);
+    const g=this.game;
+    this.rockSprites=[];
       // These are shore boundaries outside the playable strip, never invisible obstacles.
       const rocks=[[-21,218,25,19],[23,266,25,22],[-19,307,19,16],[21,364,22,18],
         [20,443,25,20],[-21,496,23,19],[22,551,26,22],[-22,577,19,15],
@@ -5754,11 +6016,10 @@ class SurfRush {
         [-24,795,26,21],[21,840,25,21],[-19,924,22,18],[23,987,24,20],
         [-21,1044,24,19],[23,1147,27,22],[-19,1209,22,18],[21,1282,24,19],[-20,1338,21,17]];
       for(const [x,z,width,height] of rocks){
-        const mesh=g.sprite(texture,width,height);mesh.center.set(.5,0);mesh.position.set(-x,-.45,z);mesh.material.fog=true;
+        const mesh=g.sprite(new THREE.Texture(),width,height);mesh.center.set(.5,0);mesh.position.set(-x,-.45,z);mesh.material.fog=true;
+        this.rockSprites.push(mesh);
         this.scenery.push({mesh,x,z,halfWidth:width/2,halfDepth:width*.18,kind:'shore-rock'});
       }
-      g.renderDirty=true;resolve();
-    },undefined,()=>reject(Error('Не удалось загрузить скалы'))));this.ready.catch(()=>{});
     const wood=g.trickRoute.makeInk(0x996b45),edge=g.trickRoute.edge;
     const pier=new THREE.Group();g.scene.add(pier);
     const deck=new THREE.Mesh(new THREE.BoxGeometry(6,.45,86),wood);deck.position.set(-15,3.5,710);pier.add(deck);
@@ -5939,6 +6200,27 @@ class SurfRush {
     g.container.dataset.signal=winner;moment.classList.remove('coach-muted');
     g.container.classList.toggle('impact-message',hasMoment&&moment.classList.contains('bad'));
     for(const el of [moment,coach,toast,hint])el.style.visibility=el.id===winner?'visible':'hidden';
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    const g=this.game,loader=new THREE.TextureLoader();
+    this._readyPromise=new Promise((resolve,reject)=>loader.load('assets/comics/sea-stack-v10.webp',texture=>{
+      texture.minFilter=THREE.LinearMipmapLinearFilter;
+      g.setpiece?.setRockTexture(texture);
+      for(const mesh of this.rockSprites){
+        mesh.material.map=texture;
+        mesh.material.needsUpdate=true;
+      }
+      g.renderDirty=true;resolve();
+    },undefined,()=>reject(Error('Не удалось загрузить скалы'))));
+    this._readyPromise.catch(()=>{});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
 }
 window.SurfRush=SurfRush;
@@ -6542,9 +6824,36 @@ class CourseShow {
     ];
     this.colors={sky:new THREE.Color(),fog:new THREE.Color(),deep:new THREE.Color(),clear:new THREE.Color()};
     this.colorA=new THREE.Color();this.colorB=new THREE.Color();
-    this.assets=[];this.textureCache=new Map();this.makePromenade();this.makeGates();this.makeHarbor();this.makeBar();
-    this.ready=Promise.all(this.assets);this.ready.catch(()=>{});
+    this.assets=[];this.cutoutTasks=[];this.textureCache=new Map();this.makePromenade();this.makeGates();this.makeHarbor();this.makeBar();
     this.mount();this.reset();
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    const loader = new THREE.TextureLoader();
+    const promises = (this.cutoutTasks || []).map(task => {
+      const file = task.file;
+      if (!this.textureCache.has(file)) {
+        this.textureCache.set(file, new Promise((resolve, reject) => {
+          loader.load('assets/comics/' + file.replace(/\.png$/, '.webp'), resolve, undefined, () => {
+            loader.load('assets/comics/' + file, resolve, undefined, () => reject(Error('Не удалось загрузить декорацию ' + file)));
+          });
+        }));
+      }
+      return this.textureCache.get(file).then(texture => {
+        task.material.map = texture;
+        task.material.needsUpdate = true;
+        this.game.renderDirty = true;
+      });
+    });
+    this._readyPromise = Promise.all(promises);
+    this._readyPromise.catch(() => {});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   ink(color){if(!this.materials.has(color))this.materials.set(color,this.game.trickRoute.makeInk(color));return this.materials.get(color);}
   box(parent,x,y,z,w,h,d,color){
@@ -6558,8 +6867,7 @@ class CourseShow {
   cutout(file,parent,x,y,z,width,height){
     const material=new THREE.SpriteMaterial({transparent:true,alphaTest:.12,depthWrite:false,fog:true});
     const mesh=new THREE.Sprite(material);mesh.center.set(.5,0);mesh.position.set(x,y,z);mesh.scale.set(width,height,1);parent.add(mesh);
-    if(!this.textureCache.has(file))this.textureCache.set(file,new Promise((resolve,reject)=>new THREE.TextureLoader().load('assets/comics/'+file.replace(/\.png$/,'.webp'),resolve,undefined,()=>new THREE.TextureLoader().load('assets/comics/'+file,resolve,undefined,()=>reject(Error('Не удалось загрузить декорацию '+file))))));
-    this.assets.push(this.textureCache.get(file).then(texture=>{material.map=texture;material.needsUpdate=true;this.game.renderDirty=true;}));
+    this.cutoutTasks.push({file, material});
     return mesh;
   }
   pennants(parent,from,to,y,z,count=12){
@@ -6769,15 +7077,25 @@ class DolphinPod {
     this.drops.name='dolphin-water-drops';this.drops.frustumCulled=false;
     this.drops.instanceMatrix.setUsage(THREE.DynamicDrawUsage);game.scene.add(this.drops);
     this.dummy=new THREE.Object3D();this.reset();
-    this.ready=new Promise((resolve,reject)=>new THREE.TextureLoader().load('assets/comics/dolphin-paper-v3.webp',texture=>{
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    this._readyPromise=new Promise((resolve,reject)=>new THREE.TextureLoader().load('assets/comics/dolphin-paper-v3.webp',texture=>{
       texture.minFilter=THREE.LinearMipmapLinearFilter;texture.magFilter=THREE.LinearFilter;
       const aspect=texture.image.width/texture.image.height;
       for(const d of this.dolphins){
         d.card.scale.y=3/aspect;d.card.material.map=texture;d.card.material.needsUpdate=true;
       }
-      this.loaded=true;game.renderDirty=true;resolve();
+      this.loaded=true;this.game.renderDirty=true;resolve();
     },undefined,()=>reject(new Error('Не удалось загрузить бумажных дельфинов'))));
-    this.ready.catch(()=>{});
+    this._readyPromise.catch(()=>{});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   makeDolphin(index){
     const width=[7.6,6.9,7.2][index],geometry=new THREE.PlaneGeometry(width,width/3,24,6);
@@ -6892,11 +7210,22 @@ class DemoSetpieces {
     this.boxGeometry=new THREE.BoxGeometry(1,1,1);this.sphereGeometry=new THREE.SphereGeometry(1,12,8);
     this.makeLighthouse();this.makeWreck();this.makeArch();
     this.dolphinPod=new DolphinPod(game);this.dolphins=this.dolphinPod.dolphins;
-    this.ready=Promise.all([game.rush.ready.then(()=>this.applyRockPrint()),this.dolphinPod.ready]);this.ready.catch(()=>{});
     this.currents=[{id:'lighthouse',from:365,to:425,offset:1.9},{id:'arch',from:766,to:846,offset:-1.9}].map(c=>this.makeCurrent(c));
     this.spray=new THREE.InstancedMesh(new THREE.SphereGeometry(.09,5,4),new THREE.MeshBasicMaterial({color:0xfff1d2,transparent:true,opacity:.7,depthWrite:false}),48);
     this.spray.frustumCulled=false;this.spray.instanceMatrix.setUsage(THREE.DynamicDrawUsage);game.scene.add(this.spray);
     this.dummy=new THREE.Object3D();this.point=new THREE.Vector3();this.reset();
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    this._readyPromise=Promise.all([this.game.rush.ready.then(()=>this.applyRockPrint()),this.dolphinPod.ready]);
+    this._readyPromise.catch(()=>{});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   ink(color){if(!this.materials.has(color))this.materials.set(color,this.game.paperToon.material(color));return this.materials.get(color);}
   mesh(parent,geometry,color,position=[0,0,0],scale=null){
@@ -7089,20 +7418,33 @@ class BeerDuel {
     this.liquid=new ComicBeerLiquid();
     this.mount();
     this.frame=new Image();
-    this.ready=Promise.all([game.world.ready,new Promise((resolve,reject)=>{
+    this.reset();
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    this._readyPromise=Promise.all([this.game.world.ready,new Promise((resolve,reject)=>{
       let fallbackTried=false;
       this.frame.onload=resolve;
       this.frame.onerror=()=>{if(!fallbackTried){fallbackTried=true;this.frame.src='assets/comics/glass-paper-frame.png';}else reject(Error('Не удалось загрузить стакан Бориса'));};
       this.frame.src='assets/comics/glass-paper-frame.webp';
     })]).then(()=>{
-      const card=this.boris.jetCard,view=game.world.jetViews[2];card.material.map=view.map;card.geometry.dispose();
-      card.geometry=new THREE.PlaneGeometry(view.width*1.2,3.6);card.position.y=1.8;
-      // The right-hand anchor is measured on the rear-view sprite atlas.
-      const b=view.bounds,w=card.geometry.parameters.width;
-      this.glass.position.set(w*((2070-b.left)/(b.right-b.left+1)-.5)+.10,3.6*(.5-(285-b.top)/(b.bottom-b.top+1))+.26,.02);
+      const card=this.boris?.jetCard,view=this.game.world.jetViews?.[2];
+      if (card && view) {
+        card.material.map=view.map;card.geometry.dispose();
+        card.geometry=new THREE.PlaneGeometry(view.width*1.2,3.6);card.position.y=1.8;
+        const b=view.bounds,w=card.geometry.parameters.width;
+        this.glass.position.set(w*((2070-b.left)/(b.right-b.left+1)-.5)+.10,3.6*(.5-(285-b.top)/(b.bottom-b.top+1))+.26,.02);
+      }
       this.printFrame=-1;this.update();
     });
-    this.ready.catch(()=>{});this.reset();
+    this._readyPromise.catch(()=>{});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   mount(){
     this.ticket=document.createElement('div');this.ticket.className='duel-ticket paper';
@@ -7306,7 +7648,10 @@ class SkyAdvertiser {
     this.banner.name='baltika-tow-banner';this.group.add(this.banner);
     const ropeGeometry=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(9*3),3));
     this.rope=new THREE.Line(ropeGeometry,new THREE.LineBasicMaterial({color:0xded8ba,transparent:true,opacity:.72,fog:false,depthWrite:false}));this.group.add(this.rope);
-    this.ready=Promise.all([
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    this._readyPromise=Promise.all([
       new Promise((resolve,reject)=>{
         const onLoaded=texture=>{this.fitAircraft(texture);this.aircraft.material.map=texture;this.aircraft.material.needsUpdate=true;resolve();};
         const loader=new THREE.TextureLoader();
@@ -7317,8 +7662,15 @@ class SkyAdvertiser {
       new Promise((resolve,reject)=>new THREE.ImageLoader().load('assets/comics/baltika-logo-reference.png',logo=>{
         this.banner.material.map=this.makeBanner(logo);this.banner.material.needsUpdate=true;resolve();
       },undefined,()=>reject(new Error('Не удалось загрузить логотип Балтики'))))
-    ]).then(()=>{this.group.visible=true;this.update();game.renderDirty=true;});
-    this.ready.catch(()=>{});
+    ]).then(()=>{this.group.visible=true;this.update();this.game.renderDirty=true;});
+    this._readyPromise.catch(()=>{});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   fitAircraft(texture){
     const image=texture.image,canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;
@@ -7454,29 +7806,13 @@ class PaperSurfGame {
     this.scene.add(new THREE.AmbientLight(0xfbf0d5, .9));
     const light = new THREE.DirectionalLight(0xfff0ca, .7); light.position.set(20, 35, -25); this.scene.add(light);
     this.textures = {};
-    const loader = new THREE.TextureLoader();
     ['surfer_norma','surfer_turn','surfer_jump','cap_fish','cap_palm','seagull_1','seagull_2'].forEach(key => {
-      this.textures[key] = loader.load(SPRITE_ASSETS[key] || ('assets/sprites/' + key + '.png'));
-      this.textures[key].minFilter = THREE.LinearMipmapLinearFilter;
+      this.textures[key] = new THREE.Texture();
     });
-    this.coastReady=new Promise((resolve,reject)=>{
-      this.textures.bg_town_transparent=loader.load('assets/comics/coast-cape-v5.webp',texture=>{
-        this.fitCoastTexture(texture);this.renderDirty=true;resolve();
-      },undefined,()=>reject(Error('Берег недоступен')));
-    });
-    this.coastReady.catch(()=>{});
-    this.textures.shark_fin=loader.load('assets/comics/shark-directions-sheet.webp');
-    this.textures.shark_fin.userData={directionAtlas:true};
-    this.textures.shark_fin.generateMipmaps=false;this.textures.shark_fin.minFilter=THREE.LinearFilter;
+    this.textures.shark_fin = new THREE.Texture();
+    this.textures.bg_town_transparent = new THREE.Texture();
+    this.surfboardTexture = new THREE.Texture();
     this.wave = new PaperWave(this.scene);
-    this.boardReady=new Promise((resolve,reject)=>{
-      this.surfboardTexture=loader.load('assets/comics/surfboard-paper-v1.webp',texture=>{
-        texture.repeat.set(444/1024,1499/1536);texture.offset.set(289/1024,22/1536);
-        texture.minFilter=THREE.LinearMipmapLinearFilter;texture.magFilter=THREE.LinearFilter;
-        this.renderDirty=true;resolve();
-      },undefined,()=>reject(Error('Не удалось загрузить доску')));
-    });
-    this.boardReady.catch(()=>{});
     this.player = this.makeSurfer(1, 0x145990);
     this.companion=new CrabCompanion(this);
     this.mug = new ComicBeerLiquid();
@@ -7536,7 +7872,7 @@ class PaperSurfGame {
     this.reset(); this.resize(); this.bindUI();
     this.journey=new SurfJourney(this);
     this.flowTest?.mount();
-    document.getElementById('cap-icon').src = SPRITE_ASSETS.cap_fish;
+    if (this.debugMode) document.getElementById('cap-icon').src = SPRITE_ASSETS.cap_fish;
     window.addEventListener('resize', () => this.resize());
     if (typeof ResizeObserver !== 'undefined' && this.container) {
       this._containerObserver = new ResizeObserver(() => this.resize());
@@ -7806,20 +8142,161 @@ class PaperSurfGame {
     this.wave.update(0,0,true);this.updateCamera(1,true);this.updateVisuals(0);this.updateHUD();
   }
 
-  async start(calibrate = true) {
+  loadPrototypeTextures() {
+    if (this._prototypeTexturesPromise) return this._prototypeTexturesPromise;
+    const loader = new THREE.TextureLoader();
+    ['surfer_norma','surfer_turn','surfer_jump','cap_fish','cap_palm','seagull_1','seagull_2'].forEach(key => {
+      loader.load(SPRITE_ASSETS[key] || ('assets/sprites/' + key + '.png'), tex => {
+        tex.minFilter = THREE.LinearMipmapLinearFilter;
+        if (this.textures[key]) {
+          this.textures[key].image = tex.image;
+          this.textures[key].minFilter = THREE.LinearMipmapLinearFilter;
+          this.textures[key].needsUpdate = true;
+        } else {
+          this.textures[key] = tex;
+        }
+      });
+    });
+    const coastP = new Promise((resolve, reject) => {
+      loader.load('assets/comics/coast-cape-v5.webp', texture => {
+        if (this.textures.bg_town_transparent) {
+          this.textures.bg_town_transparent.image = texture.image;
+          this.textures.bg_town_transparent.needsUpdate = true;
+        } else {
+          this.textures.bg_town_transparent = texture;
+        }
+        this.fitCoastTexture(texture);
+        this.renderDirty = true;
+        resolve();
+      }, undefined, () => reject(Error('Берег недоступен')));
+    });
+    coastP.catch(() => {});
+    this._coastReady = coastP;
+
+    loader.load('assets/comics/shark-directions-sheet.webp', tex => {
+      tex.userData = { directionAtlas: true };
+      tex.generateMipmaps = false;
+      tex.minFilter = THREE.LinearFilter;
+      if (this.textures.shark_fin) {
+        this.textures.shark_fin.image = tex.image;
+        this.textures.shark_fin.userData = tex.userData;
+        this.textures.shark_fin.generateMipmaps = false;
+        this.textures.shark_fin.minFilter = THREE.LinearFilter;
+        this.textures.shark_fin.needsUpdate = true;
+      } else {
+        this.textures.shark_fin = tex;
+      }
+    });
+
+    const boardP = new Promise((resolve, reject) => {
+      loader.load('assets/comics/surfboard-paper-v1.webp', texture => {
+        texture.repeat.set(444/1024, 1499/1536);
+        texture.offset.set(289/1024, 22/1536);
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        if (this.surfboardTexture) {
+          this.surfboardTexture.image = texture.image;
+          this.surfboardTexture.repeat.copy(texture.repeat);
+          this.surfboardTexture.offset.copy(texture.offset);
+          this.surfboardTexture.minFilter = texture.minFilter;
+          this.surfboardTexture.magFilter = texture.magFilter;
+          this.surfboardTexture.needsUpdate = true;
+        } else {
+          this.surfboardTexture = texture;
+        }
+        this.renderDirty = true;
+        resolve();
+      }, undefined, () => reject(Error('Не удалось загрузить доску')));
+    });
+    boardP.catch(() => {});
+    this._boardReady = boardP;
+
+    this._prototypeTexturesPromise = Promise.all([coastP, boardP]);
+    return this._prototypeTexturesPromise;
+  }
+  get coastReady() {
+    return this._coastReadyOverride || (this._coastReady || (this.loadPrototypeTextures(), this._coastReady));
+  }
+  set coastReady(v) {
+    this._coastReadyOverride = v;
+  }
+  get boardReady() {
+    return this._boardReadyOverride || (this._boardReady || (this.loadPrototypeTextures(), this._boardReady));
+  }
+  set boardReady(v) {
+    this._boardReadyOverride = v;
+  }
+  preloadGameplayAssets() {
+    if (this._gameplayAssetsPromise) return this._gameplayAssetsPromise;
+    this.loadPrototypeTextures();
+    this.wave?.load?.();
+    this.heroAnimator?.load?.();
+    this.companion?.load?.();
+    this.world?.load?.();
+    this.rivalCast?.load?.();
+    this.courseShow?.load?.();
+    this.rush?.load?.();
+    this.demo?.load?.();
+    this.duel?.load?.();
+    this.handBeer?.load?.();
+    this.skyAdvertiser?.load?.();
+    this.comics?.load?.();
+    this._gameplayAssetsPromise = Promise.all([
+      this.heroAnimator?.ready,
+      this.handBeer?.ready,
+      this.rivalCast?.ready,
+      this.comics?.ready,
+      this.world?.ready,
+      this.coastReady,
+      this.wave?.ready,
+      this.companion?.ready,
+      this.rush?.ready,
+      this.courseShow?.ready,
+      this.demo?.ready,
+      this.duel?.ready,
+      this.skyAdvertiser?.ready
+    ]);
+    return this._gameplayAssetsPromise;
+  }
+
+  async start(calibrate = true, onProgress = null) {
     if (this.starting) return;this.starting=true;
     try {
+      if (this.journey && this.journey.screen !== 'loader' && !this.flowTest) {
+        this.journey.open('loader');
+      }
+      this.preloadGameplayAssets();
       this.audio.unlock();
       if(!this.audio.isMuted)this.audio.startBGM();
       const button=document.getElementById('start-button');button.disabled=true;
       if(this.flowTest)calibrate=false;
       const needsCalibration=this.input.preferredMode==='gyro'&&(calibrate||this.input.mode!=='gyro');
       if(needsCalibration)button.textContent='ЗАПОМИНАЕМ НАКЛОН…';
-      const assets=Promise.all([this.heroAnimator.ready,this.handBeer.ready,this.rivalCast.ready,this.comics.ready,this.world.ready,this.coastReady,this.wave.ready,this.companion.ready,this.rush.ready,this.courseShow.ready,this.demo.ready,this.duel.ready,this.skyAdvertiser.ready,needsCalibration?this.input.calibrate():Promise.resolve()]);
+      const assetList=[
+        this.heroAnimator.ready,this.handBeer.ready,this.rivalCast.ready,
+        this.comics.ready,this.world.ready,this.coastReady,this.wave.ready,
+        this.companion.ready,this.rush.ready,this.courseShow.ready,
+        this.demo.ready,this.duel.ready,this.skyAdvertiser.ready
+      ];
+      let loadedCount=0;
+      assetList.forEach(p=>{
+        p.then(()=>{
+          loadedCount++;
+          const pct=Math.round((loadedCount/assetList.length)*100);
+          if(onProgress)onProgress(pct);
+          else this.journey?.setLoaderProgress?.(pct);
+        }).catch(()=>{});
+      });
+      const assets=Promise.all([
+        ...assetList,
+        needsCalibration?this.input.calibrate():Promise.resolve()
+      ]);
       let loadTimer;
       try {
         await Promise.race([assets,new Promise((_,reject)=>{loadTimer=setTimeout(()=>reject(Error('Загрузка игры заняла слишком много времени')),45000);})]);
       } finally {clearTimeout(loadTimer);}
+      if(onProgress)onProgress(100);
+      else this.journey?.setLoaderProgress?.(100);
       this.rivalCast.run++;
       this.reset();
       const useCountdown=!this.flowTest&&!!document.getElementById('start-countdown');
@@ -8522,6 +8999,9 @@ function initPaperSurf() {
       } else {
         window.game.start(false);
       }
+    } else if (window.game.journey) {
+      window.game.audio?.startMenuBGM();
+      window.game.journey.preloadStoryFlow().catch(() => {});
     }
   }
   catch(error) {

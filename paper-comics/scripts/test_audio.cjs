@@ -63,6 +63,18 @@ async function run(){
   assert.ok(Object.keys(a.manifest).every(name=>a.buffers[name]?.duration>0),'all recorded assets are valid WAV files');
   a.startBGM();assert.ok(a.bgmPlaying&&!a.bgmAudio,'muted start needs no music element');
   a.toggleMute();assert.ok(a.bgmAudio&&!a.bgmAudio.muted&&!a.bgmAudio.paused,'unmute starts music after a muted start');
+  a.startMenuBGM();
+  assert.ok(a.menuBgmPlaying&&a.menuAudio&&!a.menuAudio.paused&&!a.menuAudio.muted,'startMenuBGM starts menu audio');
+  assert.ok(!a.bgmPlaying&&a.bgmAudio.paused,'startMenuBGM pauses in-game bgm');
+  a.startBGM();
+  assert.ok(a.bgmPlaying&&!a.menuBgmPlaying&&a.menuAudio.paused,'startBGM stops menu audio');
+  a.startMenuBGM();
+  a.toggleMute();
+  assert.ok(a.menuAudio.muted,'toggleMute mutes menu audio');
+  a.toggleMute();
+  assert.ok(!a.menuAudio.muted,'toggleMute un-mutes menu audio');
+  a.stopMenuBGM();
+  assert.ok(!a.menuBgmPlaying&&a.menuAudio.paused,'stopMenuBGM pauses menu audio');
   const calls=[],report={assets:Object.keys(a.manifest).length,flights:[]};
   for(const method of ['playJump','playLanding','playSpin','playCrowdAwe','playCrowdApplause','playTrickTriumph','playFanfareWin']){
     const original=a[method];a[method]=function(...args){calls.push({method,args});return original.apply(this,args);};

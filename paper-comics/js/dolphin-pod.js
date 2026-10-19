@@ -11,15 +11,25 @@ class DolphinPod {
     this.drops.name='dolphin-water-drops';this.drops.frustumCulled=false;
     this.drops.instanceMatrix.setUsage(THREE.DynamicDrawUsage);game.scene.add(this.drops);
     this.dummy=new THREE.Object3D();this.reset();
-    this.ready=new Promise((resolve,reject)=>new THREE.TextureLoader().load('assets/comics/dolphin-paper-v3.webp',texture=>{
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    this._readyPromise=new Promise((resolve,reject)=>new THREE.TextureLoader().load('assets/comics/dolphin-paper-v3.webp',texture=>{
       texture.minFilter=THREE.LinearMipmapLinearFilter;texture.magFilter=THREE.LinearFilter;
       const aspect=texture.image.width/texture.image.height;
       for(const d of this.dolphins){
         d.card.scale.y=3/aspect;d.card.material.map=texture;d.card.material.needsUpdate=true;
       }
-      this.loaded=true;game.renderDirty=true;resolve();
+      this.loaded=true;this.game.renderDirty=true;resolve();
     },undefined,()=>reject(new Error('Не удалось загрузить бумажных дельфинов'))));
-    this.ready.catch(()=>{});
+    this._readyPromise.catch(()=>{});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   makeDolphin(index){
     const width=[7.6,6.9,7.2][index],geometry=new THREE.PlaneGeometry(width,width/3,24,6);

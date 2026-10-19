@@ -8,15 +8,11 @@ class PaperWave {
     this.wakeField = null;this.currentField=null;
     this.peelFront = null;
     this.lastPrintFrame = -1;
-    const loader=new THREE.TextureLoader();
-    let resolveWater,rejectWater;
-    this.ready=new Promise((resolve,reject)=>{resolveWater=resolve;rejectWater=reject;});
-    const texture = loader.load('assets/comics/water-surface-v5.webp',resolveWater,undefined,()=>{
-      loader.load('assets/comics/water-surface-v5.png',resolveWater,undefined,()=>rejectWater(Error('Не удалось загрузить воду')));
-    });
+    const texture = new THREE.Texture();
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(1, 1);
     texture.anisotropy = 4;
+    this.waterTexture = texture;
     const isMobile = typeof matchMedia !== 'undefined' && matchMedia('(pointer:coarse)').matches;
     const segX = isMobile ? 64 : 128;
     const segZ = isMobile ? 96 : 192;
@@ -373,6 +369,37 @@ class PaperWave {
       }
       mesh.instanceMatrix.needsUpdate=true;
     });
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    let resolveWater, rejectWater;
+    this._readyPromise = new Promise((resolve, reject) => { resolveWater = resolve; rejectWater = reject; });
+    const loader = new THREE.TextureLoader();
+    loader.load('assets/comics/water-surface-v5.webp', tex => {
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(1, 1);
+      tex.anisotropy = 4;
+      this.waterTexture.image = tex.image;
+      this.waterTexture.needsUpdate = true;
+      resolveWater(this.waterTexture);
+    }, undefined, () => {
+      loader.load('assets/comics/water-surface-v5.png', tex => {
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(1, 1);
+        tex.anisotropy = 4;
+        this.waterTexture.image = tex.image;
+        this.waterTexture.needsUpdate = true;
+        resolveWater(this.waterTexture);
+      }, undefined, () => rejectWater(Error('Не удалось загрузить воду')));
+    });
+    this._readyPromise.catch(() => {});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
 }
 PaperWave.LIP_ROW_FACTORS=Array.from({length:13},(_,row)=>{

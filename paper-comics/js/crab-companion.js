@@ -22,8 +22,12 @@ class CrabCompanion {
     this.tail=new THREE.Vector3(.30,-1.78,.075);this.anchor=new THREE.Vector3();
     this.boardUp=new THREE.Vector3();this.cameraUp=new THREE.Vector3();this.cameraRight=new THREE.Vector3();
     this.speechPoint=new THREE.Vector3();this.callout=document.getElementById('crab-callout');
-    const loader=new THREE.TextureLoader();
-    const crabReady=new Promise((resolve,reject)=>loader.load('assets/comics/crab-kleshnya-sheet-v1.webp',texture=>{
+    this.reset();
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    const loader = new THREE.TextureLoader();
+    const crabReady = new Promise((resolve,reject)=>loader.load('assets/comics/crab-kleshnya-sheet-v1.webp',texture=>{
       texture.minFilter=texture.magFilter=THREE.LinearFilter;texture.generateMipmaps=false;
       this.image=texture.image;this.textures={};
       for(const name of ['rest','raised']){
@@ -33,9 +37,15 @@ class CrabCompanion {
       }
       this.setPose('rest');resolve();
     },undefined,()=>reject(Error('Не удалось загрузить Клешню'))));
-    this.ready=Promise.all([crabReady,game.boardReady]);
-    this.ready.then(()=>{game.renderDirty=true;}).catch(()=>{});
-    this.reset();
+    this._readyPromise = Promise.all([crabReady, this.game.boardReady]);
+    this._readyPromise.then(()=>{this.game.renderDirty=true;}).catch(()=>{});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   reset(){
     this.pose='';this.raisedUntil=0;this.bubbleUntil=0;this.priority=0;this.lastSpoken=-100;this.lastEvents={};this.lineIndex={};this.heard=new Set();

@@ -7,20 +7,33 @@ class BeerDuel {
     this.liquid=new ComicBeerLiquid();
     this.mount();
     this.frame=new Image();
-    this.ready=Promise.all([game.world.ready,new Promise((resolve,reject)=>{
+    this.reset();
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    this._readyPromise=Promise.all([this.game.world.ready,new Promise((resolve,reject)=>{
       let fallbackTried=false;
       this.frame.onload=resolve;
       this.frame.onerror=()=>{if(!fallbackTried){fallbackTried=true;this.frame.src='assets/comics/glass-paper-frame.png';}else reject(Error('Не удалось загрузить стакан Бориса'));};
       this.frame.src='assets/comics/glass-paper-frame.webp';
     })]).then(()=>{
-      const card=this.boris.jetCard,view=game.world.jetViews[2];card.material.map=view.map;card.geometry.dispose();
-      card.geometry=new THREE.PlaneGeometry(view.width*1.2,3.6);card.position.y=1.8;
-      // The right-hand anchor is measured on the rear-view sprite atlas.
-      const b=view.bounds,w=card.geometry.parameters.width;
-      this.glass.position.set(w*((2070-b.left)/(b.right-b.left+1)-.5)+.10,3.6*(.5-(285-b.top)/(b.bottom-b.top+1))+.26,.02);
+      const card=this.boris?.jetCard,view=this.game.world.jetViews?.[2];
+      if (card && view) {
+        card.material.map=view.map;card.geometry.dispose();
+        card.geometry=new THREE.PlaneGeometry(view.width*1.2,3.6);card.position.y=1.8;
+        const b=view.bounds,w=card.geometry.parameters.width;
+        this.glass.position.set(w*((2070-b.left)/(b.right-b.left+1)-.5)+.10,3.6*(.5-(285-b.top)/(b.bottom-b.top+1))+.26,.02);
+      }
       this.printFrame=-1;this.update();
     });
-    this.ready.catch(()=>{});this.reset();
+    this._readyPromise.catch(()=>{});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   mount(){
     this.ticket=document.createElement('div');this.ticket.className='duel-ticket paper';

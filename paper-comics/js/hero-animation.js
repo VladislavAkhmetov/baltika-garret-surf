@@ -21,12 +21,6 @@ class HeroAnimator {
     this.footAnchor=new THREE.Vector3();this.stance=new THREE.Vector3();this.deckAnchor=new THREE.Vector3();
     this.cameraRight=new THREE.Vector3();this.cameraUp=new THREE.Vector3();this.deckX=new THREE.Vector3();this.deckY=new THREE.Vector3();
     this.deckTurn=new THREE.Quaternion();this.deckBase=new THREE.Quaternion();this.deckBest=new THREE.Quaternion();
-    this.ready=Promise.all(Object.entries(this.poseDefinitions).map(([key,definition])=>new Promise((resolve,reject)=>{
-      const image=new Image();let fallbackTried=false;
-      image.onload=()=>resolve([key,image]);
-      image.onerror=()=>{if(!fallbackTried){fallbackTried=true;image.src=definition.src;}else reject(new Error('Не удалось загрузить позу персонажа: '+key));};
-      image.src=definition.src.replace(/\.png$/,'.webp');
-    }))).then(entries=>this.buildAtlases(Object.fromEntries(entries)));
     const card=game.player.card;
     card.geometry.dispose();card.geometry=new THREE.PlaneGeometry(this.width,this.height);
     card.material.depthWrite=false;card.renderOrder=3;
@@ -34,7 +28,29 @@ class HeroAnimator {
     this.fingers=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({transparent:true,alphaTest:.25,depthWrite:false,side:THREE.DoubleSide}));
     this.fingers.position.z=.085;this.fingers.renderOrder=6;this.fingers.visible=false;card.add(this.fingers);
     this.fingerTextures={};
-    this.ready.then(()=>{for(const [key,t] of Object.entries(this.atlases)){this.fingerTextures[key]=t.clone();this.fingerTextures[key].needsUpdate=true;}this.apply('trim',0);}).catch(error=>{this.error=error;});
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    this._readyPromise = Promise.all(Object.entries(this.poseDefinitions).map(([key,definition])=>new Promise((resolve,reject)=>{
+      const image=new Image();let fallbackTried=false;
+      image.onload=()=>resolve([key,image]);
+      image.onerror=()=>{if(!fallbackTried){fallbackTried=true;image.src=definition.src;}else reject(new Error('Не удалось загрузить позу персонажа: '+key));};
+      image.src=definition.src.replace(/\.png$/,'.webp');
+    }))).then(entries=>this.buildAtlases(Object.fromEntries(entries)));
+    this._readyPromise.then(()=>{
+      for(const [key,t] of Object.entries(this.atlases)){
+        this.fingerTextures[key]=t.clone();
+        this.fingerTextures[key].needsUpdate=true;
+      }
+      this.apply('trim',0);
+    }).catch(error=>{this.error=error;});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
   cleanCutout(image){
     const canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;

@@ -1,8 +1,5 @@
 /* Blank generated artwork; every label, number and progress bar stays live. */
 #app-container {
-  --hud-paper: url('../assets/comics/hud/paper-blank.webp');
-  --hud-ink: url('../assets/comics/hud/ink-blank.webp');
-  --hud-crown: url('../assets/comics/hud/crown-cream.webp');
   --hud-color: #20434c;
   --ride-left: 12px;
   --hud-top: max(10px, env(safe-area-inset-top));
@@ -10,6 +7,11 @@
   --hud-status-width: calc((100cqw - 24px) * .32);
   --hud-chain-width: calc((100cqw - 24px) * .34);
   --hud-score-width: calc((100cqw - 24px) * .29);
+}
+#app-container.playing {
+  --hud-paper: url('../assets/comics/hud/paper-blank.webp');
+  --hud-ink: url('../assets/comics/hud/ink-blank.webp');
+  --hud-crown: url('../assets/comics/hud/crown-cream.webp');
 }
 #app-container.beer-duel { --chain-top: var(--hud-row-top); --message-top: calc(var(--hud-row-top) + 50px); }
 #app-container.beer-duel:has(#arcade-chain.has-chain) { --message-top: calc(var(--hud-row-top) + 54px); }

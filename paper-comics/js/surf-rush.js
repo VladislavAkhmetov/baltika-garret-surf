@@ -12,10 +12,8 @@ class SurfRush {
     this.makeScenery();this.reset();
   }
   makeScenery(){
-    const g=this.game,loader=new THREE.TextureLoader();
-    this.ready=new Promise((resolve,reject)=>loader.load('assets/comics/sea-stack-v10.webp',texture=>{
-      texture.minFilter=THREE.LinearMipmapLinearFilter;
-      g.setpiece?.setRockTexture(texture);
+    const g=this.game;
+    this.rockSprites=[];
       // These are shore boundaries outside the playable strip, never invisible obstacles.
       const rocks=[[-21,218,25,19],[23,266,25,22],[-19,307,19,16],[21,364,22,18],
         [20,443,25,20],[-21,496,23,19],[22,551,26,22],[-22,577,19,15],
@@ -23,11 +21,10 @@ class SurfRush {
         [-24,795,26,21],[21,840,25,21],[-19,924,22,18],[23,987,24,20],
         [-21,1044,24,19],[23,1147,27,22],[-19,1209,22,18],[21,1282,24,19],[-20,1338,21,17]];
       for(const [x,z,width,height] of rocks){
-        const mesh=g.sprite(texture,width,height);mesh.center.set(.5,0);mesh.position.set(-x,-.45,z);mesh.material.fog=true;
+        const mesh=g.sprite(new THREE.Texture(),width,height);mesh.center.set(.5,0);mesh.position.set(-x,-.45,z);mesh.material.fog=true;
+        this.rockSprites.push(mesh);
         this.scenery.push({mesh,x,z,halfWidth:width/2,halfDepth:width*.18,kind:'shore-rock'});
       }
-      g.renderDirty=true;resolve();
-    },undefined,()=>reject(Error('Не удалось загрузить скалы'))));this.ready.catch(()=>{});
     const wood=g.trickRoute.makeInk(0x996b45),edge=g.trickRoute.edge;
     const pier=new THREE.Group();g.scene.add(pier);
     const deck=new THREE.Mesh(new THREE.BoxGeometry(6,.45,86),wood);deck.position.set(-15,3.5,710);pier.add(deck);
@@ -208,6 +205,27 @@ class SurfRush {
     g.container.dataset.signal=winner;moment.classList.remove('coach-muted');
     g.container.classList.toggle('impact-message',hasMoment&&moment.classList.contains('bad'));
     for(const el of [moment,coach,toast,hint])el.style.visibility=el.id===winner?'visible':'hidden';
+  }
+  load() {
+    if (this._readyPromise) return this._readyPromise;
+    const g=this.game,loader=new THREE.TextureLoader();
+    this._readyPromise=new Promise((resolve,reject)=>loader.load('assets/comics/sea-stack-v10.webp',texture=>{
+      texture.minFilter=THREE.LinearMipmapLinearFilter;
+      g.setpiece?.setRockTexture(texture);
+      for(const mesh of this.rockSprites){
+        mesh.material.map=texture;
+        mesh.material.needsUpdate=true;
+      }
+      g.renderDirty=true;resolve();
+    },undefined,()=>reject(Error('Не удалось загрузить скалы'))));
+    this._readyPromise.catch(()=>{});
+    return this._readyPromise;
+  }
+  get ready() {
+    return this._readyOverride || this.load();
+  }
+  set ready(v) {
+    this._readyOverride = v;
   }
 }
 window.SurfRush=SurfRush;
