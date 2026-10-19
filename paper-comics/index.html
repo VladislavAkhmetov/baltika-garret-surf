@@ -6,26 +6,18 @@
   <meta name="theme-color" content="#103f58">
   <title>GARRET — Ни капли! / Бумажные комиксы</title>
   <link rel="stylesheet" href="assets/fonts/fonts.css">
-  <link rel="stylesheet" href="css/prototype.css">
-  <link rel="stylesheet" href="css/journey.css">
-  <link rel="stylesheet" href="css/menus.css">
-  <link rel="stylesheet" href="css/onboarding.css">
-  <link rel="stylesheet" href="css/companion.css">
-  <link rel="stylesheet" href="css/ride-ui.css">
-  <link rel="stylesheet" href="css/story-comic.css">
-  <link rel="stylesheet" href="css/arcade.css">
-  <link rel="stylesheet" href="css/arcade-art.css">
-  <link rel="stylesheet" href="css/flow-test.css">
-  <link rel="stylesheet" href="css/drive-test.css">
-  <link rel="stylesheet" href="css/controls.css">
-    <link rel="stylesheet" href="css/race.css">
-    <link rel="stylesheet" href="css/rush.css">
-    <link rel="stylesheet" href="css/course-show.css">
-    <link rel="stylesheet" href="css/beer-duel.css">
-  <link rel="stylesheet" href="css/mobile-frame.css">
-  <link rel="stylesheet" href="css/collage-hud.css">
-  <link rel="stylesheet" href="css/pause.css">
-  <link rel="stylesheet" href="css/results.css">
+  <link rel="stylesheet" href="css/game-bundle.css">
+  <script>
+    (function(){
+      function syncAppHeight(){
+        var h = window.innerHeight;
+        if (h) document.documentElement.style.setProperty('--app-height', h + 'px');
+      }
+      syncAppHeight();
+      window.addEventListener('resize', syncAppHeight);
+      window.addEventListener('orientationchange', syncAppHeight);
+    })();
+  </script>
 </head>
 <body>
   <div class="mobile-viewport">

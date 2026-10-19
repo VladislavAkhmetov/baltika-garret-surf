@@ -12,8 +12,9 @@ class ArcadeJuice {
     this.liveCamera=live;try{localStorage.setItem('garret_comics_camera',live?'live':'calm');}catch(_){}
     if(!live){this.roll=this.trauma=0;}
   }
+  get baseFov(){return this.game?.baseFov||58;}
   reset(){
-    this.stop=this.trauma=this.kick=this.roll=this.lineFrame=0;this.fov=58;this.offset.set(0,0,0);
+    this.stop=this.trauma=this.kick=this.roll=this.lineFrame=0;this.fov=this.baseFov;this.offset.set(0,0,0);
     this.words.forEach(w=>{w.life=0;w.el.classList.remove('visible');});
     this.lines?.style.setProperty('--lines','0');
   }
@@ -31,11 +32,11 @@ class ArcadeJuice {
   }
   // Runs after lookAt: roll and FOV are part of the camera pose for this frame only.
   updateCamera(dt,camera){
-    const p=this.game.p;
+    const p=this.game.p,base=this.baseFov;
     this.kick*=Math.exp(-dt*2.4);
-    if(this.calm){this.roll=0;this.fov=58;}
+    if(this.calm){this.roll=0;this.fov=base;}
     else{
-      const target=Math.min(70,58+THREE.MathUtils.clamp((p.speed-25)*.6,0,6)+this.kick);
+      const target=Math.min(base+12,base+THREE.MathUtils.clamp((p.speed-25)*.6,0,6)+this.kick);
       this.fov+=(target-this.fov)*(1-Math.exp(-dt*6));
       const roll=THREE.MathUtils.clamp(-p.smoothLean*.024,-.024,.024);
       if(p.airborne||p.fallen)this.roll=0;

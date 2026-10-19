@@ -255,3 +255,25 @@
 #app-container[data-input-mode="gyro"] .steer-controls button.pressed,
 #app-container[data-input-mode="gyro"] .steer-controls button.learn-control { opacity: 1; }
 #app-container .steer-controls button.learn-control { filter: drop-shadow(0 0 4px #ffca4b99); }
+
+@container mobile-screen (max-height: 740px) {
+  #app-container { --hud-top: max(8px, env(safe-area-inset-top)); --hud-row-top: calc(var(--hud-top) + 64px); }
+  #app-container.beer-duel { --chain-top: var(--hud-row-top); --message-top: calc(var(--hud-row-top) + 38px); }
+  #app-container.beer-duel:has(#arcade-chain.has-chain) { --message-top: calc(var(--hud-row-top) + 42px); }
+  #app-container .beer-ticket { height: 58px; padding: 4px 8px 12px 3px; }
+  #app-container .beer-ticket strong { font-size: 24px; }
+  #app-container #beer-canvas { width: 24px; height: 38px; }
+  #app-container .beer-track { bottom: 5px; height: 7px; }
+  #app-container .duel-ticket { height: 52px; padding: 5px 8px 5px; min-width: 68px; }
+  #app-container .duel-ticket > strong { font-size: 24px; }
+  #app-container #pause-button { width: 32px; height: 32px; font-size: 18px; }
+  #app-container .duel-status { min-height: 20px; padding: 4px 6px; font-size: 8.5px; }
+  #app-container .chain-row { padding: 4px 6px 7px; }
+  #app-container .chain-value { font-size: 17px; }
+  #app-container #ride-coach { padding: 4px 10px 5px; }
+  #app-container #ride-coach strong { font-size: 12px; }
+  #app-container #ride-coach span { font-size: 10px; margin-top: 1px; }
+  #app-container .steer-controls { bottom: max(12px, calc(env(safe-area-inset-bottom) + 6px)); gap: 8px; }
+  #app-container .steer-controls button { width: clamp(52px, 15cqw, 62px); height: clamp(52px, 15cqw, 62px); }
+  #app-container #jump-button { width: 62px; height: 62px; bottom: max(38px, calc(env(safe-area-inset-bottom) + 30px)); }
+}

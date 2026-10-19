@@ -3,18 +3,93 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="refresh" content="0; url=paper-comics/index.html">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#103f58">
   <title>GARRET — Ни капли! / Бумажные комиксы</title>
   <script>
     var path = window.location.pathname.replace(/\/index\.html?$/, '').replace(/\/$/, '');
     window.location.replace(path + '/paper-comics/index.html' + window.location.search);
   </script>
   <style>
-    body { background: #103f58; color: #fff; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
-    a { color: #f8c83a; font-size: 20px; font-weight: bold; text-decoration: none; padding: 14px 28px; border: 2px solid #f8c83a; border-radius: 8px; display: inline-block; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #e7ddc2;
+      color: #17282c;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      height: 100vh;
+      text-align: center;
+      padding: 24px;
+      overflow: hidden;
+    }
+    .splash-card {
+      background: #f4e9cd;
+      border: 3px solid #17282c;
+      box-shadow: 4px 6px 0 #103f5830;
+      padding: 28px 24px;
+      max-width: 320px;
+      width: 100%;
+      border-radius: 4px;
+      transform: rotate(-1.5deg);
+    }
+    .splash-eyebrow {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #125577;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .splash-title {
+      font-size: 32px;
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -1px;
+      color: #17282c;
+      margin-bottom: 16px;
+    }
+    .splash-title span {
+      color: #eb643c;
+    }
+    .splash-loader {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffc43d;
+      color: #17282c;
+      font-size: 13px;
+      font-weight: 800;
+      padding: 10px 18px;
+      border: 2px solid #17282c;
+      box-shadow: 2px 3px 0 #17282c;
+      border-radius: 3px;
+      margin-bottom: 16px;
+      animation: pulse 1.2s ease-in-out infinite alternate;
+    }
+    @keyframes pulse {
+      from { transform: scale(0.98); }
+      to { transform: scale(1.02); }
+    }
+    .splash-link {
+      display: inline-block;
+      color: #125577;
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: underline;
+      opacity: 0.8;
+    }
   </style>
 </head>
 <body>
-  <p><a href="paper-comics/index.html">Перейти к игре "Ни капли!" →</a></p>
+  <div class="splash-card">
+    <div class="splash-eyebrow">Бумажные комиксы</div>
+    <h1 class="splash-title">НИ <span>КАПЛИ!</span></h1>
+    <div class="splash-loader">Загружаем игру…</div>
+    <div><a class="splash-link" href="paper-comics/index.html">Нажми, если переход не сработал →</a></div>
+  </div>
 </body>
 </html>

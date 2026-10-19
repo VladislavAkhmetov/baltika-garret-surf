@@ -1,0 +1,2049 @@
+/* Source: css/prototype.css */
+:root{--ink:#17282c;--cream:#f4e9cd;--yellow:#ffc43d;--coral:#eb643c;--blue:#125577;--deep:#103f58;--paper-edge:polygon(1% 2%,9% 0,17% 1.4%,29% 0,40% 1%,54% 0,68% 1.6%,79% 0,91% 1%,98% 0,100% 12%,99% 26%,100% 43%,99% 61%,100% 80%,98.5% 98%,87% 100%,75% 98.8%,62% 100%,47% 99%,33% 100%,19% 98.5%,7% 100%,0 98%,1% 82%,0 66%,1% 46%,0 29%)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;overscroll-behavior:none}body{background:#e7ddc2;color:var(--ink);font-family:Rubik,Arial,sans-serif;display:flex;justify-content:center;align-items:center;gap:70px;min-height:100dvh;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='.13' filter='url(%23n)'/%3E%3C/svg%3E")}
+button{font:inherit;cursor:pointer;border:0;color:var(--ink);touch-action:manipulation;-webkit-tap-highlight-color:transparent}button:focus-visible{outline:3px solid var(--coral);outline-offset:4px}button:active{transform:translateY(2px) rotate(-1deg)}
+.paper{background-color:var(--cream);background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='.10' filter='url(%23p)'/%3E%3C/svg%3E");clip-path:var(--paper-edge)}
+.desktop-note{width:270px;position:relative;flex-shrink:0}.edition{font-size:11px;letter-spacing:3px;font-weight:700;display:block;margin-bottom:26px}.desktop-note h1{font-family:'Russo One',Impact,sans-serif;line-height:1.14;font-size:46px;margin:0 0 25px;letter-spacing:-1.8px}.desktop-note em{font-style:normal;display:inline-block;background:var(--yellow);padding:3px 9px 5px;margin-left:-9px;transform:rotate(-3deg);white-space:nowrap}.desktop-note>p{font-size:15px;line-height:1.75}.note-controls{padding:20px 22px 24px;margin:35px -8px 30px;transform:rotate(2deg);box-shadow:0 3px 4px #17282c22}.note-controls p{font-size:12px;margin:15px 0}.note-controls small{font-size:11px;line-height:1.8;display:block;color:#52615c}.scribble{font-family:Caveat,cursive;font-size:21px;font-weight:700;display:block;margin-bottom:20px}kbd{font-family:Rubik,sans-serif;font-size:10px;border:1.5px solid var(--ink);padding:4px 6px;border-radius:3px;font-weight:700}.desktop-footer{font-family:Caveat,cursive;font-size:20px;transform:rotate(-3deg);display:block}
+#app-container{position:relative;width:min(100vw,480px);height:min(96dvh,940px);overflow:hidden;background:#2788ad;isolation:isolate;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 25px 65px #103f5840,0 0 0 8px #17282c;border-radius:6px}
+.sky{position:absolute;inset:0;background:linear-gradient(#3b95b0 0%,#90b9b8 25%,#f1d7a8 53%,#f8dfb9 63%);z-index:-2;overflow:hidden}
+/* Separate sheets: the shadow belongs to the wrapper, outside the torn mask. */
+.sun,.sun-halo,.cloud{position:absolute;pointer-events:none;filter:drop-shadow(1px 2px 1px #69463224)}
+.sun,.sun-halo{aspect-ratio:1;--sky-cutout:url('../assets/sprites/sky-paper-disc.svg')}
+.sun{top:25%;left:34%;width:47%;--sky-paper:#f6c54c;transform:rotate(-5deg)}
+.sun-halo{top:19%;left:22%;width:72%;--sky-paper:#ec8463;opacity:.84;transform:rotate(13deg)}
+.sun::before,.sun::after,.sun-halo::before,.cloud::before{content:"";position:absolute;inset:0;background-color:var(--sky-paper);background-image:url('../assets/sprites/sky-paper-grain.svg');background-size:180px 180px;background-blend-mode:multiply;-webkit-mask:var(--sky-cutout) center/100% 100% no-repeat;mask:var(--sky-cutout) center/100% 100% no-repeat}
+.sun::after{inset:-2px 1px 1px -2px;background-color:#ffe4a0;transform:rotate(4deg);z-index:0}
+.sun::before{inset:1px 0 0 1px;background-size:140px 140px;z-index:1}
+.cloud{height:clamp(26px,8cqw,36px);--sky-paper:#f4e8d0;--sky-cutout:url('../assets/sprites/sky-paper-cloud-one.svg');filter:drop-shadow(1px 2px 1px #69463230)}
+.cloud::before{background-image:url('../assets/sprites/sky-paper-grain.svg'),linear-gradient(#fff6e580,transparent 45%,#d3b98b30);background-size:150px 150px,100% 100%;background-blend-mode:multiply,normal}
+.cloud-one{width:56%;top:31%;left:-5%;transform:rotate(-7deg)}
+.cloud-two{width:42%;top:24%;right:-5%;transform:rotate(5deg);--sky-cutout:url('../assets/sprites/sky-paper-cloud-two.svg');--sky-paper:#f7edd9}
+.sky.world-sky>.sun,.sky.world-sky>.sun-halo,.sky.world-sky>.cloud{left:var(--sky-x);top:var(--sky-y);right:auto;width:var(--sky-width);height:var(--sky-height);aspect-ratio:auto;transform:translate(-50%,-50%) rotate(var(--sky-turn))}
+#surf-canvas{display:block;width:100%;height:100%;position:absolute;inset:0}.print-grain{position:absolute;inset:0;pointer-events:none;z-index:2;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='.11' filter='url(%23g)'/%3E%3C/svg%3E");mix-blend-mode:multiply;opacity:.48}
+@media (pointer:coarse){.print-grain{display:none!important}body{background-image:none}}
+.hud{position:absolute;top:max(16px,env(safe-area-inset-top));left:13px;right:13px;z-index:5;display:grid;grid-template-columns:1fr 1fr 36px;gap:10px;align-items:start;transition:opacity .3s}.beer-ticket{grid-row:span 2;display:flex;align-items:center;padding:6px 12px 7px 2px;gap:2px;transform:rotate(-3deg);filter:drop-shadow(1px 3px 0 #17282c)}#beer-canvas{width:48px;height:72px;flex-shrink:0}.beer-ticket>div{flex:1}.ticket-label{font-size:9px;font-weight:700;letter-spacing:1px}.beer-ticket strong{font-size:37px;line-height:1.15;font-weight:900;display:block;letter-spacing:-2px}.beer-ticket strong span{font-size:24px;letter-spacing:-1px}.beer-track{height:8px;border:1.5px solid var(--ink);background:#d8ccaa;margin-top:3px}.beer-track i{display:block;height:100%;width:100%;background:var(--yellow);transition:width .1s}.score-ticket{transform:rotate(3deg);padding:0 2px}.score-ticket>span{background:var(--yellow);font-size:12px;font-weight:900;padding:4px 13px 2px;display:table;clip-path:var(--paper-edge);transform:rotate(-3deg);margin-left:4px}.score-ticket strong{font-family:'Russo One',Impact,sans-serif;font-size:25px;letter-spacing:1px;background:#17282c;color:var(--cream);padding:5px 9px;display:block;clip-path:var(--paper-edge)}.caps-ticket{grid-column:2;display:flex;align-items:center;gap:5px;padding:4px 8px;transform:rotate(-2deg);width:max-content}.caps-ticket img{width:23px;height:23px;object-fit:contain}.caps-ticket #caps-value{font-weight:900;font-size:20px}.caps-ticket .ticket-label{font-size:8px}.small-button{width:36px;height:36px;font-size:18px;font-weight:900;grid-column:3;grid-row:1;transform:rotate(5deg)}
+.bottom-hud{position:absolute;bottom:max(20px,env(safe-area-inset-bottom));left:16px;right:16px;z-index:5;display:flex;gap:10px;align-items:end;pointer-events:none}.speed-ticket{color:var(--cream);text-shadow:2px 2px 0 var(--deep);width:67px;position:relative}.speed-ticket strong{font-family:'Russo One',Impact,sans-serif;font-size:42px;line-height:1;display:block}.speed-ticket>span{font-size:9px;font-weight:900;letter-spacing:2px}#speed-meter{height:3px;background:var(--yellow);margin-top:5px;width:80%}.route-ticket{padding:11px 12px 12px;flex:1;transform:rotate(-2deg)}.route-ticket>span{font-size:10px;font-weight:900;white-space:nowrap}.route-track{height:4px;background:#ccbea1;margin-top:7px}.route-track i{display:block;background:var(--coral);height:100%;width:0}.charge-ticket{padding:10px 11px;transform:rotate(3deg);width:90px;text-align:center}.charge-ticket>span{font-size:10px;font-weight:900;display:block;margin-bottom:7px}.charge-ticket>div{height:5px;background:#d7c9a9}.charge-ticket i{height:100%;background:var(--yellow);display:block;width:0}
+.hint{position:absolute;bottom:110px;left:50%;transform:translateX(-50%) rotate(-4deg);padding:8px 16px;font-family:Caveat,cursive;font-weight:700;font-size:23px;white-space:nowrap;z-index:6;transition:opacity .4s;pointer-events:none}.hint.invisible{opacity:0}.moment{position:absolute;top:31%;left:50%;transform:translateX(-50%) rotate(-6deg) scale(.8);z-index:8;pointer-events:none;text-align:center;opacity:0;transition:opacity .13s,transform .2s;width:max-content;max-width:92%}.moment.visible{opacity:1;transform:translateX(-50%) rotate(-6deg) scale(1)}.moment strong{display:block;font-family:'Russo One',Impact,sans-serif;font-size:clamp(27px,7cqw,40px);padding:10px 18px;background:var(--yellow);clip-path:var(--paper-edge);box-shadow:3px 4px 0 var(--ink);white-space:nowrap}.moment span{display:table;margin:0 auto;background:var(--cream);padding:6px 13px;font-family:Caveat,cursive;font-size:22px;transform:rotate(3deg)}.moment.bad strong{background:var(--coral)}#spill-flash{position:absolute;inset:0;z-index:4;pointer-events:none;box-shadow:inset 0 0 75px #eb643c;opacity:0;transition:opacity .1s}.touch-guide{position:absolute;left:15px;right:15px;bottom:78px;display:flex;justify-content:space-between;color:var(--cream);font-family:Caveat,cursive;font-size:16px;text-shadow:1px 1px var(--deep);z-index:5;pointer-events:none;opacity:0}.touch-guide.visible{opacity:.9}
+.screen{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;justify-content:center;align-items:center;background:#103f5820;backdrop-filter:blur(1px);padding:25px}.hidden{display:none!important}.start-card{padding:28px 28px 20px;width:100%;max-width:330px;text-align:center;transform:rotate(-3deg);filter:drop-shadow(4px 8px 0 #103f5840)}.eyebrow{font-size:9px;font-weight:700;letter-spacing:2px;display:block}.start-card h2{font-family:'Russo One',Impact,sans-serif;font-size:72px;line-height:.95;letter-spacing:-3px;margin:21px 0 20px}.start-card h2 em{font-style:normal;color:var(--blue);font-size:60px}.start-card>p{font-family:Caveat,cursive;font-size:24px;line-height:1.05;margin:12px 0 24px}.yellow-button{background:var(--yellow);font-weight:900;font-size:15px;display:block;width:100%;padding:16px 12px;clip-path:var(--paper-edge);letter-spacing:.2px;box-shadow:inset 0 -4px 0 #db9e22}.yellow-button span{font-size:22px;margin-left:12px}.start-card .start-help{font-family:Rubik,sans-serif;font-size:10px;line-height:1.65;margin:15px 0 0;color:#54625b}.start-stamp{background:var(--coral);color:var(--cream);font-size:13px;letter-spacing:2px;padding:10px 20px;margin-bottom:-4px;z-index:1;transform:rotate(5deg);clip-path:var(--paper-edge);font-weight:700}.start-footnote{font-family:Caveat,cursive;color:var(--cream);font-size:19px;text-shadow:1px 1px var(--deep);margin-top:22px;transform:rotate(-3deg)}
+.pause-card,.result-card{text-align:center;padding:30px 25px;width:100%;max-width:340px;transform:rotate(-2deg)}.pause-card h2,.result-card h2{font-family:'Russo One',Impact,sans-serif;font-size:39px;margin:22px 0}.text-button{background:transparent;font-family:Caveat,cursive;font-size:22px;padding:16px 0 0}.result-card h2{font-size:44px;margin-bottom:10px}.result-beer{font-size:82px;line-height:1;font-family:'Russo One',Impact,sans-serif;color:var(--blue);letter-spacing:-3px}.result-card>p{font-family:Caveat,cursive;font-size:24px;margin:12px 0 22px}.result-stats{border-top:1px dashed #a79c80;padding:15px 0;margin-bottom:12px;display:flex;gap:12px;justify-content:space-around}.result-stats>div{flex:1}.result-stats span{font-size:8px;font-weight:700;display:block;line-height:1.5}.result-stats strong{font-size:23px;display:block;margin-top:6px}.error-screen{position:absolute;inset:20%;z-index:30;background:var(--cream);padding:25px;line-height:1.5;align-content:center}.playing .hud,.playing .bottom-hud{opacity:1}#app-container:not(.playing) .hud,#app-container:not(.playing) .bottom-hud{opacity:.45}
+@container mobile-screen (max-height:710px){.start-card{max-width:290px;padding:22px 25px 15px}.start-card h2{font-size:59px;margin:16px 0}.start-card h2 em{font-size:49px}.start-card>p{font-size:22px;margin-bottom:18px}.start-stamp{font-size:11px}.start-footnote{margin-top:14px}.hint{bottom:100px;font-size:20px}.beer-ticket strong{font-size:32px}#beer-canvas{height:64px;width:42px}.result-beer{font-size:65px}.result-card h2{margin-top:15px}.result-card{padding:22px}}
+@media(prefers-reduced-motion:reduce){.moment{transition:opacity .1s}.hint{transition:none}}
+
+.hint{width:max-content;max-width:calc(100% - 32px);white-space:normal;text-align:center;line-height:1.1;font-size:21px}
+#app-container:not(.playing) .hint,#app-container:not(.playing) .touch-guide{display:none}
+.comic-frame .comic-scene{background:transparent}
+.comic-frame .comic-burst{inset:0;clip-path:polygon(0 0,73% 0,54% 100%,0 100%)}
+#comic-cutout{left:0;top:25%;width:74%;height:65%;object-position:50% 0;transform:rotate(-6deg)}
+.comic-frame.grab #comic-cutout{left:0;top:25%;transform:rotate(6deg)}
+/* Layout follows the mobile stage, including when it is shown on a computer. */
+.center-button{position:absolute;right:0;top:47px;width:36px;height:32px;font-size:25px;line-height:1;transform:rotate(-3deg)}.input-label{position:absolute;left:3px;top:98px;padding:4px 7px;font-size:8px;letter-spacing:.5px;font-weight:700}.combo-value{position:absolute;right:0;top:92px;background:var(--coral);color:var(--cream);font-family:'Russo One',Impact,sans-serif;padding:4px 7px;transform:rotate(3deg)}
+.comic-frame{position:absolute;inset:0;z-index:9;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .08s}.comic-frame.visible{opacity:1;visibility:visible}.comic-scene{position:absolute;inset:0;clip-path:polygon(47% 0,100% 0,100% 100%,32% 100%);background:#163e50}.comic-scene canvas{width:100%;height:100%;object-fit:cover;filter:contrast(1.1) saturate(.75)}.comic-burst{position:absolute;inset:0 18% 0 0;background:repeating-conic-gradient(from 20deg at 44% 57%,#ffca42 0deg 13deg,#f2b733 13deg 25deg);clip-path:polygon(0 0,79% 0,57% 100%,0 100%);overflow:visible}.comic-burst::after{content:'';position:absolute;inset:0;background-image:radial-gradient(#1b363a 1px,transparent 1px);background-size:7px 7px;opacity:.11;pointer-events:none}.comic-burst img{position:absolute;left:-12%;top:24%;width:103%;height:73%;object-fit:contain;filter:drop-shadow(5px 7px 0 #17384655);transform:rotate(-11deg)}.comic-burst strong{position:absolute;left:7%;top:16%;color:var(--cream);font-family:'Russo One',Impact,sans-serif;font-size:clamp(45px,9cqw,78px);line-height:1;transform:rotate(-8deg);text-shadow:3px 3px 0 var(--ink),-2px -2px 0 var(--ink),2px -2px 0 var(--ink),-2px 2px 0 var(--ink);z-index:2;white-space:nowrap}.comic-burst span{position:absolute;bottom:13%;left:4%;background:var(--cream);padding:7px 12px;font-family:Caveat,cursive;font-weight:700;font-size:24px;transform:rotate(-6deg);z-index:2;max-width:63%}.comic-frame.grab .comic-burst img{transform:rotate(7deg);left:-14%;top:26%}.result-card .result-tricks{font-family:Rubik,sans-serif;font-size:11px;line-height:1.5;margin:4px 0 15px}.yellow-button:disabled{opacity:.7;cursor:wait}@container mobile-screen (max-width:400px){.input-label{top:92px;font-size:7px}.comic-burst strong{font-size:43px}.comic-burst span{font-size:21px}}
+
+/* Thumb controls stay clear of the hero and the route status. */
+.action-controls{position:absolute;left:16px;right:16px;bottom:max(14px,env(safe-area-inset-bottom));z-index:7;display:flex;justify-content:space-between;align-items:end;gap:14px;pointer-events:none}
+.action-button{pointer-events:auto;touch-action:none;position:relative;width:116px;min-height:86px;padding:9px 10px 12px;text-align:center;filter:drop-shadow(2px 4px 0 #123f5880);transition:background .1s}
+.action-button strong{display:block;font-family:'Russo One',Impact,sans-serif;font-size:12px;letter-spacing:.2px;line-height:1.2}.action-button small{display:block;font-size:8px;margin-top:4px;font-weight:600}.action-icon{display:block;font-family:'Russo One',Impact,sans-serif;font-size:27px;line-height:1.1;margin-bottom:4px}
+.crouch-button{background-color:var(--yellow);transform:rotate(3deg);width:126px}.action-button.pressed{background-color:#ec7445;transform:translateY(3px) rotate(-1deg);color:#fff2d0}.button-charge{display:block;height:4px;background:#17282c30;margin-top:6px}.button-charge>i{height:100%;display:block;background:var(--ink);width:0}
+.bottom-hud{bottom:max(122px,calc(env(safe-area-inset-bottom) + 112px));gap:9px}.speed-ticket{width:54px}.speed-ticket strong{font-size:33px}.route-ticket{padding:9px 10px}.route-ticket>span{font-size:9px}.wave-ticket{position:absolute;left:65px;right:0;bottom:55px;padding:7px 10px;transform:rotate(1deg)}.wave-ticket>span{font-size:9px;font-weight:900}.wave-ticket>div{height:4px;background:#c3cdb5;margin-top:5px}.wave-ticket i{height:100%;width:0;display:block;background:#258c91;transition:width .1s}.wave-caught .wave-ticket{background-color:#ffe398}.wave-caught .wave-ticket i{background:#ed7742}
+.touch-guide{bottom:205px;left:16px;right:auto;font-size:14px}.hint{bottom:218px!important;font-size:19px!important}.moment{top:23%}.input-label{top:102px}
+#app-container:not(.playing) .action-controls{display:none}
+/* Anime timing and hard gutters: face strip, low-angle hero, scene and beer detail. */
+.comic-frame{bottom:108px;background:#172d38}.comic-scene{inset:0;clip-path:polygon(65% 0,100% 0,100% 100%,45% 100%);background:#76b1b6!important}.comic-scene canvas{filter:contrast(1.2) saturate(.9)}
+.comic-frame .comic-burst{inset:25% 0 0 0;clip-path:polygon(0 0,76% 0,49% 100%,0 100%);background:repeating-conic-gradient(from 12deg at 44% 54%,#ffcc4d 0deg 8deg,#f7e8c9 8deg 9deg,#f2b53c 9deg 21deg)}
+.comic-frame #comic-cutout,.comic-frame.grab #comic-cutout{left:-12%;top:9%;width:96%;height:90%;object-position:50% 35%;transform:rotate(-7deg)}
+.comic-frame .comic-burst strong{top:8%;left:4%;font-size:clamp(43px,9cqw,75px);transform:rotate(-12deg)}.comic-frame .comic-burst span{left:2%;bottom:4%;font-size:20px;max-width:58%;line-height:1}
+.comic-face-panel{position:absolute;inset:4% -2% auto -2%;height:23%;overflow:hidden;clip-path:polygon(0 7%,100% 0,100% 87%,0 100%);background:linear-gradient(100deg,#e5643e,#f9d387);border-top:5px solid #172d38;border-bottom:6px solid #172d38;z-index:3}
+.comic-face-panel img{position:absolute;width:115%;height:560%;left:-12%;top:-167%;object-fit:contain;object-position:center}.comic-face-panel i{position:absolute;inset:0;background:repeating-linear-gradient(-12deg,transparent 0 18px,#fff3d177 18px 19px,transparent 19px 32px);mix-blend-mode:screen}
+.comic-eye-panel{position:absolute;width:43%;height:37%;right:-3%;bottom:5%;z-index:4;background:#c2e4cf;clip-path:polygon(24% 0,100% 10%,100% 100%,0 87%);transform:rotate(2deg)}.comic-eye-panel::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 0 6px #172d38;pointer-events:none}.comic-eye-panel canvas{width:100%;height:100%;object-fit:contain;transform:scale(1.24) rotate(-11deg)}.comic-eye-panel span{position:absolute;left:16%;bottom:9%;font-family:'Russo One',Impact,sans-serif;font-size:14px;background:var(--yellow);padding:5px 8px;transform:rotate(-6deg)}
+.comic-frame.visible .comic-face-panel{animation:anime-strip .14s ease-out both}.comic-frame.visible .comic-burst{animation:anime-hit .20s .035s ease-out both}.comic-frame.visible .comic-eye-panel{animation:anime-detail .18s .09s ease-out both}.comic-frame.reverse .comic-face-panel{clip-path:polygon(0 0,100% 8%,100% 100%,0 88%)}.comic-frame.reverse .comic-eye-panel{bottom:10%;transform:rotate(-6deg)}
+@keyframes anime-strip{from{transform:translateX(25%)}to{transform:translateX(0)}}@keyframes anime-hit{from{transform:scale(1.16);filter:brightness(1.7)}to{transform:scale(1);filter:brightness(1)}}@keyframes anime-detail{from{transform:translateX(40%) rotate(8deg)}to{transform:translateX(0) rotate(2deg)}}
+@media(prefers-reduced-motion:reduce){.comic-frame *{animation:none!important}.action-button{transition:none}}
+
+.wave-ticket{position:absolute;z-index:5;left:16px;right:auto;top:148px;bottom:auto;width:225px;padding:7px 10px}.hint{top:200px;bottom:auto!important;max-width:calc(100% - 36px);font-size:19px!important}.moment{top:27%}.moment.visible~.hint{opacity:0}
+.comic-face-panel img{width:100%;height:100%;left:0;top:0;object-fit:cover;object-position:50% 14%;transform:scale(1.65);transform-origin:50% 45%}
+@container mobile-screen (max-height:710px){.wave-ticket{top:132px;width:205px}.hint{top:177px!important;font-size:17px!important}.action-button{min-height:75px}.action-icon{font-size:23px}.bottom-hud{bottom:107px}.comic-frame{bottom:94px}}
+
+.surf-rhythm{width:133px;padding:10px 11px;transform:rotate(-3deg);pointer-events:none}.surf-rhythm>span{font-size:8px;font-weight:700;letter-spacing:.5px}.surf-rhythm>strong{display:block;margin:6px 0;font-family:'Russo One',Impact,sans-serif;font-size:11px;line-height:1.4}.surf-rhythm>small{font-size:8px;line-height:1.45;display:block}.unstable .crouch-button{background-color:#ee8150}.action-controls{align-items:center}
+/* Weight replaces the artificial crouch button; knees react to the water. */
+.bottom-hud{bottom:max(24px,env(safe-area-inset-bottom));gap:10px}
+.touch-guide{bottom:95px;font-size:14px}
+.wave-ticket{width:235px;top:140px}
+.weight-ticket{position:absolute;z-index:5;top:190px;left:16px;width:180px;padding:6px 10px;transform:rotate(-1deg);pointer-events:none}
+.weight-ticket>span{font-size:8px;font-weight:800;display:block}
+.weight-ticket>div{position:relative;display:flex;justify-content:space-between;margin-top:5px;border-bottom:2px solid #b8ac8d;padding-bottom:3px;font-size:6px;font-weight:700}
+#weight-dot{position:absolute;left:50%;bottom:-5px;width:8px;height:8px;background:#e96843;border:1px solid #17282c;transform:rotate(45deg);transition:left .05s}
+.unstable .weight-ticket{background-color:#ffd080}
+.hint{top:245px!important;font-size:19px!important}
+.comic-frame{bottom:0}
+.comic-frame #comic-cutout{left:-6%;width:91%;top:10%;height:85%;transform:rotate(-5deg)}
+.comic-frame[data-variant=save] .comic-burst{background:repeating-conic-gradient(from 12deg at 44% 54%,#ec704d 0deg 8deg,#f7e8c9 8deg 9deg,#eaa13c 9deg 21deg)}
+.comic-face-panel img{object-position:50% 15%;transform:scale(1.4);transform-origin:50% 16%}
+#app-container:not(.playing) .weight-ticket,#app-container:not(.playing) .wave-ticket{opacity:.4}
+@container mobile-screen (max-height:710px){.wave-ticket{top:132px}.weight-ticket{top:176px}.hint{top:218px!important}.bottom-hud{bottom:20px}.comic-frame{bottom:0}}
+.comic-face-panel img{object-position:50% 0%;transform:scale(1.35);transform-origin:50% 0%}
+.comic-frame .comic-burst span{max-width:46%;font-size:18px;line-height:1.1;bottom:3%}
+/* Contact, wave ending and balance are visible before the player loses a line. */
+.wave-ticket{padding:7px 10px 8px;pointer-events:none}
+.wave-ticket .wave-heading,.wave-ticket .wave-readout{display:flex;justify-content:space-between;align-items:center;gap:5px;height:auto;background:none;margin:0}
+.wave-heading>span{font-size:9px;font-weight:900;line-height:1.3}.wave-heading>b{font-size:8px;white-space:nowrap;opacity:.65}
+.wave-ticket .wave-contact{height:4px;margin:5px 0;background:#c3cdb5}
+.wave-readout{font-size:7px;font-weight:800;letter-spacing:.1px}.wave-readout>span{white-space:nowrap}
+.wave-ticket[data-phase=ending]{background-color:#ffe398}.wave-ticket[data-phase=gap] .wave-contact i{background:#258c91}
+.weight-ticket{top:210px;width:180px;padding:7px 10px 8px}
+.weight-ticket .weight-axis{margin-top:5px}.weight-ticket .balance-readout{display:flex;justify-content:space-between;font-size:7px;font-weight:700;border:0;padding:0;margin-top:9px;gap:5px}
+.balance-readout b{font-size:7px}.weight-ticket .balance-track{display:block;height:3px;border:0;margin-top:4px;padding:0;background:#d4c6a4}
+#balance-fill{height:100%;display:block;background:#258c91;width:0;transition:width .08s}
+.unstable #balance-fill{background:#dc5d38}.hint{top:290px!important}
+@container mobile-screen (max-height:710px){.wave-ticket{top:132px}.weight-ticket{top:199px}.hint{top:276px!important}}
+/* The ride is the main screen. Readouts and instruction cards live in debug/menu. */
+.hud{grid-template-columns:112px 1fr 34px;grid-template-rows:auto;gap:12px;top:max(13px,env(safe-area-inset-top));left:12px;right:12px;align-items:start}
+.beer-ticket{grid-row:auto;padding:3px 7px 5px 1px;gap:1px}.beer-ticket .ticket-label{display:none}#beer-canvas{width:30px;height:42px}.beer-ticket strong{font-size:28px;line-height:1.15;letter-spacing:-1.4px}.beer-ticket strong span{font-size:17px}.beer-track{height:3px;margin-top:2px;border:0}
+.score-ticket{width:110px;justify-self:end;padding:3px 0}.score-ticket>span{display:none}.score-ticket strong{font-size:21px;letter-spacing:0;padding:5px 8px}
+.small-button{grid-row:auto;width:34px;height:34px;font-size:18px}
+#hint,.touch-guide,.speed-ticket,.route-ticket>span{display:none!important}
+.bottom-hud{left:20px;right:20px;bottom:max(12px,env(safe-area-inset-bottom));gap:0}.route-ticket{padding:0;background:transparent;clip-path:none;transform:none;filter:none}.route-track{height:3px;margin:0;background:#f4ead050}.route-track i{background:#f4ead0}
+.moment{top:auto;bottom:32px;max-width:80%;transform:translateX(-50%);width:max-content}.moment.visible{transform:translateX(-50%)}.moment strong{font-size:17px!important;background:none;padding:4px 8px;color:#fff0d0;text-shadow:1px 2px #173949;clip-path:none;box-shadow:none}.moment.bad strong{background:none;color:#ffca42}.moment span{display:none!important}
+.pause-help{font-size:12px;line-height:1.7;margin:0 0 20px}.pause-card .text-button{font-size:19px;padding-top:14px}
+#ride-debug{position:absolute;inset:0;z-index:5;pointer-events:none}#ride-debug .caps-ticket{position:absolute;top:90px;left:16px}#ride-debug .input-label{top:122px}.debug-mode .speed-ticket{display:block!important}
+#jump-button{position:absolute;right:20px;bottom:max(34px,calc(env(safe-area-inset-bottom) + 24px));z-index:7;width:54px;height:54px;border-radius:47% 52% 46% 51%;background:#ffca43;color:#17282c;border:3px solid #f4e8ca;font-size:34px;font-weight:900;line-height:1;touch-action:none;box-shadow:2px 3px #163d4c66}
+#jump-button::before{content:'';position:absolute;inset:-5px;border-radius:50%;background:conic-gradient(#ec7445 var(--jump-charge,0deg),transparent 0);z-index:-1}#jump-button.preparing{transform:scale(.92);background:#f2ad32}#jump-button.airborne{opacity:.55}
+#app-container:not(.playing) #jump-button,#app-container:not(.playing) #shark-threat{display:none}
+#shark-threat{position:absolute;bottom:38px;left:22px;z-index:6;width:44px;height:40px;opacity:0;pointer-events:none;transition:opacity .2s}.fin-icon{display:block;width:34px;height:29px;background:#153c4b;clip-path:polygon(0 100%,20% 77%,42% 49%,57% 0,72% 8%,74% 53%,100% 100%);filter:drop-shadow(2px 2px #fff0d3)}#shark-threat b{display:block;height:3px;background:#ffca43;margin-top:5px;transform-origin:left}#shark-threat.visible{opacity:1}#shark-threat.close .fin-icon{background:#e96640}
+
+
+/* Source: css/journey.css */
+
+/* The game fills its own stage; every label is pasted paper, not a web card. */
+body{display:block;background:#103f58;overflow:hidden}
+.desktop-note{display:none!important}
+#app-container{width:100vw;height:100dvh;max-width:1400px;margin:0 auto;border-radius:0;box-shadow:none;container-type:size;container-name:mobile-screen}
+.paper{background-color:transparent;background-image:url('../assets/comics/paper-panel-v2.webp');background-size:100% 100%;clip-path:none;filter:drop-shadow(2px 3px 1px #143b4b50)}
+.journey{padding:0;align-items:stretch;justify-content:flex-start;backdrop-filter:none;background:#2d8fad;color:var(--ink);--pad:clamp(14px,3cqw,36px)}
+.journey::before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(#fff3d72a 1px,transparent 1px);background-size:5px 5px}
+.journey button{cursor:pointer}.journey button:disabled{cursor:default}
+.yellow-button{background-color:var(--yellow);background-image:url('../assets/comics/paper-panel-v2.webp');background-size:100% 100%;background-blend-mode:multiply;clip-path:var(--paper-edge);box-shadow:none;font-family:'Russo One',Impact,sans-serif;font-size:clamp(16px,2.5cqw,24px);min-height:58px;letter-spacing:.4px;transform:rotate(-2deg)}
+.yellow-button:disabled{filter:grayscale(1);opacity:.8}
+.journey-header{height:76px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px var(--pad);position:relative;z-index:3}
+.journey-header h2{font-family:'Russo One',Impact,sans-serif;font-size:clamp(22px,3.6cqw,35px);padding:14px 25px;margin:0;transform:rotate(-2deg)}
+.journey-header>span{font-size:12px;font-weight:700;padding:13px 18px;transform:rotate(2deg)}
+.back-button{width:50px;height:50px;flex-shrink:0;font-size:30px;transform:rotate(-5deg)}
+@keyframes panel-zoom{from{transform:scale(1.07)}to{transform:scale(1)}}
+@keyframes panel-hit{from{opacity:0;transform:rotate(-10deg) scale(1.4)}to{opacity:1;transform:rotate(-10deg) scale(1)}}
+@keyframes panel-slide{from{opacity:0;transform:translateY(20px) rotate(-1deg)}to{opacity:1;transform:translateY(0) rotate(-1deg)}}
+.pause-card,.result-card{max-width:570px;padding:35px 40px;filter:drop-shadow(2px 5px 8px #143b4b50)}.pause-card h2,.result-card h2{font-size:48px;margin:16px 0}.pause-help,.pause-balance-help{font-size:16px;line-height:1.4}.pause-card .text-button{font-size:24px;padding-top:12px;margin:0 8px}
+.result-card>p{font-size:27px;margin:8px 0 15px}.result-card .result-tricks,.result-recovery{font-family:Rubik,sans-serif;font-size:12px!important;line-height:1.4;margin:8px 0!important}.result-stats span{font-size:11px}.result-stats strong{font-size:27px}.result-beer{font-size:75px}
+#pause-screen,#result-screen{background:#103f5880;backdrop-filter:blur(3px)}
+/* Readable paper HUD inspired by the three pasted tickets in the reference. */
+.hud{top:max(12px,env(safe-area-inset-top));left:18px;right:18px;display:grid;grid-template-columns:190px 210px 175px 48px;gap:14px;justify-content:space-between;align-items:start}
+.beer-ticket{padding:9px 13px 12px 5px;gap:3px;transform:rotate(-4deg);grid-row:auto}
+#beer-canvas{width:57px;height:78px}.beer-ticket strong{font-size:43px;letter-spacing:-2px}.beer-ticket strong span{font-size:30px}.beer-ticket .ticket-label{font-size:10px;display:block}.beer-track{height:13px;margin-top:5px;background:#ede1c5;border:2px solid var(--ink);padding:2px}.beer-track i{background:#ffba25}
+.collection-ticket{padding:13px 16px 11px;text-align:center;transform:rotate(2deg);position:relative}.collection-ticket>span{font-family:Caveat,cursive;font-size:24px;font-weight:700;line-height:1}.wave-caps{display:flex;justify-content:center;gap:9px;margin-top:10px}.wave-cap{width:43px;height:43px;border:2px dashed var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;font-style:normal;position:relative}.wave-cap img{width:112%;height:112%;object-fit:contain;opacity:0;transform:scale(.6);transition:transform .3s,opacity .3s}.wave-cap.earned{border-color:transparent}.wave-cap.earned img{opacity:1;transform:scale(1)}.sun-cap{color:transparent;font-size:31px}.sun-cap.earned{background:#1689ab;color:#ffd34b;border:4px ridge #f0b931;box-shadow:1px 2px #153d4b}.collection-ticket small{display:none}
+.score-ticket{transform:rotate(4deg);padding-top:8px}.score-ticket>span{display:table!important;font-size:17px;padding:8px 21px 5px;margin-left:8px}.score-ticket strong{font-size:30px;padding:10px 14px;border:5px solid var(--cream)}
+.small-button{grid-column:4;grid-row:1;width:48px;height:48px;font-size:25px;margin-top:8px}
+.ride-coach{position:absolute;z-index:5;top:147px;left:50%;transform:translateX(-50%) rotate(-2deg);max-width:440px;width:max-content;padding:16px 27px;text-align:center;pointer-events:none}.ride-coach strong{font-family:'Russo One',Impact,sans-serif;font-size:17px;display:block}.ride-coach span{font-family:Caveat,cursive;font-size:23px;line-height:1.05;display:block;margin-top:5px}
+#app-container:not(.playing) .hud,#app-container:not(.playing) .bottom-hud,#app-container:not(.playing) .ride-coach,#app-container:not(.playing) .steer-controls{visibility:hidden}
+.bottom-hud{left:22%;right:22%;bottom:25px}.route-ticket{display:block;padding:11px 25px 15px;background-image:url('../assets/comics/paper-panel-v2.webp');background-size:100% 100%;transform:rotate(1deg);filter:drop-shadow(2px 3px #153d4b40)}.route-ticket>b{display:flex;justify-content:space-between;font-size:12px;gap:15px}.route-track{height:5px;background:#b9ae98;margin-top:7px}.route-track i{background:var(--coral)}
+.steer-controls{position:absolute;left:20px;bottom:20px;z-index:7;display:flex;gap:10px}.steer-controls button{width:72px;height:76px;font-size:40px;touch-action:none;transform:rotate(-5deg)}.steer-controls button:last-child{transform:rotate(4deg)}.steer-controls button small{font-size:11px;display:block;margin-top:-4px;font-weight:700}.steer-controls button.pressed{background-color:var(--yellow);background-blend-mode:multiply}
+#jump-button{right:20px;bottom:20px;width:124px;height:100px;border-radius:0;border:0;background:var(--yellow) url('../assets/comics/paper-panel-v2.webp') center/100% 100%;background-blend-mode:multiply;clip-path:var(--paper-edge);font-size:34px;transform:rotate(5deg);box-shadow:none;padding:6px 10px}#jump-button small{display:block;font-family:'Russo One';font-size:15px;margin-top:1px}#jump-button span{display:block;font-size:8px;font-weight:700;margin-top:6px}#jump-button::before{inset:auto 12px 8px;height:5px;border-radius:0;background:linear-gradient(90deg,var(--coral) var(--jump-percent,0%),#173b4b25 0);z-index:0}
+.balance-cue{position:absolute;z-index:6;left:50%;bottom:110px;transform:translateX(-50%) rotate(-2deg);width:250px;padding:16px 22px;text-align:center;pointer-events:none}.balance-cue strong{font-size:14px}.balance-cue small{font-family:'Russo One';font-size:16px}.balance-rail{position:relative;height:8px;margin:15px 0 10px;background:linear-gradient(90deg,#e96e45 0 25%,#e6b83d 25% 40%,#82ab80 40% 60%,#e6b83d 60% 75%,#e96e45 75%)}.balance-safe{position:absolute;left:40%;width:20%;height:12px;top:-2px;border:1px solid #17414d}.balance-needle{position:absolute;left:50%;top:-5px;width:10px;height:18px;background:var(--ink);border:1px solid var(--cream);transform:translateX(-50%) rotate(12deg)}.balance-cue.catching{background-color:var(--yellow);background-blend-mode:multiply}.catch-track{height:4px;margin-top:8px;background:#17282c20}.catch-fill{display:block;height:100%;background:#276c73;width:0}
+.wipeout-screen{position:absolute;inset:0;z-index:8;background:#12475a85;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--cream);pointer-events:none}.wipeout-screen>span{font-family:'Russo One';font-size:clamp(70px,12cqw,120px);color:var(--yellow);text-shadow:4px 4px #173747;transform:rotate(-12deg)}.wipeout-screen>strong{font-size:25px;margin-top:24px}.wipeout-screen>p{font-size:16px;line-height:1.7;text-align:center}.fallen #jump-button,.fallen .steer-controls{visibility:hidden}
+.moment{top:29%;bottom:auto;max-width:90%;transform:translateX(-50%) rotate(-6deg);z-index:6}.moment.visible{transform:translateX(-50%) rotate(-6deg)}.moment strong{font-size:26px!important;background:var(--yellow);color:var(--ink);padding:12px 23px;clip-path:var(--paper-edge);text-shadow:none}.moment span{display:table!important;color:var(--ink);font-size:26px;padding:7px 18px;background-image:url('../assets/comics/paper-panel-v2.webp');background-size:100% 100%;background-color:transparent}.moment.bad strong{background:var(--coral);color:var(--cream)}
+#shark-threat{bottom:135px;left:24px}
+@container mobile-screen (max-width:650px){
+ .journey-header{height:64px;padding:8px 12px;gap:7px}.journey-header h2{font-size:22px;padding:13px 19px}.journey-header>span{font-size:11px;padding:12px}.back-button{width:44px;height:44px}
+ .hud{left:9px;right:9px;top:9px;grid-template-columns:110px minmax(110px,1fr) 105px;gap:5px}.beer-ticket{padding:9px 10px 10px 3px;gap:0}#beer-canvas{width:32px;height:47px}.beer-ticket strong{font-size:29px;letter-spacing:-1px}.beer-ticket strong span{font-size:18px}.beer-ticket .ticket-label{font-size:7px}.beer-track{height:9px;margin-top:3px;padding:1px}.collection-ticket{padding:10px 8px}.collection-ticket>span{font-size:18px;display:block}.wave-caps{gap:5px;margin-top:7px}.wave-cap{width:27px;height:27px;border-width:1.5px}.sun-cap{font-size:21px}.sun-cap.earned{border-width:3px}.score-ticket{padding-top:2px}.score-ticket>span{font-size:12px;padding:6px 15px 3px;margin-left:3px}.score-ticket strong{font-size:19px;padding:7px 5px;border-width:3px;letter-spacing:0}.small-button{position:absolute;right:2px;top:70px;width:37px;height:37px;font-size:22px;margin:0}
+ .ride-coach{top:103px;max-width:77%;padding:12px 18px;left:46%}.ride-coach strong{font-size:12px}.ride-coach span{font-size:19px;margin-top:4px;line-height:1}
+ .steer-controls{left:10px;bottom:17px;gap:3px}.steer-controls button{width:49px;height:60px;font-size:31px}.steer-controls button small{font-size:8px}
+ #jump-button{right:10px;bottom:16px;width:86px;height:79px;font-size:27px;padding:7px}#jump-button small{font-size:11px}#jump-button span{font-size:6px;margin-top:4px}
+ .bottom-hud{left:32%;right:27%;bottom:24px}.route-ticket{padding:9px 12px 11px}.route-ticket>b{font-size:8px;gap:2px}.route-track{height:4px;margin-top:4px}
+ .balance-cue{bottom:100px;width:215px;padding:13px 22px}.balance-cue strong{font-size:12px}.balance-cue small{font-size:14px}.balance-rail{margin:12px 0 9px}
+ .pause-card,.result-card{padding:28px 26px;max-width:350px}.pause-card h2,.result-card h2{font-size:35px;margin:13px 0}.pause-help,.pause-balance-help{font-size:13px}.pause-card .text-button{font-size:21px;margin:0 5px}.result-beer{font-size:63px}.result-card>p{font-size:24px}.result-stats{padding:12px 0;margin-bottom:7px}.result-stats span{font-size:8px}.result-stats strong{font-size:22px}.result-card .result-tricks{font-size:10px!important;max-height:70px;overflow:auto}.result-card .yellow-button{font-size:15px}.moment strong{font-size:19px!important}.moment span{font-size:23px}
+}
+@container mobile-screen (max-width:650px) and (max-height:710px){
+ .journey-header{height:54px}
+}
+@container mobile-screen (orientation:landscape) and (max-height:520px){
+ .journey-header{height:54px;padding:5px 20px}.journey-header h2{font-size:24px;padding:10px 23px}.journey-header .back-button{height:42px;width:42px}
+ .pause-card,.result-card{max-width:580px;padding:10px 24px}.pause-card h2,.result-card h2{font-size:26px;margin:3px 0}.pause-help,.pause-balance-help{font-size:12px;margin:5px 0}.pause-card .yellow-button,.result-card .yellow-button{font-size:16px;min-height:38px;padding:8px}.pause-card .text-button{font-size:17px;padding:6px 0 0}.result-beer{font-size:40px}.result-card>p{font-size:18px;margin:4px 0 8px}.result-stats{padding:4px 0;margin:3px 0}.result-stats strong{font-size:20px}.result-card .result-tricks{display:none}
+ .hud{grid-template-columns:130px 155px 130px 40px;max-width:none;top:8px;gap:10px;left:15px;right:15px}.beer-ticket{padding:7px 12px}#beer-canvas{width:36px;height:50px}.beer-ticket strong{font-size:29px}.beer-ticket strong span{font-size:22px}.collection-ticket{padding:10px 12px}.collection-ticket>span{font-size:20px}.wave-caps{margin-top:5px}.wave-cap{width:28px;height:28px}.score-ticket strong{font-size:23px;padding:6px 9px}.score-ticket>span{font-size:13px;padding:5px 15px}.small-button{width:40px;height:40px;font-size:23px;margin-top:4px}.ride-coach{top:91px;max-width:320px;padding:11px 20px}.ride-coach strong{font-size:13px}.ride-coach span{font-size:19px}.balance-cue{bottom:69px;padding:11px 18px;width:220px}.balance-cue strong{font-size:11px}.balance-cue small{font-size:13px}.balance-rail{margin:9px 0 6px}.bottom-hud{bottom:15px}.steer-controls button{width:60px;height:65px;font-size:32px}#jump-button{height:72px;width:110px;bottom:13px;font-size:26px}#jump-button small{font-size:12px}#jump-button span{font-size:7px}
+}
+@media(prefers-reduced-motion:reduce){.story-enter *{animation:none!important}.wave-cap img{transition:none}}
+
+
+/* A horizontal bay postcard and actual face close-ups on narrow screens. */
+
+
+
+.wave-cap.earned:not(.sun-cap){background:#efb625;border:3px ridge #e3a924;box-shadow:1px 2px #153d4b50}
+.wave-cap.earned:nth-child(2){background:#e54b32;border-color:#b82c1d}
+.wave-cap.earned img{width:120%;height:120%;flex-shrink:0}
+@container mobile-screen (max-width:650px){.wave-cap.earned:not(.sun-cap){border-width:2px}}
+
+
+/* Source: css/menus.css */
+/* Quiet paper menus. The illustration, selection and primary action carry the screen. */
+.menu-screen{background:#f1e7d0;color:#193b44;overflow:hidden;isolation:isolate}
+.menu-screen::before{background:url('../assets/comics/paper-panel-v2.webp') center/cover;opacity:.32;mix-blend-mode:multiply;z-index:-1}
+.menu-screen button:focus-visible{outline:3px solid #236779;outline-offset:5px}
+.menu-screen .yellow-button{min-height:64px;font-size:21px;letter-spacing:1px;transform:rotate(-1deg);transition:filter .16s,translate .16s}
+.menu-screen .yellow-button:hover:not(:disabled){filter:brightness(1.05);translate:0 -2px}
+.menu-screen .yellow-button:active:not(:disabled){translate:0 1px}
+.menu-screen .yellow-button:disabled{opacity:.45}
+.menu-title{position:absolute;left:12%;top:25%;z-index:2;margin:0;font-family:'Russo One',Impact,sans-serif;font-size:clamp(70px,9cqw,118px);line-height:.95;letter-spacing:-.055em;transform:rotate(-3deg)}
+.menu-title span{display:block}
+.menu-hero{position:absolute;height:82%;max-width:50%;right:8%;bottom:8%;object-fit:contain;pointer-events:none;filter:drop-shadow(3px 7px 4px #6f60471a)}
+.menu-play{position:absolute;left:12%;bottom:23%;width:29%;max-width:350px;z-index:25;touch-action:manipulation;cursor:pointer;pointer-events:auto}
+.boot-status{position:absolute;left:8%;right:8%;bottom:calc(max(22px,env(safe-area-inset-bottom) + 12px) + 72px);z-index:26;margin:0;padding:8px;background:#f1e7d0;text-align:center;font:500 13px/1.4 Rubik,Arial,sans-serif}
+.menu-back{position:absolute;top:max(20px,env(safe-area-inset-top));left:4%;width:48px;height:48px;z-index:3;background:none;font-size:32px;line-height:1;color:#193b44}
+.selection-choices{display:grid;grid-template-columns:1fr 1fr;gap:9%;flex:1;min-height:0;width:82%;max-width:1050px;margin:70px auto 0;align-items:center}
+.selection-choice{display:grid;grid-template-rows:minmax(0,1fr) 60px;align-items:center;min-height:0;height:100%;max-height:640px}
+.selection-art{position:relative;min-height:0}
+.selection-hero{height:100%;max-height:550px}
+.selection-hero img{display:block;height:100%;width:100%;object-fit:contain}
+.selection-location{width:100%;aspect-ratio:1.35;max-height:400px;padding:9px;background:#faf2df;transform:rotate(2deg);clip-path:var(--paper-edge);filter:drop-shadow(2px 4px 2px #6f604721)}
+.location-picture{width:100%;height:100%;position:relative;overflow:hidden;container-type:size}
+.location-picture::before{content:'';position:absolute;width:max(100cqw,100cqh);height:max(100cqw,100cqh);left:50%;top:50%;transform:translate(-50%,-50%);background:url('../assets/comics/story-panels-v2.webp') right bottom/200% 200%}
+.selection-arrows{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:60px;margin:10px auto 0}
+.selection-arrows button{flex:0 0 46px;height:46px;background:none;font-family:Rubik,sans-serif;font-size:42px;font-weight:400;line-height:1;color:#53727a;transition:color .15s,translate .15s}
+.selection-arrows button:hover{color:#193b44}.selection-arrows button:active{translate:0 2px}
+.selection-arrows h3{flex:1;margin:0;text-align:center;font-family:'Russo One',Impact,sans-serif;font-size:clamp(18px,2.3cqw,28px);font-weight:400;line-height:1.2}
+.selection-footer{flex-shrink:0;padding:28px 0 max(42px,env(safe-area-inset-bottom));z-index:2}
+.selection-footer .yellow-button{width:320px;max-width:80%;margin:auto}
+.selection-lock{display:none;position:absolute;inset:0;align-items:center;justify-content:center;flex-direction:column;gap:12px;font:600 12px Rubik,sans-serif;letter-spacing:2px;color:#193b44}
+.selection-lock svg{width:38px;height:38px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.is-locked .selection-lock{display:flex}
+.is-locked .selection-hero img{filter:brightness(0);opacity:.11}
+.is-locked .location-picture{filter:grayscale(1);opacity:.19}
+.is-locked h3{color:#7b837b}
+#assist-toggle{display:block;margin:4px auto;font-family:Rubik,sans-serif;font-size:13px;padding:8px 0}
+@container mobile-screen (orientation:portrait){
+ .menu-title{left:0;right:0;top:7%;text-align:center;font-size:11.5cqw;letter-spacing:-.045em;white-space:nowrap;transform:rotate(-2deg)}
+ .menu-title span{display:inline}
+ .menu-hero{height:60%;max-width:94%;width:94%;right:3%;bottom:22%;object-position:center}
+ .menu-play{width:80%;max-width:330px;left:50%;bottom:max(22px,calc(env(safe-area-inset-bottom) + 12px));transform:translateX(-50%) rotate(-1deg)!important;z-index:25;touch-action:manipulation;cursor:pointer;pointer-events:auto}
+ .selection-choices{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) minmax(0,32%);gap:20px;width:80%;margin-top:55px;align-items:stretch}
+ .selection-choice{grid-template-rows:minmax(0,1fr) 46px;height:auto;max-height:none}
+ .selection-hero{height:100%;max-height:none}
+ .selection-arrows{min-height:46px;margin-top:6px;gap:8px;max-width:340px}
+ .selection-arrows button{flex-basis:44px;height:44px;font-size:37px}
+ .selection-arrows h3{font-size:20px}
+ .selection-location{height:100%;aspect-ratio:auto;padding:6px}
+ .selection-footer{padding:24px 0 max(32px,env(safe-area-inset-bottom))}
+}
+@container mobile-screen (orientation:portrait) and (max-height:710px){
+ .menu-title{top:6%;font-size:11cqw}
+ .menu-hero{height:65%;bottom:18%}
+ .menu-screen .yellow-button{min-height:54px;font-size:18px}
+ .selection-choices{margin-top:40px;gap:12px;grid-template-rows:minmax(0,1fr) minmax(0,31%)}
+ .menu-back{top:10px;width:44px;height:44px;font-size:29px}
+ .selection-arrows h3{font-size:18px}
+ .selection-footer{padding:18px 0 22px}
+}
+@container mobile-screen (orientation:landscape) and (max-height:520px){
+ .menu-title{top:23%;left:12%;font-size:12.5cqh}
+ .menu-hero{height:90%;bottom:5%;right:11%;max-width:46%}
+ .menu-play{bottom:20%;width:27%}
+ .menu-screen .yellow-button{min-height:48px;font-size:17px}
+ .menu-back{top:10px;left:3%;height:40px;width:40px;font-size:28px}
+ .selection-choices{margin-top:23px;width:75%;gap:12%}
+ .selection-choice{grid-template-rows:minmax(0,1fr) 40px}
+ .selection-hero{height:100%}
+ .selection-location{aspect-ratio:1.8;max-height:150px;padding:6px}
+ .selection-arrows{min-height:40px;margin-top:3px;gap:4px}
+ .selection-arrows button{flex-basis:40px;height:40px;font-size:34px}
+ .selection-arrows h3{font-size:17px}
+ .selection-footer{padding:14px 0 18px}
+}
+@media(prefers-reduced-motion:reduce){.menu-screen button{transition:none!important}}
+
+/* Ultimate First Screen Poster */
+.title-screen {
+  --poster-yellow: #f6af15;
+  background: var(--poster-yellow);
+  padding: 0 !important;
+  overflow: hidden !important;
+  position: absolute;
+  inset: 0;
+}
+.title-screen::before {
+  display: none !important;
+}
+
+.title-poster-stage {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  aspect-ratio: 579 / 1024;
+  width: min(100%, calc(72cqh * 579 / 810));
+  height: auto;
+  max-width: none;
+  max-height: none;
+  overflow: hidden;
+  clip-path: inset(0 0 20.9% 0);
+  user-select: none;
+  -webkit-user-select: none;
+  z-index: 1;
+}
+
+/* Blend the paper edge into the yellow extension on taller screens. */
+.title-poster-stage::after {
+  content: '';
+  position: absolute;
+  inset: 77% 0 20.9%;
+  background: linear-gradient(transparent, var(--poster-yellow));
+  pointer-events: none;
+}
+
+.title-poster-stage picture,
+.title-poster-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: fill;
+  pointer-events: none;
+}
+
+/* Center controls in the yellow space below the artwork, including short phones. */
+.title-menu-actions {
+  position: absolute;
+  left: 50%;
+  top: calc((100% + min(calc(100cqw * 810 / 579), 72cqh) - env(safe-area-inset-bottom)) / 2);
+  transform: translate(-50%, -50%);
+  width: min(100%, calc((28cqh - env(safe-area-inset-bottom)) * 479 / 214));
+  aspect-ratio: 479 / 214;
+  background: url('../assets/comics/start-poster.webp') center bottom / 120.877% auto no-repeat;
+  mask-image: linear-gradient(transparent, black 4%);
+  z-index: 2;
+}
+
+.title-bottle {
+  position: absolute;
+  width: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(2px 4px 2px #17282c30);
+  z-index: 3;
+}
+
+.title-bottle-lemon {
+  left: 3%;
+  top: calc(min(calc(100cqw * 810 / 579), 72cqh) - 12cqh);
+  height: min(22cqh, 44cqw);
+  transform: rotate(-19deg);
+}
+
+.title-bottle-raspberry {
+  right: 2%;
+  top: calc(min(calc(100cqw * 810 / 579), 72cqh) - 9cqh);
+  height: min(25cqh, 49cqw);
+  transform: rotate(12deg);
+}
+
+/* Play button overlay */
+.title-screen #start-button.poster-play {
+  position: absolute !important;
+  left: 12.3% !important;
+  top: 26.37% !important;
+  bottom: auto !important;
+  right: auto !important;
+  width: 75.41% !important;
+  height: 42.03% !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: url('../assets/comics/button-play.webp') center / contain no-repeat !important;
+  color: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  clip-path: none !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+  z-index: 25 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transform: none !important;
+  transform-origin: center center;
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0.2, 1), filter 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.title-screen #start-button.poster-play:hover:not(:disabled) {
+  transform: scale(1.04) !important;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.3)) brightness(1.05) !important;
+}
+
+.title-screen #start-button.poster-play:active:not(:disabled) {
+  transform: scale(0.97) translateY(2px) !important;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2)) !important;
+}
+
+.title-screen #start-button.poster-play:focus-visible {
+  outline: 3px solid #103f58 !important;
+  outline-offset: 4px;
+}
+
+.title-screen #start-button.poster-play:disabled {
+  filter: grayscale(0.2) opacity(0.85) !important;
+  cursor: wait !important;
+}
+
+/* When loading or status error, display text over dark base badge */
+.title-screen #start-button.poster-play[data-pending],
+.title-screen #start-button.poster-play.has-status {
+  background-image: url('../assets/comics/button-play-base.webp') !important;
+  color: #fff8e7 !important;
+  font-family: 'Russo One', Impact, sans-serif !important;
+  font-size: clamp(14px, 3.8cqw, 20px) !important;
+  letter-spacing: 0.04em !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7), 0 0 1px #000 !important;
+}
+
+/* Quick ride hotspot */
+.title-screen #quick-button.poster-quick {
+  position: absolute !important;
+  left: 18.09% !important;
+  top: 8.74% !important;
+  bottom: auto !important;
+  right: auto !important;
+  width: 63.82% !important;
+  height: 18.37% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  clip-path: none !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+  z-index: 25 !important;
+  transform: none !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  transition: transform 0.15s ease, filter 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.title-screen #quick-button.poster-quick:hover:not(:disabled) {
+  transform: scale(1.05) !important;
+  filter: brightness(1.25) !important;
+}
+
+.title-screen #quick-button.poster-quick:active:not(:disabled) {
+  transform: scale(0.96) !important;
+}
+
+.title-screen #quick-button.poster-quick:focus-visible {
+  outline: 2px solid #e27d14 !important;
+  outline-offset: 2px;
+}
+
+/* Hidden placeholder text to preserve test suite layout queries without rendering over the poster */
+.title-screen .sr-overlay {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Boot status position on title screen */
+.title-screen .boot-status {
+  top: 76% !important;
+  bottom: auto !important;
+  left: 8% !important;
+  right: 8% !important;
+  z-index: 24 !important;
+  pointer-events: none !important;
+}
+
+
+/* Source: css/onboarding.css */
+/* A single cue stays above the action; the relevant control gets a quiet outline. */
+.ride-coach{max-width:min(440px,80%);padding:15px 25px;min-height:0}
+.ride-coach strong{font-size:16px;line-height:1.15}
+.ride-coach span{font-family:Rubik,sans-serif;font-size:14px;line-height:1.35;margin-top:7px}
+.ride-coach span:empty{display:none}
+.moment.coach-muted{visibility:hidden}
+.learn-control{outline:3px solid #fff1be;outline-offset:5px;filter:drop-shadow(0 0 7px #ffc43d99)}
+.steer-controls button.learn-control{background-color:#ffcf59;background-blend-mode:multiply}
+#jump-button.learn-control{background-color:#ffe383;scale:1.04}
+.story-error{position:absolute;left:6%;right:6%;top:80px;z-index:6;margin:0;padding:25px;color:#9a2c17;font-size:15px;line-height:1.4;text-align:center}
+@container mobile-screen (max-width:650px){
+ .ride-coach{max-width:78%;padding:13px 21px}
+ .ride-coach strong{font-size:13px}.ride-coach span{font-size:12px;margin-top:5px}
+ .learn-control{outline-width:2px;outline-offset:3px}
+}
+@container mobile-screen (orientation:landscape) and (max-height:520px){
+ .ride-coach{max-width:350px;padding:12px 20px}
+ .ride-coach strong{font-size:13px}.ride-coach span{font-size:12px;margin-top:4px}
+}
+
+
+/* Source: css/companion.css */
+/* Paper navigator, cinematic close-up and the wager's two outcomes. */
+.crab-callout{position:absolute;z-index:6;left:0;top:0;width:max-content;max-width:168px;padding:10px 14px;pointer-events:none;visibility:hidden;opacity:0;transform:translateY(4px);transition:opacity .16s,transform .16s;color:var(--ink);background:#fff5dc;border:2px solid var(--ink);border-radius:46% 42% 43% 38%;clip-path:none;filter:drop-shadow(1px 2px 0 #123d4933)}
+.crab-callout.visible{visibility:visible;opacity:1;transform:translateY(0)}
+.crab-callout::after{content:"";position:absolute;right:-13px;top:calc(var(--speech-tail-y,50%) - 7px);width:19px;height:13px;background:#fff5dc;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:skewX(34deg) rotate(-22deg)}
+.crab-callout[data-side="right"]::after{right:auto;left:-13px;border-right:0;border-left:2px solid var(--ink);transform:skewX(-34deg) rotate(22deg)}
+.crab-callout span{position:relative;z-index:1;display:block;font:700 23px/1.05 Caveat,cursive;text-align:center}
+.crab-callout.offscreen{visibility:hidden;opacity:0}
+#app-container:not(.playing) .crab-callout,.fallen .crab-callout{visibility:hidden}
+#result-screen{padding:15px}
+.result-card{max-height:calc(100dvh - 30px);overflow:auto;overscroll-behavior:contain}
+.result-card h2{font-size:34px;line-height:1.05;margin:12px 0}
+.result-card #result-comment{font-size:22px;line-height:1.1;margin:8px 0 10px}
+.result-companion{display:flex;align-items:center;justify-content:center;gap:14px;margin:10px 0 12px;text-align:left}
+.result-companion canvas{width:112px;height:100px;object-fit:contain;flex-shrink:0}
+.result-companion p{margin:0;max-width:280px}
+.result-companion strong{display:block;font:700 10px Rubik,sans-serif;color:#a93d21;margin-bottom:6px}
+.result-companion span{font:700 25px/1.05 Caveat,cursive}
+@container mobile-screen (max-width:650px){
+ .crab-callout{max-width:154px;padding:9px 12px}
+ .balance-cue{left:12px;bottom:109px;width:175px;padding:12px 19px;transform:rotate(-3deg)}
+ .crab-callout span{font-size:22px}
+ .result-card{padding:24px 24px}
+ .result-card h2{font-size:28px}
+ .result-card #result-comment{font-size:20px}
+ .result-companion{gap:10px;margin:8px 0}
+ .result-companion canvas{width:90px;height:83px}
+ .result-companion span{font-size:22px}
+}
+@container mobile-screen (max-width:650px) and (max-height:710px){
+ .result-card{padding:19px 24px}
+ .result-card h2{font-size:25px;margin:8px 0}
+ .result-companion canvas{width:76px;height:69px}
+ .result-companion span{font-size:20px}
+}
+@container mobile-screen (orientation:landscape) and (max-height:520px){
+ .crab-callout{max-width:154px;padding:9px 12px}
+ .balance-cue{left:50%;bottom:69px;width:220px;padding:11px 18px;transform:translateX(-50%) rotate(-2deg)}
+ .crab-callout span{font-size:20px}
+ .result-card{position:relative;max-width:680px;padding:15px 32px 15px 162px}
+ .result-card h2{font-size:26px;margin:5px 0}
+ .result-card #result-comment{font-size:18px}
+ .result-companion{position:absolute;left:18px;top:45px;width:128px;flex-direction:column;gap:7px;text-align:center}
+ .result-companion canvas{width:112px;height:105px}
+ .result-companion span{font-size:20px}
+}
+@media(prefers-reduced-motion:reduce){.crab-callout{transition:none}}
+
+
+/* Source: css/ride-ui.css */
+/* Read the action at a glance; button symbols replace permanent key legends. */
+#app-container button,#app-container button *{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+#jump-button,.steer-controls button{touch-action:none}
+.beer-ticket .ticket-label,.score-ticket>span{display:none!important}
+.score-ticket{width:100%;max-width:175px}.score-ticket strong{white-space:nowrap}
+.collection-ticket>span{font-size:24px}.collection-ticket{padding-top:10px}
+.collection-ticket{min-height:68px;display:flex;align-items:center;justify-content:center}.collection-ticket .wave-caps{margin:0}
+.sound-button{position:absolute;z-index:12;right:14px;top:max(14px,env(safe-area-inset-top));width:44px;height:44px;display:grid;place-items:center;background-size:100% 100%;transform:rotate(3deg);padding:10px}
+.sound-button svg{width:26px;height:26px;overflow:visible;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sound-button .sound-off{display:none}.sound-button[aria-pressed="true"] .sound-waves{display:none}.sound-button[aria-pressed="true"] .sound-off{display:block}
+#app-container.playing .sound-button{right:76px;top:79px}
+#app-container:has(#story-screen:not(.hidden)) .sound-button{left:66px;right:auto;top:7px;width:40px;height:40px}
+.bottom-hud{left:32%;right:28%;bottom:30px}
+.route-ticket{padding:0;background:none;filter:none;transform:none}
+.route-track{height:5px;margin:0;background:#fff2d166;border:1px solid #214a5450}
+.route-track i{background:#ffc43d}
+#jump-button{width:68px;height:68px;padding:0;font-size:38px;display:flex;align-items:center;justify-content:center}
+#jump-button b{font:inherit;line-height:1}
+#jump-button.spin-ready{background-color:#ffe198;filter:drop-shadow(0 0 9px #ffcc55);color:#123d49;opacity:1}
+#jump-button.special-ready{background-color:#ffd05b;filter:drop-shadow(0 0 13px #ffb839);outline:2px solid #fff2cd;outline-offset:3px}
+#jump-button.spinning{opacity:1}
+#jump-button.spinning b{transform:rotate(-18deg)}
+#shark-threat{background:transparent}
+#shark-threat[data-phase="windup"],#shark-threat[data-phase="lunge"]{background:transparent;opacity:1}
+#shark-threat[data-phase="windup"] .fin-icon,#shark-threat[data-phase="lunge"] .fin-icon{background:#e66540}
+#shark-threat[data-phase="windup"] b,#shark-threat[data-phase="lunge"] b{background:#fff2d1}
+.ride-coach strong{font-size:19px}.ride-coach span{font-size:17px;line-height:1.25}
+.balance-cue small{font-size:25px}.balance-cue strong{font-size:17px}
+#pause-screen,#result-screen{background:#0c2d3dd9;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+#app-container:has(#pause-screen:not(.hidden)) #ride-coach,#app-container:has(#pause-screen:not(.hidden)) #arcade-chain,#app-container:has(#pause-screen:not(.hidden)) #moment,#app-container:has(#pause-screen:not(.hidden)) #chain-toast,#app-container:has(#pause-screen:not(.hidden)) #hint,#app-container:has(#pause-screen:not(.hidden)) .bottom-hud,#app-container:has(#result-screen:not(.hidden)) #ride-coach,#app-container:has(#result-screen:not(.hidden)) #arcade-chain,#app-container:has(#result-screen:not(.hidden)) #moment,#app-container:has(#result-screen:not(.hidden)) #chain-toast,#app-container:has(#result-screen:not(.hidden)) #hint,#app-container:has(#result-screen:not(.hidden)) .bottom-hud,#app-container:has(#result-screen:not(.hidden)) .hud{opacity:0!important;pointer-events:none!important;visibility:hidden!important}
+.pause-card,.result-card{filter:drop-shadow(2px 5px 8px #143b4b50)}
+.pause-card{width:min(390px,92%);padding:46px 22px 34px;text-align:center;transform:rotate(-2deg)}
+.pause-card .eyebrow{margin-top:2px;letter-spacing:2px}
+.pause-card h2{font-size:30px;margin:4px 0 8px}
+.pause-card .pause-help{font-size:11.5px;line-height:1.4;margin:0 0 6px}
+.pause-card .pause-balance-help{font-size:10.5px;line-height:1.35;margin:0 0 8px;color:#52615c}
+.pause-card .yellow-button{font-size:17px;min-height:46px;margin:0 0 6px}
+.pause-card .text-button{font-family:Rubik,sans-serif;font-size:11.5px;padding:3px 6px;margin:1px 2px;display:inline-block;color:#234b54}
+.result-card{width:min(440px,92%);padding:48px 24px 38px}
+.result-card h2{font-size:25px;margin:2px 0 6px;line-height:1.1}.result-beer{font-size:56px;line-height:1;margin:0 0 2px}
+.result-card #result-comment{font:15px/1.2 Rubik,sans-serif;margin:4px 0 6px}
+.result-companion{margin:6px 0;gap:12px}.result-companion span{font-size:19px}.result-companion canvas{width:64px;height:56px}
+.result-summary{display:flex;justify-content:center;align-items:center;gap:14px;margin:6px 0 8px}
+.result-summary>span{font:14px 'Russo One',sans-serif}.result-summary>strong{font:27px 'Russo One',sans-serif}
+.result-card .yellow-button{font-size:18px;min-height:46px;padding:11px 10px;margin:0 0 4px}
+@container mobile-screen (max-width:650px){
+ .collection-ticket{min-height:64px}
+ #app-container.playing .sound-button{right:53px;top:79px}
+ .collection-ticket>span{font-size:20px}.collection-ticket{padding:10px 8px}
+ .ride-coach{max-width:83%;padding:15px 22px;left:50%}
+ .ride-coach strong{font-size:17px}.ride-coach span{font-size:16px}
+ .steer-controls button{font-size:32px;width:51px;height:59px}
+ #jump-button{width:66px;height:64px;font-size:37px;right:12px;bottom:16px}
+ .pause-card{padding:38px 18px 24px}
+ .pause-card h2{font-size:24px;margin:1px 0 3px}
+ .pause-card .pause-help{font-size:9.5px;line-height:1.2;margin:0 0 3px}
+ .pause-card .pause-balance-help{font-size:9px;line-height:1.15;margin:0 0 3px}
+ .pause-card .yellow-button{min-height:38px;font-size:15px;margin:0 0 3px}
+ .pause-card .pause-missions{margin:2px auto}
+ .pause-card .pause-missions li{padding:1px 0 1px 18px;font-size:11px}
+ .pause-card .text-button{font-size:10.5px;padding:1px 4px;margin:0 2px}
+ .result-card{padding:44px 20px 34px}.result-card h2{font-size:23px}.result-beer{font-size:52px}
+ .result-card #result-comment{font-size:14px}.result-companion span{font-size:18px}
+ .result-summary{margin:6px 0}.result-companion canvas{width:60px;height:52px}
+}
+@container mobile-screen (orientation:landscape) and (max-height:520px){
+ #app-container.playing .sound-button{right:67px;top:64px;width:40px;height:40px}
+ .ride-coach{max-width:370px;padding:12px 22px}.ride-coach strong{font-size:17px}.ride-coach span{font-size:16px}
+ .pause-card{width:min(660px,92%);padding:22px 26px 18px}
+ .pause-card h2{font-size:26px;margin:4px 0 6px}
+ .result-card{width:min(690px,90%);padding:18px 30px 18px 170px}
+ .result-card h2{font-size:25px;margin:0 0 7px}.result-beer{font-size:56px}.result-card #result-comment{font-size:17px;margin:4px 0}
+ .result-companion{left:22px;top:43px;width:128px;margin:0}.result-companion span{font-size:20px}
+ .result-summary{margin:8px 0;gap:14px}.result-summary>strong{font-size:26px}
+}
+
+
+/* Source: css/story-comic.css */
+/* Three inked panels form each page. Dialogue stays inside its speaker's frame. */
+#story-screen{--comic-ink:#092f44;--comic-paper:#fff3d9;background:#102f3c;color:var(--comic-ink);padding:0;align-items:center;overflow:hidden}
+#story-screen::before{background:radial-gradient(#fff3d912 .8px,transparent 1px);background-size:5px 5px}
+.comic-toolbar{position:relative;z-index:4;display:flex;justify-content:space-between;align-items:center;width:100%;height:58px;flex-shrink:0;padding:6px max(12px,env(safe-area-inset-right));}
+.comic-toolbar button{color:var(--comic-paper);background:transparent;min-height:44px;border:0;box-shadow:none;font:600 16px Rubik,sans-serif;cursor:pointer}
+.comic-toolbar #story-prev{width:46px;font-size:34px;line-height:1}
+.comic-toolbar button:focus-visible,.comic-nav button:focus-visible{outline:3px solid #ffcb32;outline-offset:2px}
+.comic-book{width:min(100% - 20px,900px);flex:1;min-height:0;position:relative;background:var(--comic-paper);border:5px solid var(--comic-paper);filter:drop-shadow(0 8px 12px #0004);container-type:size;isolation:isolate}
+.comic-page{position:absolute;inset:0;display:grid;grid-template-rows:36% 27% 37%;background:var(--comic-paper);overflow:hidden}
+.comic-panel{position:relative;min-height:0;overflow:visible;background:transparent;margin:0}
+.comic-panel:nth-child(1){grid-row:1;margin-bottom:-14px;z-index:1;--panel-clip:polygon(0 0,100% 0,100% 89%,0 100%)}
+.comic-panel:nth-child(2){grid-row:2;margin-top:-8px;margin-bottom:-13px;z-index:2;--panel-clip:polygon(0 11%,100% 0,100% 100%,0 86%)}
+.comic-panel:nth-child(3){grid-row:3;margin-top:-5px;z-index:3;--panel-clip:polygon(0 0,100% 10%,100% 100%,0 100%)}
+.comic-panel img{position:absolute;width:100%;height:100%;inset:0;object-fit:cover;object-position:center;display:block;clip-path:var(--panel-clip);background:#dac794}
+.comic-panel::after{content:'';position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 2px #092f4450;mix-blend-mode:multiply;z-index:1;clip-path:var(--panel-clip)}
+.comic-bubble{position:absolute;z-index:3;margin:0;padding:12px 17px;background:var(--comic-paper);border:3px solid var(--comic-ink);border-radius:48% 44% 47% 42% / 43% 48% 44% 49%;box-shadow:3px 3px 0 #092f4428;text-align:center;font:700 clamp(20px,3.25cqw,31px)/1.08 Rubik,sans-serif;white-space:pre-line;letter-spacing:-.6px;transform:rotate(-2deg)}
+.comic-bubble::before,.comic-bubble::after{content:'';position:absolute;clip-path:polygon(0 0,100% 0,10% 100%);width:30px;height:27px;left:22%;top:calc(100% - 3px);background:var(--comic-ink)}
+.comic-bubble::after{width:22px;height:21px;left:calc(22% + 3px);top:calc(100% - 5px);background:var(--comic-paper)}
+.comic-bubble-embedded{opacity:0;pointer-events:none}
+.comic-tony .comic-bubble{right:4%;top:7%;max-width:58%}
+.comic-tony img{object-position:50% 45%}
+.comic-max .comic-bubble{left:4%;top:22%;max-width:48%;transform:rotate(3deg)}
+.comic-max .comic-bubble::before,.comic-max .comic-bubble::after{left:auto;right:8%;transform:rotate(-30deg)}
+.comic-max img{object-position:50% 37%}
+.comic-crab .comic-bubble{left:4%;top:14%;max-width:56%}
+.comic-crab .comic-bubble::before,.comic-crab .comic-bubble::after{left:72%;transform:rotate(-20deg)}
+.comic-crab img{object-position:50% 54%}
+.comic-sfx{position:absolute;z-index:2;left:5%;bottom:9%;font:400 clamp(25px,5.2cqw,50px)/1 'Russo One',Impact,sans-serif;color:#ffcb32;-webkit-text-stroke:1.5px var(--comic-ink);paint-order:stroke fill;text-shadow:3px 3px var(--comic-ink);transform:rotate(-9deg);margin:0;letter-spacing:-1px}
+.comic-boris .comic-bubble{left:4%;top:9%;max-width:54%}
+.comic-boris .comic-bubble::before,.comic-boris .comic-bubble::after{left:77%;transform:rotate(-30deg)}
+.comic-boris img{object-position:50% 37%}
+.comic-boris .comic-sfx{bottom:17%;font-size:clamp(25px,4.7cqw,43px)}
+.comic-shark .comic-bubble{left:3%;top:14%;max-width:47%;font-family:'Russo One',Impact,sans-serif;font-weight:400;transform:rotate(-5deg)}
+.comic-shark .comic-bubble::before,.comic-shark .comic-bubble::after{left:76%;height:30px;transform:rotate(-27deg)}
+.comic-shark img{object-position:50% 58%}
+.comic-cup .comic-bubble{right:3%;top:4%;max-width:59%}
+.comic-cup .comic-bubble::before,.comic-cup .comic-bubble::after{left:75%;transform:rotate(-17deg)}
+.comic-cup img{object-position:50% 56%}
+
+/* V6 Comic Panels */
+.comic-cards .comic-bubble{display:none !important}
+.comic-cards img{object-position:50% 50%}
+
+.bubble-tail{position:absolute;pointer-events:none;z-index:2;overflow:visible}
+.has-svg-tail::before,.has-svg-tail::after{display:none !important}
+
+/* Panel 2: Job - Tony speaking from the left */
+.comic-job .comic-bubble{right:4%;top:-12%;left:auto;max-width:50%;padding:8px 12px;font-size:clamp(14px,2.2cqw,19px);line-height:1.15;transform:rotate(-1deg)}
+.comic-job .tail-left{left:-27px;top:55%;width:32px;height:28px}
+.comic-job img{object-position:50% 45%}
+
+/* Panel 3: Wager - Max on the left, Boris on the right */
+.comic-wager .comic-bubble-1{left:2%;top:-7%;right:auto;max-width:48%;padding:6px 8px;font-size:clamp(12px,1.9cqw,16px);line-height:1.12;transform:rotate(-2deg)}
+.comic-wager .comic-bubble-1 .tail-down-right{bottom:-24px;left:45%;width:32px;height:30px}
+.comic-wager .comic-bubble-2{right:2%;top:-6%;left:auto;max-width:46%;padding:6px 8px;font-size:clamp(12px,1.9cqw,16px);line-height:1.12;transform:rotate(2deg)}
+.comic-wager .comic-bubble-2 .tail-down-left-boris{bottom:-24px;left:18%;width:32px;height:30px}
+.comic-wager img{object-position:50% 40%}
+
+/* Panel 4: Jetski Start - Boris speaking, bubble in the open sky on the right */
+.comic-jetski-start .comic-bubble{right:4%;top:6%;left:auto;max-width:46%;padding:8px 14px;font-size:clamp(16px,2.5cqw,23px);transform:rotate(2deg)}
+.comic-jetski-start .tail-left-down{left:-28px;top:25%;width:34px;height:30px}
+.comic-jetski-start img{object-position:50% 37%}
+
+/* Panel 5: Umbrella Crab - Crab speaking from bottom-left on board */
+.comic-umbrella-crab .comic-bubble{left:3%;top:38%;right:auto;max-width:38%;padding:7px 11px;font-size:clamp(14px,2.1cqw,19px);transform:rotate(-2deg)}
+.comic-umbrella-crab .tail-down-crab{bottom:-25px;left:36%;width:32px;height:30px}
+.comic-umbrella-crab img{object-position:50% 50%}
+
+/* Panel 6: Shift Launch - Max speaking, bubble in the open sky on the right */
+.comic-shift-launch .comic-bubble{right:3%;top:14%;left:auto;max-width:46%;padding:7px 12px;font-size:clamp(15px,2.3cqw,22px);transform:rotate(2deg)}
+.comic-shift-launch .tail-left-high{left:-27px;top:28%;width:32px;height:26px}
+.comic-shift-launch .comic-sfx{right:6%;bottom:8%;left:auto;transform:rotate(8deg)}
+.comic-shift-launch img{object-position:50% 50%}
+.comic-page[data-comic-page="1"]{grid-template-rows:30% 34% 36%}
+.comic-nav{position:relative;z-index:4;flex-shrink:0;display:flex;justify-content:center;width:100%;padding:12px 14px max(14px,env(safe-area-inset-bottom));}
+.comic-nav #story-next{min-height:54px;width:min(100%,420px);font:400 22px 'Russo One',Impact,sans-serif;transform:rotate(-1deg);padding:10px 24px}
+.comic-loading{position:absolute;inset:0;display:grid;place-items:center;z-index:5;background:var(--comic-paper);font:400 26px 'Russo One',Impact,sans-serif;}
+.comic-loading[hidden]{display:none}
+#story-screen .story-error{position:absolute;z-index:6;top:70px;left:10%;right:10%;padding:24px;font:600 20px/1.25 Rubik,sans-serif;color:var(--comic-ink);text-align:center}
+.story-enter .comic-panel img{animation:comic-reveal .3s ease-out both}
+@keyframes comic-reveal{from{opacity:.3;transform:scale(1.02)}to{opacity:1;transform:scale(1)}}
+@container mobile-screen (min-width:700px) and (min-height:600px){
+ .comic-toolbar{max-width:920px;height:58px}
+ .comic-book{width:min(100% - 36px,calc((100dvh - 154px)*1.12),900px)}
+ .comic-page{grid-template-columns:43% 57%;grid-template-rows:48% 52%;}
+ .comic-panel:nth-child(1){grid-column:1/3;grid-row:1;margin-bottom:-4px;--panel-clip:polygon(0 0,100% 0,100% 91%,0 100%)}
+ .comic-panel:nth-child(2){grid-column:1;grid-row:2;margin:0 3px 0 0;--panel-clip:polygon(0 1%,100% 0,92% 100%,0 100%)}
+ .comic-panel:nth-child(3){grid-column:2;grid-row:2;margin:-22px 0 0 -12px;--panel-clip:polygon(4% 5%,100% 0,100% 100%,0 100%)}
+ .comic-page[data-comic-page="1"]{grid-template-columns:53% 47%;grid-template-rows:53% 47%}
+ .comic-page[data-comic-page="1"] .comic-panel:nth-child(1){grid-column:1;grid-row:1;--panel-clip:polygon(0 0,100% 0,93% 100%,0 96%);margin:0 3px -8px 0}
+ .comic-page[data-comic-page="1"] .comic-panel:nth-child(2){grid-column:2;grid-row:1;--panel-clip:polygon(5% 0,100% 0,100% 98%,0 100%);margin:0 0 -5px -12px}
+ .comic-page[data-comic-page="1"] .comic-panel:nth-child(3){grid-column:1/3;grid-row:2;--panel-clip:polygon(0 0,100% 3%,100% 100%,0 100%);margin:3px 0 0}
+ .comic-max img{object-position:65% 35%}.comic-crab img{object-position:66% 50%}
+ .comic-bubble{font-size:clamp(22px,3.55cqw,31px)}
+ .comic-max .comic-bubble{top:6%;max-width:83%}
+ .comic-crab .comic-bubble{top:10%;left:12%;max-width:80%}
+ .comic-shark .comic-bubble{left:15%;top:5%;max-width:80%}
+ .comic-shark img{object-position:60% 55%}
+ .comic-boris .comic-bubble{max-width:85%;top:5%}
+ .comic-cup .comic-bubble{right:13%;top:3%;max-width:52%}
+ .comic-crab .comic-sfx{font-size:clamp(24px,4.9cqw,43px);left:9%}
+}
+@container mobile-screen (max-width:699px) and (max-height:710px){
+ .comic-toolbar{height:48px;padding-top:2px;padding-bottom:2px}
+ .comic-book{width:calc(100% - 12px);border-width:3px}
+ .comic-bubble{font-size:20px;padding:9px 12px;border-width:2.5px}
+ .comic-nav{padding-top:9px;padding-bottom:9px}
+ .comic-nav #story-next{min-height:48px;font-size:20px}
+}
+@container mobile-screen (orientation:landscape) and (max-height:599px){
+ .comic-toolbar{height:44px;padding:0 12px}.comic-toolbar button{min-height:40px}
+ .comic-book{width:calc(100% - 20px);border-width:3px}
+ .comic-page,.comic-page[data-comic-page="1"]{grid-template-columns:repeat(3,1fr);grid-template-rows:100%}
+ .comic-panel:nth-child(1){grid-column:1;grid-row:1;margin:0 -8px 0 0;--panel-clip:polygon(0 0,100% 0,92% 100%,0 100%)}
+ .comic-panel:nth-child(2){grid-column:2;grid-row:1;margin:0 -8px 0 -8px;--panel-clip:polygon(6% 0,100% 0,94% 100%,0 100%)}
+ .comic-panel:nth-child(3){grid-column:3;grid-row:1;margin:0 0 0 -8px;--panel-clip:polygon(6% 0,100% 0,100% 100%,0 100%)}
+ .comic-bubble{font-size:20px;padding:10px 12px;border-width:2.5px}
+ .comic-panel .comic-bubble{left:9%;right:5%;top:4%;max-width:86%}
+ .comic-panel .comic-bubble-embedded{opacity:1}
+ .comic-tony .comic-bubble{top:auto;bottom:5%}
+ .comic-tony .comic-bubble::before{top:auto;bottom:calc(100% - 3px);clip-path:polygon(0 100%,100% 100%,10% 0)}
+ .comic-tony .comic-bubble::after{top:auto;bottom:calc(100% - 5px);clip-path:polygon(0 100%,100% 100%,10% 0)}
+ .comic-boris .comic-bubble{right:auto;max-width:82%}
+ .comic-cup{background:var(--comic-paper)}
+ .comic-cup img{object-fit:contain;object-position:center bottom}
+ .comic-tony img{object-position:20% 55%}.comic-max img{object-position:68% 50%}.comic-crab img{object-position:65% 55%}
+ .comic-boris img{object-position:65% 50%}.comic-shark img{object-position:43% 60%}
+ .comic-panel .comic-sfx{font-size:26px;left:12%;bottom:8%}
+ .comic-nav{padding:7px 14px}.comic-nav #story-next{width:300px;min-height:44px;font-size:19px;padding:8px 16px}
+ .comic-job .comic-bubble{top:3%;left:auto;right:4%;max-width:88%;font-size:12px;padding:4px 7px}
+ .comic-wager .comic-bubble-1{top:3%;left:3%;right:auto;max-width:48%;font-size:11px;padding:4px 6px}
+ .comic-wager .comic-bubble-2{top:3%;right:3%;left:auto;max-width:48%;font-size:11px;padding:4px 6px}
+ .comic-jetski-start .comic-bubble{top:2%;right:3%;left:auto;max-width:80%;font-size:12px;padding:4px 7px}
+ .comic-umbrella-crab .comic-bubble{top:2%;left:3%;right:auto;max-width:80%;font-size:12px;padding:4px 7px}
+ .comic-shift-launch .comic-bubble{top:2%;right:3%;left:auto;max-width:80%;font-size:12px;padding:4px 7px}
+ .comic-shift-launch .comic-sfx{right:3%;bottom:4%;font-size:18px}
+}
+@media(prefers-reduced-motion:reduce){.story-enter .comic-panel img{animation:none}}
+
+
+/* Source: css/arcade.css */
+/* Arcade sprint: pursuit foam, trick chain, speed lines, sound words, missions and the shareable run comic. */
+.speed-lines,.sfx-layer{position:absolute;pointer-events:none}
+.speed-lines{inset:-10%;z-index:3;opacity:var(--lines,0);background:repeating-conic-gradient(from var(--lines-turn,0deg) at 50% 58%,#fff6df 0deg .9deg,transparent .9deg 5.5deg,#fff6df 5.5deg 6deg,transparent 6deg 11deg);-webkit-mask:radial-gradient(ellipse 58% 52% at 50% 58%,transparent 62%,#000 100%);mask:radial-gradient(ellipse 58% 52% at 50% 58%,transparent 62%,#000 100%);transition:opacity .12s}
+.sfx-layer{inset:0;z-index:6;overflow:hidden}
+.sfx-word{position:absolute;left:0;top:0;font:400 34px/1 'Russo One',Impact,sans-serif;color:var(--yellow);-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:3px 3px 0 var(--ink);white-space:nowrap;opacity:0;transform:translate(-50%,-50%) rotate(var(--tilt,0deg)) scale(.3)}
+.sfx-word.visible{animation:sfx-pop .9s steps(9,end) forwards}
+.sfx-word.trick{font-size:42px}.sfx-word.bad{color:var(--coral)}.sfx-word.near{color:#fff6df}.sfx-word.pocket{color:#8fe3d6;font-size:38px}
+@keyframes sfx-pop{0%{opacity:0;transform:translate(-50%,-50%) rotate(var(--tilt)) scale(.3)}15%{opacity:1;transform:translate(-50%,-60%) rotate(var(--tilt)) scale(1.18)}30%{transform:translate(-50%,-64%) rotate(var(--tilt)) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-96%) rotate(var(--tilt)) scale(.94)}}
+
+.beer-ticket{position:relative}
+.beer-mult{position:absolute;right:-8px;top:-9px;z-index:1;font:400 17px/1 'Russo One',Impact,sans-serif;padding:5px 7px 4px;background:#e7dcc0;border:2px solid var(--ink);transform:rotate(9deg);transition:background .2s}
+.beer-mult[data-level="2"]{background:var(--yellow)}.beer-mult[data-level="3"]{background:var(--yellow);box-shadow:2px 2px 0 var(--coral)}
+.score-ticket.beaten strong{background:var(--yellow);color:var(--ink)}
+
+.arcade-chain{position:absolute;z-index:7;left:50%;bottom:118px;width:min(330px,62%);transform:translateX(-50%) rotate(-1.5deg);display:flex;flex-direction:column;gap:5px;pointer-events:none;opacity:0;transition:opacity .15s,bottom .2s}
+#app-container.playing .arcade-chain.has-chain,#app-container.playing .arcade-chain.chasing{opacity:1}
+.chase-row{display:none;grid-template-columns:auto 1fr auto;align-items:center;gap:7px;padding:5px 9px;background:#123d4cd9;color:#fff2d1;clip-path:var(--paper-edge)}
+.arcade-chain.chasing .chase-row{display:grid}
+.pursuit-cue{display:none;font:500 10px/1.4 Rubik,sans-serif;color:var(--yellow);max-width:260px}
+.arcade-chain.pursuing .pursuit-cue{display:block}
+.chase-label{font:400 12px 'Russo One',sans-serif;letter-spacing:.5px}
+.chase-track{position:relative;height:11px;background:#0b2a35;border:2px solid #f4e9cd}
+.chase-fill{position:absolute;inset:0;background:linear-gradient(90deg,#8fe3d6,#ffc43d 60%,#eb643c);transform-origin:left;transform:scaleX(0)}
+.chase-zone{position:absolute;top:-4px;bottom:-4px;width:2px;background:#f4e9cd}.zone-mid{left:52.6%}.zone-max{left:79%}
+.chase-mult{font:400 20px/1 'Russo One',sans-serif;color:#f4e9cd;min-width:42px;text-align:right}
+.chase-row[data-level="1"] .chase-mult{color:var(--yellow)}
+.chase-row[data-level="2"] .chase-mult{color:var(--yellow);animation:pocket-pulse .5s steps(2,end) infinite}
+@keyframes pocket-pulse{50%{transform:scale(1.18) rotate(-4deg)}}
+.chain-row{display:none;position:relative;padding:7px 12px 10px;background:var(--cream) url('../assets/comics/paper-panel-v2.webp') center/100% 100%;text-align:center;filter:drop-shadow(2px 3px 0 #17282c55)}
+.arcade-chain.has-chain .chain-row{display:block}
+.chain-items{display:block;font:700 19px/1.05 Caveat,cursive;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chain-value{display:block;font:400 22px/1.15 'Russo One',sans-serif}
+.chain-count{color:var(--coral)}
+.chain-timer{position:absolute;left:12px;right:12px;bottom:5px;height:3px;background:#17282c22}
+.chain-timer i{display:block;height:100%;background:var(--coral);transform-origin:left}
+.arcade-chain.held .chain-timer i{background:#2b7f86}
+.chain-toast{position:absolute;z-index:8;left:50%;top:44%;transform:translateX(-50%) rotate(3deg) scale(.7);text-align:center;pointer-events:none;opacity:0}
+.chain-toast.visible{animation:toast-in 1.3s steps(13,end) forwards}
+.chain-toast strong{display:block;font:400 17px 'Russo One',sans-serif;background:#123d4c;color:#fff2d1;padding:6px 14px;clip-path:var(--paper-edge)}
+.chain-toast span{display:table;margin:2px auto 0;font:400 30px 'Russo One',sans-serif;color:var(--yellow);-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:2px 3px 0 var(--ink)}
+.chain-toast.bad strong{background:var(--coral)}.chain-toast.bad span{color:#fff2d1;font-size:24px}
+@keyframes toast-in{0%{opacity:0;transform:translateX(-50%) rotate(3deg) scale(.7)}12%{opacity:1;transform:translateX(-50%) rotate(-2deg) scale(1.08)}25%{transform:translateX(-50%) rotate(-2deg) scale(1)}80%{opacity:1}100%{opacity:0;transform:translateX(-50%) translateY(-24px) rotate(-2deg)}}
+
+.mission-list{list-style:none;margin:0;padding:0;text-align:left;font:500 13px/1.25 Rubik,sans-serif}
+.mission-list li{position:relative;padding:2px 0 2px 24px}
+.mission-list li::before{content:'';position:absolute;left:2px;top:3px;width:12px;height:12px;border:2px solid var(--ink);transform:rotate(-4deg)}
+.mission-list li.done{color:#235d63}.mission-list li.done::before{content:'✓';border-color:#235d63;font:900 15px/10px Rubik,sans-serif;text-indent:1px;color:#235d63}
+.pause-missions{max-width:300px;margin:6px auto 2px}
+.result-record{font:400 14px 'Russo One',sans-serif!important;margin:-8px 0 8px!important;letter-spacing:.3px}
+.result-record.is-record{display:table;margin:-8px auto 8px!important;background:var(--yellow);padding:4px 10px;transform:rotate(-2deg)}
+.result-goals{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 14px}
+.result-stars{font:400 20px 'Russo One',sans-serif;color:#b9852a;white-space:nowrap}
+.result-share{display:flex;justify-content:center;align-items:baseline;gap:12px;margin-top:4px;flex-wrap:nowrap;white-space:nowrap}
+.result-card .result-share .text-button{font:400 12px 'Russo One',sans-serif!important;padding:6px 3px 2px!important;margin:0!important;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px;white-space:nowrap}
+.result-card .result-share .menu-link{display:inline-block!important;font:400 12px 'Russo One',sans-serif!important;padding:6px 3px 2px!important;margin:0!important;color:#52615c!important;text-decoration:underline!important;text-decoration-thickness:2px!important;text-underline-offset:4px!important;white-space:nowrap}
+#comic-button{color:#a93d21}
+
+.share-screen{background:#103f58f0;backdrop-filter:blur(3px);z-index:12}
+.share-card{width:min(420px,92%);padding:24px 18px 28px;text-align:center;transform:rotate(-1deg)}
+.share-card img{display:block;width:100%;max-height:min(48dvh,390px);object-fit:contain;background:#e7ddc2;border:3px solid var(--ink)}
+.share-card img:not([src]){aspect-ratio:4/5}
+.share-status{min-height:16px;margin:4px 0 2px;font:700 17px Caveat,cursive}
+.share-actions{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap}
+.share-actions .yellow-button{width:100%;max-width:240px;min-height:44px;font-size:16px;margin-bottom:2px}
+.share-actions .text-button{font:700 18px Caveat,cursive;padding:2px 8px;margin:0 4px;color:#17282c}
+
+.menu-quick{position:absolute;z-index:25;left:12%;bottom:calc(23% - 54px);font:400 16px 'Russo One',sans-serif;padding:10px 0;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:5px;touch-action:manipulation;cursor:pointer;pointer-events:auto}
+.menu-daily{position:absolute;z-index:3;left:12%;top:calc(25% + clamp(150px,19cqw,240px));margin:0;font:700 24px Caveat,cursive;transform:rotate(-2deg);background:#fff2d1cc;padding:2px 10px}
+@container mobile-screen (orientation:portrait){
+ .menu-quick{left:50%;bottom:calc(max(22px,calc(env(safe-area-inset-bottom) + 12px)) + 68px);transform:translateX(-50%);background:#fff2d1;padding:8px 18px;text-decoration:none;clip-path:var(--paper-edge);z-index:25;touch-action:manipulation;cursor:pointer;pointer-events:auto}
+ .menu-daily{left:50%;top:calc(7% + 13cqw);transform:translateX(-50%) rotate(-2deg);white-space:nowrap;font-size:21px}
+}
+@container mobile-screen (orientation:landscape) and (max-height:520px){
+ .menu-quick{bottom:calc(20% - 44px);font-size:14px;padding:6px 0}
+ .menu-daily{top:calc(23% + 26cqh);font-size:19px}
+}
+@container mobile-screen (max-width:650px){
+ .arcade-chain{bottom:108px;width:min(300px,64%)}
+ .chain-items{font-size:17px}.chain-value{font-size:19px}
+ .sfx-word{font-size:28px}.sfx-word.trick{font-size:34px}
+ .beer-mult{font-size:13px;padding:4px 5px 3px;right:-6px;top:-7px}
+ .result-goals{gap:10px;margin-bottom:10px}.mission-list{font-size:12px}
+}
+@container mobile-screen (max-height:700px) and (orientation:portrait){
+ .result-companion{display:none!important}
+ .arcade-chain{bottom:96px}
+}
+@container mobile-screen (orientation:landscape) and (max-height:520px){
+ .arcade-chain{bottom:20px;width:min(300px,36%)}
+ .result-card #result-comment{display:none}
+ .result-record{margin:0 0 4px!important}.result-record.is-record{margin:0 auto 4px!important}
+ .result-goals{margin:0 0 6px;gap:8px}.result-goals .mission-list{display:flex;gap:4px 12px;flex-wrap:wrap;justify-content:center;font-size:11px}.mission-list li{padding:1px 0 1px 18px}.mission-list li::before{width:10px;height:10px}
+ .result-stars{font-size:16px}
+ .result-share{margin-top:0}.result-card .result-share .text-button{padding:6px 4px 0}
+ .pause-missions{display:none}
+}
+@media(prefers-reduced-motion:reduce){.speed-lines{display:none}.sfx-word.visible{animation-duration:.6s}.chase-row[data-level="2"] .chase-mult{animation:none}}
+.collection-ticket[hidden],.caps-ticket[hidden]{display:none!important}
+.ribbon-ride .hud{grid-template-columns:190px minmax(0,1fr) 48px}
+.ribbon-ride .score-ticket{grid-column:2;justify-self:end}
+.ribbon-ride .small-button{grid-column:3}
+@container mobile-screen (max-width:600px){.ribbon-ride .hud{grid-template-columns:110px minmax(0,1fr) 36px}.ribbon-ride .score-ticket{max-width:105px}}
+@container mobile-screen (orientation:landscape) and (max-height:520px){.ribbon-ride .hud{grid-template-columns:130px minmax(0,1fr) 40px}}
+
+
+/* Source: css/arcade-art.css */
+/* Clear water in the play area; glass controls and occasional paper accents. */
+#app-container{--ride-left:22px;--chain-top:122px;--message-top:122px;--ride-width:330px}
+#app-container:has(#arcade-chain.has-chain){--message-top:200px}
+#app-container.debug-mode:has(#arcade-chain.chasing){--message-top:226px}
+#start-countdown{position:absolute;z-index:24;left:50%;top:46%;min-width:1.1em;transform:translate(-50%,-50%);pointer-events:none;visibility:hidden;opacity:0;color:#ffd264;font:400 clamp(100px,27cqw,184px)/.9 'Russo One',Impact,sans-serif;text-align:center;-webkit-text-stroke:3px #103f58;paint-order:stroke fill;text-shadow:0 5px 0 #103f58,0 9px 18px #082e3d70}
+#start-countdown.visible{visibility:visible;opacity:1}
+#start-countdown.beat{animation:start-countdown-beat .38s cubic-bezier(.16,.8,.25,1.15) both}
+#start-countdown.go{min-width:0;padding:8px 22px;font-size:clamp(38px,10cqw,76px);letter-spacing:.04em;color:#fff0bf;-webkit-text-stroke:2px #a43e2b;text-shadow:0 4px 0 #103f58,0 8px 16px #082e3d70}
+#app-container.countdown .hud,#app-container.countdown .sound-button,#app-container.countdown #arcade-chain,#app-container.countdown #moment,#app-container.countdown #chain-toast,#app-container.countdown #crab-callout,#app-container.countdown #comic-frame,#app-container.countdown #ride-coach,#app-container.countdown #hint,#app-container.countdown #spill-flash,#app-container.countdown #shark-threat,#app-container.countdown #balance-cue,#app-container.countdown #wipeout-screen,#app-container.countdown .steer-controls,#app-container.countdown #jump-button,#app-container.countdown #bottom-hud,#app-container.countdown #touch-guide{visibility:hidden!important;pointer-events:none!important}
+#app-container.countdown #start-countdown{visibility:visible;opacity:1}
+@keyframes start-countdown-beat{from{opacity:0;transform:translate(-50%,-50%) scale(1.35)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.sky{pointer-events:none}
+.speed-lines{opacity:calc(var(--lines,0) * .34);background:repeating-conic-gradient(from var(--lines-turn,0deg) at 50% 57%,#fff6df99 0deg .25deg,transparent .25deg 14deg);-webkit-mask:radial-gradient(ellipse 62% 55% at 50% 57%,transparent 65%,#000 100%);mask:radial-gradient(ellipse 62% 55% at 50% 57%,transparent 65%,#000 100%)}
+
+#arcade-chain{top:var(--chain-top);left:var(--ride-left)!important;right:auto!important;bottom:auto!important;width:min(var(--ride-width),calc(100% - 124px));transform:none!important;gap:3px;transition:opacity .15s}
+.chase-row{grid-template-columns:auto minmax(12px,1fr) auto auto;padding:4px 10px;background:#0d3d4b70;background-image:none;border:1px solid #dcfff72c;border-radius:7px;clip-path:none;filter:none;color:#ecfff9;gap:4px 7px}
+.arcade-chain.chasing .chase-row{display:none}
+.debug-mode .arcade-chain.chasing .chase-row{display:grid}
+.chase-label{font-size:12px;letter-spacing:0}
+.chase-label::before{content:'≋';display:inline-block;margin-right:4px;font-size:18px;vertical-align:-2px;color:#b5f6e8}
+.chase-track{height:5px;border:0;border-radius:2px;background:#effff826;overflow:visible}
+.chase-fill{background:linear-gradient(90deg,#91ddcb 0 52%,#ffd264 52% 79%,#f2a57e 79%);border-radius:2px}
+.chase-zone{width:1px;top:-2px;bottom:-2px;background:#ecfff980}
+.chase-mult{font-size:20px;min-width:38px;color:#ecfff9;text-shadow:none}
+.chase-row[data-level="2"] .chase-mult{animation:none;color:#ffd264}
+.chase-distance{font:400 16px/1.15 'Russo One',sans-serif;white-space:nowrap;color:#f3fff9}
+.chase-status{grid-column:1/-1;font:600 12px/1.2 Rubik,sans-serif;color:#c8eee4;min-height:15px}
+.chase-row[data-risk="close"]{border-color:#ffd26475}.chase-row[data-risk="critical"]{border-color:#ff997db3;background:#702f386b;box-shadow:0 0 10px #ef704f30}
+.chase-row[data-risk="critical"] .chase-distance,.chase-row[data-risk="critical"] .chase-status{color:#ffe0b9}
+.chain-row{padding:5px 11px 8px;background:#0d3d4b70;background-image:none;border:1px solid #dcfff72c;border-radius:7px;clip-path:none;filter:none;text-align:left;color:#f0fff9}
+.chain-items{display:none}
+.chain-value{font-size:25px;line-height:1.2;letter-spacing:-.7px}
+.chain-count{color:#ffd264;background:none;padding:0;transform:none}
+.chain-timer{left:11px;right:11px;bottom:3px;height:2px;background:#edfff825}
+.chain-timer i,.arcade-chain.held .chain-timer i{background:#a7ecdc}
+
+#moment,#chain-toast,#ride-coach{top:var(--message-top);left:var(--ride-left);right:auto;bottom:auto;transform:none;max-width:min(440px,calc(100% - 28px));width:max-content;text-align:left;z-index:6}
+#moment{transition:opacity .15s;isolation:isolate;display:flex;align-items:center;flex-wrap:wrap;column-gap:10px;row-gap:2px;padding:5px 0}
+#moment.visible{transform:none;animation:ride-note .22s ease-out both}
+#moment strong,#moment.reward strong{display:block;margin:0;padding:0;background:none;clip-path:none;filter:none;box-shadow:none;transform:none;font:400 22px/1.2 'Russo One',Impact,sans-serif!important;white-space:normal;max-width:100%;color:#f0fff9;text-shadow:0 2px 4px #062c40b3;text-wrap:balance}
+#moment .moment-points,#moment .moment-mult{display:none}
+#moment.reward .moment-points{display:block;font:400 31px/1 'Russo One',Impact,sans-serif;letter-spacing:-1px;color:#ffd264;-webkit-text-stroke:0;text-shadow:0 2px 4px #062c40b3;margin:0}
+#moment .moment-mult{display:none!important}
+#moment span{display:none!important}
+#moment.reward::before{content:none}
+#moment.big-reward{padding:8px 13px;background:#f4e9cd url('../assets/comics/paper-panel-v2.webp') center/100% 100%;clip-path:var(--paper-edge)}
+#moment.big-reward strong{color:#17444c;text-shadow:none;font-size:22px!important}
+#moment.big-reward .moment-points{color:#b45530;text-shadow:none;font-size:31px}
+#moment.bad strong{color:#ffcfb4;background:none}
+.wipeout-screen>strong{max-width:90%;text-align:center;line-height:1.25}
+.fallen #sfx-layer,.fallen #moment,.fallen #chain-toast,.fallen #ride-coach{display:none}
+#moment:has(~#chain-toast.visible){visibility:hidden}
+@keyframes ride-note{from{opacity:0;translate:0 -6px}to{opacity:1;translate:0 0}}
+#chain-toast.visible{animation:ride-note .22s ease-out both}
+#moment.visible:not(.bad),#chain-toast.visible:not(.bad){animation:reward-note .35s ease-out both}
+@keyframes reward-note{from{opacity:0}to{opacity:1}}
+#chain-toast strong{display:block;font-size:18px;letter-spacing:0;padding:0;background:none;color:#f0fff9;clip-path:none;filter:none;text-shadow:0 2px 4px #062c40b3}
+#chain-toast span{display:block;margin:3px 0 0;font-size:32px;letter-spacing:-1px;color:#ffd264;-webkit-text-stroke:0;text-shadow:0 2px 4px #062c40b3}
+#chain-toast.bad strong,#chain-toast.bad span{background:none;color:#ffcfb4}
+#ride-coach{max-width:min(var(--ride-width),calc(100% - 124px));background:#0d3d4b6b;background-image:none;border-left:2px solid #bcf3e5;border-radius:0 6px 6px 0;filter:none;clip-path:none;padding:8px 12px;color:#f0fff9}
+#app-container:has(#arcade-chain.has-chain) #ride-coach,#app-container.debug-mode:has(#arcade-chain.chasing) #ride-coach{max-width:min(440px,calc(100% - 28px))}
+#ride-coach strong{font-size:18px;line-height:1.22}
+#ride-coach span{font:500 16px/1.3 Rubik,sans-serif;margin-top:4px;color:#effff0}
+.sfx-word{font-size:28px;font-style:italic;letter-spacing:-1px;-webkit-text-stroke:1px #f4e9cd;paint-order:stroke fill;text-shadow:1px 2px 0 #103f5880}
+.sfx-word.trick{font-size:30px}.sfx-word.pocket{font-size:27px}
+
+.steer-controls{left:14px;bottom:max(18px,calc(env(safe-area-inset-bottom) + 12px));gap:9px}
+.steer-controls button,#jump-button{background:#0d526721;background-image:none;border:2px solid #ebfff2aa;border-radius:50%;box-shadow:inset 0 0 16px #c3fff00a,0 1px 4px #0b364a40;filter:none;clip-path:none;transform:none;opacity:.9;color:#f2fff8;padding:0}
+.steer-controls button,.steer-controls button:last-child{width:58px;height:58px;font:400 49px/.9 Arial,sans-serif;transform:none;padding-bottom:5px}
+.steer-controls button.pressed{background:#bcffe429;border-color:#edfff4;background-blend-mode:normal}
+#jump-button{width:66px;height:66px;right:16px;bottom:max(18px,calc(env(safe-area-inset-bottom) + 12px));font-size:34px;display:grid;place-items:center}
+#jump-button::before{display:none}
+#jump-button .jump-icon{width:47px;height:47px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+#jump-button .jump-icon circle{fill:currentColor;stroke:none}
+#jump-button #jump-glyph{font:inherit;display:none}
+#jump-button.spin-ready #jump-glyph,#jump-button.spinning #jump-glyph{display:block}
+#jump-button.spin-ready .jump-icon,#jump-button.spinning .jump-icon{display:none}
+#jump-button.spin-ready{background:#b8fff029;color:#edfff4;border-color:#acffe5;filter:drop-shadow(0 0 4px #99ffdf55)}
+#jump-button.special-ready{background:#ffd26421;color:#ffe2a0;border-color:#ffe2a0;filter:drop-shadow(0 0 5px #ffd26466);outline:0}
+#jump-button .jump-action{display:none;font:400 14px/1 'Russo One',sans-serif;letter-spacing:0;color:inherit}
+#jump-button.spin-ready,#jump-button.spinning,#jump-button.landing{display:flex;flex-direction:column;justify-content:center;gap:1px}
+#jump-button.spin-ready #jump-glyph,#jump-button.spinning #jump-glyph,#jump-button.landing #jump-glyph{display:block;font-size:29px;line-height:1}
+#jump-button.spin-ready .jump-action,#jump-button.spinning .jump-action,#jump-button.landing .jump-action{display:block}
+#jump-button.landing .jump-icon{display:none}
+.steer-controls button.learn-control,#jump-button.learn-control{background:#d5fff52b;outline:2px solid #edfff4;outline-offset:3px;filter:none;scale:1}
+#balance-cue{left:50%;bottom:92px;width:min(260px,64%);padding:0;transform:translateX(-50%);background:none;background-image:none;filter:none;color:#ecfff9;text-shadow:0 1px 3px #103f58}
+#balance-cue strong{font-size:16px}
+#balance-cue small{font-size:17px;line-height:1.1;display:block}
+.balance-rail{height:51px;margin:4px 0 2px;background:url('../assets/sprites/balance-arc.svg') center/100% 100% no-repeat;border:0}
+.balance-safe{display:none}
+.balance-needle{top:var(--needle-top,10px);width:15px;height:21px;clip-path:polygon(0 0,100% 0,50% 100%);background:#f3fff9;border:0;transform:translateX(-50%);filter:drop-shadow(0 1px 2px #123d4980)}
+.catch-track{height:2px;width:52%;margin:5px auto 0;background:#edfff826}
+.catch-fill{background:#a7ffdd}
+
+@container mobile-screen (max-width:650px){
+ #app-container{--ride-left:12px;--chain-top:87px;--message-top:89px;--ride-width:274px}
+ #app-container:has(#arcade-chain.has-chain){--message-top:164px}
+ #app-container.debug-mode:has(#arcade-chain.chasing){--message-top:194px}
+ #moment strong,#moment.reward strong{font-size:19px!important}
+ #moment.reward .moment-points{font-size:29px}
+ #moment.big-reward{padding:7px 11px}
+ #ride-coach strong{font-size:17px}
+ .chain-value{font-size:24px}
+ #balance-cue{bottom:88px;width:220px;max-width:64%}
+ .balance-rail{height:43px}
+ .steer-controls button,.steer-controls button:last-child{width:54px;height:54px;font-size:46px}
+ .steer-controls{gap:7px}
+ #jump-button{width:62px;height:62px;right:14px}
+ #jump-button .jump-icon{width:43px;height:43px}
+}
+@container mobile-screen (orientation:landscape) and (max-height:520px){
+ #app-container{--ride-left:15px;--chain-top:81px;--message-top:84px;--ride-width:245px}
+ #app-container:has(#arcade-chain.has-chain){--message-top:154px}
+ #app-container.debug-mode:has(#arcade-chain.chasing){--message-top:180px}
+ #moment,#chain-toast,#ride-coach{max-width:min(350px,42%)}
+ #moment strong,#moment.reward strong{font-size:18px!important}
+ #moment.reward .moment-points{font-size:27px}
+ #ride-coach strong{font-size:17px}
+ #ride-coach span{font-size:15px}
+ .chain-value{font-size:22px}.chase-mult{font-size:18px}
+ .chain-row{padding:4px 10px 7px}.chase-row{padding:3px 10px}
+ #balance-cue{bottom:78px;width:240px;max-width:37%}
+ .balance-rail{height:43px}.steer-controls{bottom:15px}
+ #jump-button{bottom:15px;width:60px;height:60px}
+}
+@media(prefers-reduced-motion:reduce){
+ .sky{filter:none;transform:none}
+ #moment.visible,#chain-toast.visible,#moment.visible:not(.bad),#chain-toast.visible:not(.bad){animation:none}
+}
+
+
+/* Source: css/flow-test.css */
+/* All experiment styling is scoped; the full game keeps its current layout. */
+.flow-test .hud,.flow-test #ride-coach,.flow-test #arcade-chain,.flow-test #chain-toast,.flow-test #moment,.flow-test #hint,.flow-test #crab-callout,.flow-test #daily-label,.flow-test #quick-button,.flow-test .touch-guide,.flow-test .result-card,.flow-test #pause-missions,.flow-test #assist-toggle,.flow-test .pause-balance-help{display:none!important}
+.flow-test .sun,.ribbon-ride .sun{width:24%;left:65%;top:8%}.flow-test .sun-halo,.ribbon-ride .sun-halo{width:37%;left:59%;top:3%;opacity:.88}.flow-test .cloud-one,.ribbon-ride .cloud-one{top:17%}.flow-test .cloud-two,.ribbon-ride .cloud-two{top:10%}
+.flow-test .sky{background:linear-gradient(#3b95b0,#afd0c5 28%,#f1d7a8 55%)}
+.flow-test #sound-button{top:74px!important;right:18px!important;width:38px;height:38px}
+.flow-intro .menu-title{left:10%;top:15%;font-size:clamp(48px,7.2vw,92px);line-height:1;letter-spacing:-.045em}
+.flow-intro .menu-hero{right:2%;bottom:9%;height:78%;max-width:48%;opacity:.94}
+.flow-intro .menu-play{left:10%;bottom:13%;width:37%;max-width:330px;font-size:19px;min-height:58px;transform:rotate(-1deg)!important}
+.flow-intro-copy{position:absolute;top:43%;left:10%;width:45%;max-width:440px}
+.flow-eyebrow{font:700 11px/1.5 Rubik,sans-serif;letter-spacing:1.8px}
+.flow-intro-copy p{font:500 18px/1.5 Rubik,sans-serif;margin:12px 0 20px}
+.flow-intro-copy .flow-help{font:400 12px/1.6 Rubik,sans-serif;margin-top:16px}
+.flow-options{border:0;padding:0;margin:0}.flow-options legend{font:500 12px Rubik,sans-serif;margin-bottom:8px}.flow-options label{display:inline-flex;gap:7px;align-items:center;margin-right:16px;min-height:44px;font:500 14px Rubik,sans-serif;cursor:pointer}.flow-options input{width:18px;height:18px;accent-color:#165964}
+.flow-toolbar{position:absolute;z-index:7;top:max(18px,env(safe-area-inset-top));left:20px;right:18px;display:flex;justify-content:space-between;gap:12px;align-items:flex-start;color:#fff0ce;text-shadow:0 2px 3px #103f58}
+.flow-section small{display:block;font:500 10px Rubik,sans-serif;letter-spacing:2px;margin-bottom:6px}.flow-section strong{font:18px 'Russo One',sans-serif}
+.flow-actions{display:flex;gap:7px;align-items:center}.flow-actions button{min-height:42px;background:#123c49d9;color:#fff2d1;border:1px solid #d0e6d060;padding:8px 12px;border-radius:5px;font:500 12px Rubik,sans-serif;touch-action:manipulation}.flow-actions button[aria-pressed=true]{background:#f2df9c;color:#173a43;border-color:#f2df9c}.flow-actions button:focus-visible{outline:3px solid #fff2d1;outline-offset:3px}
+.flow-cue{position:absolute;left:50%;bottom:100px;transform:translateX(-50%);z-index:6;max-width:90%;width:max-content;text-align:center;color:#fff6d9;font:18px 'Russo One',sans-serif;text-shadow:0 2px 5px #123b4c;pointer-events:none;transition:color .15s}
+.flow-cue.is-catch{color:#ffdd80}
+.flow-test:not(.playing) .flow-toolbar,.flow-test:not(.playing) .flow-cue,.flow-test:has(#pause-screen:not(.hidden)) .flow-toolbar,.flow-test:has(#pause-screen:not(.hidden)) .flow-cue{display:none}
+.flow-test .bottom-hud{bottom:28px;left:calc(50% - 135px);right:calc(50% - 135px);gap:12px}.flow-test .speed-ticket{display:block!important;width:42px}.flow-test .speed-ticket strong{font-size:25px}.flow-test .speed-ticket span{font-size:8px}.flow-test .route-ticket{padding:0}.flow-test .route-track{background:#deead559}
+.flow-result{width:min(440px,94%);padding:34px 28px;text-align:center;color:#193b44}.flow-result h2{font:32px 'Russo One',sans-serif;margin:12px 0}.flow-result>p{font:14px/1.5 Rubik,sans-serif;margin:10px 0 18px}.flow-stats{display:grid;grid-template-columns:1fr 1fr;gap:22px 12px;margin:26px 0}.flow-stats strong{display:block;font:32px 'Russo One',sans-serif}.flow-stats span{display:block;font:11px/1.4 Rubik,sans-serif;margin-top:5px}.flow-result .yellow-button{font-size:17px}.flow-compare-button{width:100%;min-height:48px;background:transparent;color:#185b67;font:700 13px Rubik,sans-serif;margin-top:9px}.flow-result a{display:inline-block;color:#46666a;font:12px Rubik,sans-serif;padding:14px}
+@container mobile-screen (max-width:650px){
+ .flow-intro .menu-title{top:10%;left:8%;right:auto;text-align:left;font-size:53px}.flow-intro .menu-hero{height:31%;right:-5%;bottom:42%;max-width:43%;opacity:.88}
+ .flow-intro-copy{top:36%;left:8%;width:65%}.flow-intro-copy p{font-size:15px;margin:12px 0}.flow-intro-copy .flow-help{font-size:11px;width:130%;margin-top:16px}.flow-eyebrow{font-size:9px;letter-spacing:1px}
+ .flow-options label{font-size:13px;margin-right:9px}.flow-intro .menu-play{bottom:12%;left:8%;width:84%;max-width:none;font-size:18px}
+ .flow-toolbar{left:13px;right:12px;top:14px;gap:4px}.flow-section strong{font-size:13px}.flow-section small{font-size:8px;letter-spacing:1px}.flow-actions{gap:4px}.flow-actions button{padding:7px 9px;font-size:11px;min-height:44px}.flow-actions #flow-pause{padding:7px 12px}
+ .flow-cue{font-size:14px;bottom:107px}.flow-test .bottom-hud{left:calc(50% - 55px);right:calc(50% - 55px);bottom:33px}.flow-test .speed-ticket{width:35px}.flow-test .speed-ticket strong{font-size:22px}.flow-result{padding:28px 22px}
+}
+@container mobile-screen (max-width:370px){.flow-section strong{font-size:11px}.flow-actions button{font-size:10px;padding:7px}.flow-intro .menu-title{font-size:46px}.flow-intro-copy{top:33%}.flow-intro .menu-play{bottom:8%}}
+@container mobile-screen (orientation:landscape) and (max-height:520px){
+ .flow-intro .menu-title{top:12%;left:8%;font-size:43px}.flow-intro .menu-hero{height:91%;bottom:1%;right:5%;max-width:36%}.flow-intro-copy{top:40%;left:8%;width:52%;max-width:none}.flow-intro-copy>p:not(.flow-help){display:none}.flow-intro-copy .flow-help{font-size:10px;margin:4px 0}.flow-options label{min-height:35px}.flow-intro .menu-play{bottom:7%;left:8%;width:42%;min-height:44px;font-size:15px}.flow-eyebrow{font-size:9px}.flow-cue{bottom:65px;font-size:14px}.flow-result{width:min(620px,95%);padding:18px 26px}.flow-result h2{font-size:24px;margin:6px}.flow-stats{grid-template-columns:repeat(4,1fr);margin:12px 0;gap:12px}.flow-stats strong{font-size:25px}.flow-result>p{margin:6px 0 10px;font-size:12px}.flow-result .yellow-button{min-height:40px;padding:9px}.flow-compare-button{min-height:34px;margin-top:3px}.flow-result a{padding:6px}
+}
+@media(prefers-reduced-motion:reduce){.flow-cue{transition:none}}
+.ribbon-ride .pause-card{padding-bottom:48px}
+@container mobile-screen (max-width:650px){.ribbon-ride .pause-card{padding-bottom:42px}}
+@container mobile-screen (orientation:landscape) and (max-height:520px){.ribbon-ride .pause-card{padding-bottom:28px}}
+
+
+/* Source: css/drive-test.css */
+.drive-test .drive-hud{position:absolute;z-index:6;top:92px;left:20px;right:20px;display:flex;gap:26px;align-items:start;color:#fff3d4;text-shadow:0 2px 4px #153e4c;pointer-events:none}
+.drive-hud small{display:block;font:500 9px/1.4 Rubik,sans-serif;letter-spacing:.9px;margin-bottom:4px}
+.drive-hud strong{display:block;font:24px/1.15 'Russo One',sans-serif}
+.drive-pending{min-width:130px;color:#ffd785}.drive-beer{margin-left:auto;text-align:right;padding-top:4px}
+.drive-beer strong{font-size:19px}.drive-beer small{font-size:8px}
+.drive-chain-track{height:3px;margin-top:7px;background:#fff2ce30;overflow:hidden;border-radius:3px}
+.drive-chain-track i{display:block;height:100%;background:#ffd785;transform-origin:left center}
+.drive-test:not(.playing) .drive-hud,.drive-test:has(#pause-screen:not(.hidden)) .drive-hud{display:none}
+.drive-test .flow-cue{max-width:86%;white-space:normal}
+.drive-test #sound-button{top:140px!important}
+.drive-test:has(#result-screen:not(.hidden)) #sound-button{top:12px!important;right:12px!important}
+.drive-test .flow-result{width:min(490px,94%);background-color:#f2e8d2;clip-path:var(--paper-edge)}
+.drive-test .flow-result h2{font-size:27px}.drive-test #drive-result-summary{font-weight:700;color:#a65331}
+.drive-test .flow-result a{display:block;padding:8px}
+.drive-baseline{position:absolute;left:10%;bottom:7%;font:500 12px Rubik,sans-serif;color:#24545c;padding:8px 0}
+.drive-test .flow-intro-copy .flow-help{max-width:410px}
+.drive-test .pause-card{max-height:calc(100dvh - 40px);overflow-y:auto}
+@container mobile-screen (max-width:650px){
+ .drive-test .drive-hud{top:85px;left:13px;right:13px;gap:16px}
+ .drive-hud strong{font-size:20px}.drive-hud small{font-size:8px;letter-spacing:.3px}
+ .drive-pending{min-width:108px}.drive-beer{padding-top:0}.drive-beer strong{font-size:17px}.drive-beer small{font-size:7px}
+ .drive-test #sound-button{top:140px!important}
+ .drive-test .flow-cue{font-size:13px}.drive-baseline{left:8%;bottom:5%}
+ .drive-test #result-screen{padding:16px}
+ .drive-test .flow-result{padding:26px 20px}.drive-test .flow-result h2{font-size:24px}
+ .drive-test .flow-stats{gap:16px 10px;margin:18px 0}.drive-test .flow-result>p{margin:8px 0 12px}
+}
+@container mobile-screen (max-width:370px){
+ .drive-test .drive-hud{gap:10px}.drive-pending{min-width:100px}.drive-hud strong{font-size:17px}
+ .drive-test .flow-intro .menu-play{bottom:10%}.drive-baseline{bottom:3%}
+ .drive-test .flow-intro-copy p{margin:9px 0}.drive-test .flow-intro-copy .flow-help{margin-top:10px;line-height:1.45}
+ .drive-test .flow-result h2{font-size:21px}.drive-test .flow-stats strong{font-size:28px}
+}
+@container mobile-screen (orientation:landscape) and (max-height:520px){
+ .drive-test .drive-hud{top:70px;right:auto;gap:22px}.drive-hud strong{font-size:18px}.drive-beer{margin-left:0}
+ .drive-test #sound-button{top:74px!important}.drive-test .flow-result{width:min(680px,95%);padding:12px 24px}
+ .drive-test .flow-cue{bottom:94px}
+ .drive-test .flow-result h2{font-size:22px;margin:6px}.drive-test .flow-stats{margin:10px 0}
+ .drive-test .flow-result a{display:inline-block;font-size:11px;padding:5px 10px}
+ .drive-test .flow-intro .menu-play{bottom:13%}.drive-baseline{left:8%;bottom:3%}
+}
+
+
+/* Source: css/controls.css */
+/* Final control layer: mirrored reach, an unobstructed gyro view and a floating drag cue. */
+#app-container[data-input-mode="gyro"] .steer-controls,
+#app-container[data-input-mode="touch"] .steer-controls{display:none}
+#app-container #jump-button{width:var(--action-size,72px);height:var(--action-size,72px);right:max(18px,calc(env(safe-area-inset-right) + 12px));left:auto;bottom:max(20px,calc(env(safe-area-inset-bottom) + 14px))}
+#app-container[data-jump-side="left"] #jump-button{left:max(18px,calc(env(safe-area-inset-left) + 12px));right:auto}
+#app-container[data-jump-side="left"] .steer-controls{left:auto;right:max(18px,calc(env(safe-area-inset-right) + 12px))}
+#steer-pad{position:absolute;z-index:6;width:88px;height:56px;border:1px solid #e1fff08c;border-radius:40px;background:#12526732;transform:translate(-50%,-50%);opacity:0;pointer-events:none;transition:opacity .12s;box-shadow:inset 0 0 12px #c3fff010}
+#steer-pad.active{opacity:1}
+#steer-pad i{position:absolute;width:32px;height:32px;left:28px;top:11px;border:2px solid #e5fff5;border-radius:50%;background:#c2ffe92e;transform:translateX(var(--steer-offset,0px))}
+#app-container:not(.playing) #steer-pad,.fallen #steer-pad{display:none}
+#controls-screen{z-index:35;overflow-y:auto;align-items:flex-start;padding:max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom));background:#103f58bf;overscroll-behavior:contain}
+#app-container:not(.playing){touch-action:manipulation}
+#app-container:has(#controls-screen:not(.hidden)){touch-action:pan-y}
+#app-container:has(#pause-screen:not(.hidden)){touch-action:pan-y}
+#app-container:has(.screen:not(.hidden):not(#error-screen)){touch-action:manipulation}
+.screen,.journey,.menu-screen{touch-action:manipulation}
+.screen button,.journey button,.menu-screen button,#start-button,#quick-button{touch-action:manipulation;pointer-events:auto}
+#controls-screen,.pause-card{touch-action:pan-y}
+.controls-card{width:min(430px,100%);margin:auto;text-align:left;padding:26px 24px 22px;transform:none;background:#f4ead2;border:1px solid #e1d2b5;border-radius:16px;clip-path:none;filter:drop-shadow(0 6px 12px #103f5870)}
+.controls-card h2{font:26px/1.1 'Russo One',sans-serif;margin:8px 0 20px}
+.controls-card fieldset{padding:0;border:0;margin:16px 0 0;min-width:0}
+.controls-card legend,.control-slider{font:500 13px/1.4 Rubik,sans-serif;color:#214c56}
+.control-options{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.control-options button{flex:1;min-width:90px;min-height:44px;border:1px solid #56787566;border-radius:10px;padding:9px 8px;background:#f5eedb;color:#214c56;font:500 12px/1.3 Rubik,sans-serif;touch-action:manipulation}
+.control-options button[aria-pressed="true"]{background:#164e60;color:#f9f3df;border-color:#164e60;box-shadow:inset 0 0 0 1px #f9f3df33}
+#controls-description{font:13px/1.5 Rubik,sans-serif;min-height:39px;margin:10px 0 0;color:#325b60}
+#controls-status{font:12px/1.4 Rubik,sans-serif;color:#315c54;margin:5px 0 0}
+#controls-status:empty{display:none}
+.control-slider{display:block;margin-top:18px}
+.control-slider output{float:right;font-variant-numeric:tabular-nums;color:#164e60}
+.control-slider input{display:block;width:100%;height:36px;margin:3px 0 0;accent-color:#164e60;cursor:pointer}
+.control-slider>span{display:flex;justify-content:space-between;font-weight:400;color:#526b67}
+.controls-card .text-button{font:13px/1.4 Rubik,sans-serif;min-height:44px;padding:12px 0 4px;color:#164e60}
+.controls-action-help{font:12px/1.5 Rubik,sans-serif;color:#526b67;margin:16px 0}
+.controls-card .yellow-button{display:block;width:100%;min-height:46px;font-size:17px}
+.title-screen .controls-open{position:absolute;left:max(18px,env(safe-area-inset-left));top:max(14px,env(safe-area-inset-top));bottom:auto;color:#234b54;font:14px/1.4 Rubik,sans-serif;min-height:44px;padding:10px 0}
+.pause-card{max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain}
+.pause-tips{margin:2px 0 8px;text-align:left;font:12px/1.45 Rubik,sans-serif;color:#32565d}
+.pause-tips summary{min-height:40px;display:list-item;align-content:center;cursor:pointer;font-weight:500;padding:9px 4px;touch-action:manipulation}
+.pause-tips p{margin:4px 4px 9px}
+.pause-card .pause-help{font-size:12px;line-height:1.5;margin:4px 0 12px}
+.pause-card .text-button{min-height:40px;align-content:center;padding:6px 8px;font-size:12px;touch-action:manipulation}
+.selection-footer .controls-open{display:block;margin:10px auto 0;font:13px/1.4 Rubik,sans-serif;min-height:36px;padding:8px;color:#234b54}
+.controls-card .yellow-button:disabled{opacity:.5;cursor:wait}
+.controls-card button:focus-visible,.controls-card input:focus-visible{outline:3px solid #df7848;outline-offset:3px}
+@container mobile-screen (max-width:370px){.controls-card{padding:22px 18px}.control-options button{font-size:11px}.controls-card h2{font-size:24px}}
+@container mobile-screen (orientation:landscape) and (max-height:520px){.controls-card{width:min(520px,100%);padding:20px 24px}}
+@container mobile-screen (min-width:601px){#app-container.playing .sound-button{right:16px}}
+@media(prefers-reduced-motion:reduce){#steer-pad{transition:none}}
+
+
+/* Source: css/race.css */
+/* A compact score leaves the approaching encounter on the water. */
+.race-mode #arcade-chain{width:156px;max-width:calc(100% - 132px)}
+.race-mode .chain-value{font-size:18px;letter-spacing:-.3px}
+.race-mode .chain-row{padding:4px 8px 7px;background:#0d3d4b50;border-color:#dcfff71f}
+.race-mode .pursuit-cue{font-size:9px;line-height:1.3}
+.race-mode:has(#arcade-chain.has-chain){--message-top:174px}
+.race-mode #ride-coach{max-width:min(250px,calc(100% - 124px));padding:6px 9px;background:#0d3d4b45}
+.race-mode #ride-coach strong{font-size:14px}.race-mode #ride-coach span{font-size:12px;line-height:1.25}
+.race-mode #moment strong,.race-mode #moment.reward strong{font-size:16px!important}
+.race-mode #moment.reward .moment-points{font-size:23px}
+.race-mode #hint{max-width:240px;font-size:13px;white-space:normal}
+.race-mode #chain-toast strong{font-size:13px}.race-mode #chain-toast span{font-size:23px}
+.race-callout{position:absolute;z-index:5;pointer-events:none;opacity:0;transform:translate(-50%,-100%) rotate(-3deg);background:#f4e9cdeb;color:#173e46;border:1.5px solid #173e46;border-radius:9px;padding:4px 9px;max-width:142px;font:700 18px/1.05 Caveat,cursive;text-align:center;transition:opacity .12s}
+.race-callout::after{content:'';position:absolute;left:48%;bottom:-6px;width:9px;height:9px;background:#f4e9cd;transform:rotate(45deg);border-right:1.5px solid #173e46;border-bottom:1.5px solid #173e46}
+.race-callout.visible{opacity:1}
+.race-mode:not(.playing) .race-callout{visibility:hidden}
+.race-mode.race-boost .route-track i{background:#fff1a6;box-shadow:0 0 8px #ffd26499}
+.race-mode:has(#pause-screen:not(.hidden)) .race-callout,.race-mode:has(#result-screen:not(.hidden)) .race-callout{visibility:hidden}
+@container mobile-screen (max-width:650px){.race-mode:has(#arcade-chain.has-chain){--message-top:136px}.race-mode #ride-coach{max-width:230px}}
+@container mobile-screen (orientation:landscape) and (max-height:520px){.race-mode:has(#arcade-chain.has-chain){--message-top:125px}.race-mode #ride-coach{max-width:240px}.race-callout{font-size:16px}}
+
+
+/* Source: css/rush.css */
+.rush-mode #rush-meter{position:absolute;z-index:6;top:17px;left:50%;transform:translateX(-50%) rotate(-2deg);width:86px;text-align:center;color:#173d47;pointer-events:none;background:#f7e9cbeF;clip-path:polygon(3% 5%,28% 0,49% 4%,74% 0,98% 6%,100% 93%,73% 100%,44% 94%,0 100%);padding:7px 6px 6px}
+#rush-meter{display:none}.playing.rush-mode #rush-meter{display:block}
+#rush-meter strong{display:block;font:900 13px/1.1 sans-serif;letter-spacing:.5px}
+#rush-meter span{display:flex;justify-content:center;gap:5px;padding:5px 0}
+#rush-meter i{width:12px;height:12px;border:1.5px solid #37505a;border-radius:50%;background:#c4c6b3;transition:background .12s}
+#rush-meter i.lit{background:#ffc530;border-color:#bd6629;box-shadow:0 0 4px #fff1af}
+#rush-meter small{font:700 10px/1.1 sans-serif}
+.in-rush #rush-meter{background:#ffcd47}.in-rush #rush-meter strong{color:#9d341f}
+.in-rush #rush-meter::after{content:'';position:absolute;bottom:0;left:0;width:100%;height:3px;background:#b95028;transform:scaleX(var(--rush-left));transform-origin:left}
+.rush-mode #arcade-chain .pursuit-cue{display:none}
+.rush-mode[data-signal]:not([data-signal=""]) #crab-callout,.rush-mode[data-signal]:not([data-signal=""]) .race-callout{visibility:hidden}
+.rush-mode #moment.coach-muted{opacity:1}
+.rush-mode #moment .moment-mult{display:none}
+.rush-mode.impact-message .sfx-word.trick,.rush-mode.impact-message .sfx-word.near{visibility:hidden}
+.rush-mode #ride-coach,.rush-mode #moment,.rush-mode #chain-toast{max-width:calc(100% - 32px)}
+#edge-spray{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden;opacity:var(--splash,0);display:none}
+.playing #edge-spray{display:block}
+#edge-spray i{position:absolute;bottom:calc(15% + var(--i) * 3.7%);left:calc(-7px + var(--d) * 8px);width:calc(12px + var(--d) * 7px);height:calc(26px + var(--d) * 9px);border-radius:70% 25% 60% 30%;background:#f4fbec;transform:rotate(-28deg);box-shadow:0 0 3px #c8f5ed}
+#edge-spray i:nth-child(even){left:auto;right:calc(-9px + var(--d) * 6px);transform:rotate(28deg)}
+.rush-mode:has(#pause-screen:not(.hidden)) #rush-meter,.rush-mode:has(#result-screen:not(.hidden)) #rush-meter{display:none}
+@container mobile-screen (max-width:370px){.rush-mode #rush-meter{top:12px;width:70px;padding:5px}.rush-mode #rush-meter strong{font-size:11px}}
+@container mobile-screen (orientation:landscape) and (max-height:520px){.rush-mode #rush-meter{top:12px}.rush-mode #arcade-chain{top:65px}}
+@media(prefers-reduced-motion:reduce){#edge-spray{display:none!important}#rush-meter i{transition:none}}
+
+
+/* Source: css/course-show.css */
+.sky{background:linear-gradient(var(--course-sky,#479db0),var(--course-horizon,#c7d7c9) 53%,#f8dfb9 70%)}
+#course-ticket{position:absolute;z-index:4;left:50%;top:25%;max-width:88%;padding:7px 13px;background:#f5e8ca;color:#23454a;font:12px 'Russo One',sans-serif;letter-spacing:.06em;white-space:nowrap;transform:translate(-50%,-8px) rotate(-2deg);clip-path:polygon(1% 6%,97% 0,100% 87%,3% 100%);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
+#course-ticket.visible{opacity:1;transform:translate(-50%,0) rotate(-2deg)}
+#app-container[data-course="swell"] .sun-halo{opacity:.36}
+#app-container[data-course="home"] .sun-halo{--sky-paper:#ea9468;opacity:.85}
+.sun-halo{transition:opacity 1.5s}
+.sun-halo::before{transition:background-color 1.5s}
+.delivery-active #result-screen{visibility:hidden;pointer-events:none}
+.delivery-active .hud,.delivery-active .action-controls,.delivery-active #ride-coach,.delivery-active #arcade-chain,.delivery-active #course-ticket,.delivery-active #crab-callout{visibility:hidden!important}
+#delivery-scene{position:absolute;inset:auto 18px max(30px,env(safe-area-inset-bottom));z-index:40;text-align:center;display:flex;align-items:center;flex-direction:column;gap:15px}
+#delivery-scene.hidden{display:none}
+#delivery-line{margin:0;max-width:430px;padding:17px 20px;background:#f7e9cb;color:#20434b;font:clamp(16px,4cqw,22px)/1.3 'Russo One',sans-serif;clip-path:polygon(1% 4%,97% 0,100% 94%,2% 100%)}
+#delivery-scene button{width:100%;max-width:360px;min-height:48px;padding:12px 22px;font-size:13px}
+@container mobile-screen (max-height:500px){#course-ticket{top:30%;font-size:10px}#delivery-scene{inset:auto 20px 18px;gap:8px}#delivery-line{font-size:15px;padding:10px 16px}}
+@media(prefers-reduced-motion:reduce){#course-ticket,.sun-halo,.sun-halo::before{transition:none}}
+
+
+/* Source: css/beer-duel.css */
+/* Race position is the goal; beer earns a separate score bonus. */
+.beer-duel .hud{grid-template-columns:190px 190px minmax(80px,1fr) 48px}
+.beer-duel .beer-ticket{grid-column:1;grid-row:1;min-width:0}
+.beer-duel .beer-ticket .ticket-label{display:block!important;letter-spacing:.04em}
+.beer-duel .duel-ticket{grid-column:2;grid-row:1;padding:12px 16px 14px;transform:rotate(2deg);min-width:0}
+.duel-ticket>span{display:block;font:700 10px/1.2 Rubik,sans-serif;letter-spacing:.04em}
+.duel-ticket>strong{display:block;font:900 43px/1.15 Rubik,sans-serif;letter-spacing:-2px;color:#b64d31}
+.duel-ticket small{font-size:28px;letter-spacing:0}.duel-ticket>strong{line-height:1.65}
+.beer-duel .score-ticket{grid-column:3;grid-row:1}.beer-duel .small-button{grid-column:4;grid-row:1}
+.beer-duel .beer-mult{display:none}
+.beer-duel.rush-mode #rush-meter{top:auto;left:auto;right:16px;bottom:100px;transform:rotate(2deg);width:76px}
+.beer-duel #rush-meter small{display:none}
+#app-container.beer-duel{--message-top:154px;--chain-top:149px}
+#app-container.beer-duel:has(#arcade-chain.has-chain){--message-top:210px}
+.duel-status{position:absolute;left:18px;top:124px;z-index:5;padding:5px 9px;background:#103f58c9;color:#fff1d0;font:700 11px/1.2 Rubik,sans-serif;pointer-events:none;border-radius:3px}
+.duel-status[data-leader="max"]{color:#ffe290}.duel-status[data-leader="boris"]{color:#ffc5a4}
+#app-container:not(.playing) .duel-status,.beer-duel:has(#pause-screen:not(.hidden)) .duel-status{display:none}
+#app-container:not(.beer-duel) .duel-ticket{display:none}
+.menu-wager{position:absolute;left:12%;top:55%;width:32%;margin:0;z-index:3;font:500 clamp(13px,1.5cqw,20px)/1.4 Rubik,sans-serif;color:#275261}
+.duel-results{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 8px}
+.duel-results>div{padding:8px 4px;border-top:2px solid #24556855;border-bottom:2px solid #24556855}
+.duel-results span{display:block;font:700 10px/1.3 Rubik,sans-serif;letter-spacing:.03em;margin-bottom:5px}
+.duel-results .result-beer{display:block;font-size:42px;letter-spacing:-2px}
+.duel-results #result-beer-bonus{color:#b64d31;font-size:32px;line-height:1.32;letter-spacing:-1px}
+.result-breakdown{display:flex;justify-content:center;gap:10px;font:700 11px/1.4 Rubik,sans-serif;margin:4px 0}
+#delivery-line{white-space:pre-line}
+[data-outcome="victory"] #result-title{color:#125577}
+@container mobile-screen (orientation:portrait){.menu-wager{left:5%;top:calc(7% + 13cqw + 35px);width:90%;text-align:center;font-size:14px}}
+@container mobile-screen (max-width:650px){
+ .beer-duel .hud{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 36px;gap:8px;left:12px;right:12px}
+ .beer-duel .beer-ticket{padding:8px 8px 11px 1px;gap:0}.beer-duel #beer-canvas{width:36px;height:62px}
+ .beer-duel .beer-ticket strong,.duel-ticket>strong{font-size:34px}.beer-duel .beer-ticket strong span,.duel-ticket small{font-size:21px}
+ .beer-duel .beer-ticket .ticket-label,.duel-ticket>span{font-size:8px;letter-spacing:0}
+ .beer-duel .duel-ticket{padding:11px 9px 12px}
+ .beer-duel .small-button{grid-column:3}.beer-duel .score-ticket{position:absolute;right:0;top:96px;width:87px}.beer-duel .score-ticket strong{font-size:15px;letter-spacing:0;padding:4px 8px}
+ #app-container.beer-duel.playing .sound-button{right:10px;top:57px;width:36px;height:36px;padding:7px}
+ .duel-status{left:12px;top:113px;max-width:calc(100% - 116px);font-size:9px;padding:5px 7px}
+ .duel-results{gap:8px;margin-top:10px}.duel-results .result-beer{font-size:36px}.duel-results #result-beer-bonus{font-size:28px}.duel-results span{font-size:9px}
+ #app-container.beer-duel{--message-top:146px;--chain-top:146px}
+ #app-container.beer-duel:has(#arcade-chain.has-chain){--message-top:197px}
+}
+@container mobile-screen (orientation:landscape) and (max-height:520px){
+ .beer-duel .result-card{padding:14px 30px 14px 170px}
+ .beer-duel .hud{grid-template-columns:140px 140px minmax(80px,1fr) 40px}
+ .beer-duel .duel-ticket{padding:8px 12px}.duel-ticket>strong{font-size:33px}.duel-ticket>span{font-size:9px}
+ .duel-status{top:98px;left:18px;font-size:9px}.menu-wager{top:52%;font-size:12px}
+ #app-container.beer-duel{--message-top:124px;--chain-top:124px}
+ #app-container.beer-duel:has(#arcade-chain.has-chain){--message-top:166px}
+ .beer-duel.rush-mode #rush-meter{bottom:90px;right:14px;width:68px;padding:5px}
+ .duel-results{margin:5px 0}.duel-results .result-beer{font-size:36px}.duel-results>div{padding:4px}
+}
+
+
+/* Source: css/mobile-frame.css */
+/* One phone-sized stage on every screen. Component breakpoints use this size. */
+:root{--app-height:100dvh}
+html,body{width:100%;height:100%;min-height:0}
+body{display:flex;justify-content:center;align-items:center;gap:0;background:#103f58;overflow:hidden}
+.mobile-viewport{width:min(100vw,430px);height:min(var(--app-height,100dvh),940px);flex:none;container-type:size;container-name:mobile-screen;overflow:hidden}
+.mobile-viewport #app-container{width:100%;height:100%;max-width:none;max-height:none;margin:0;border-radius:0;box-shadow:none}
+.desktop-note{display:none!important}
+
+
+/* Source: css/collage-hud.css */
+/* Blank generated artwork; every label, number and progress bar stays live. */
+#app-container {
+  --hud-paper: url('../assets/comics/hud/paper-blank.webp');
+  --hud-ink: url('../assets/comics/hud/ink-blank.webp');
+  --hud-crown: url('../assets/comics/hud/crown-cream.webp');
+  --hud-color: #20434c;
+  --ride-left: 12px;
+  --hud-top: max(10px, env(safe-area-inset-top));
+  --hud-row-top: calc(var(--hud-top) + 90px);
+  --hud-status-width: calc((100cqw - 24px) * .32);
+  --hud-chain-width: calc((100cqw - 24px) * .34);
+  --hud-score-width: calc((100cqw - 24px) * .29);
+}
+#app-container.beer-duel { --chain-top: var(--hud-row-top); --message-top: calc(var(--hud-row-top) + 50px); }
+#app-container.beer-duel:has(#arcade-chain.has-chain) { --message-top: calc(var(--hud-row-top) + 54px); }
+#app-container .hud {
+  top: var(--hud-top); left: 12px; right: 12px;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr) 40px;
+  gap: 8px; align-items: start;
+  color: var(--hud-color);
+}
+#app-container .beer-ticket,
+#app-container .duel-ticket,
+#app-container.playing .sound-button,
+#app-container #pause-button,
+#app-container #ride-coach,
+#app-container #rush-meter {
+  background: var(--hud-paper) center / 100% 112% no-repeat;
+  border: 0; border-radius: 0; clip-path: none;
+  box-shadow: none; filter: drop-shadow(1px 3px 2px #36271e30);
+  color: var(--hud-color);
+}
+#app-container .beer-ticket {
+  position: relative; grid-column: 1; grid-row: 1;
+  height: 78px; padding: 8px 10px 18px 4px; gap: 1px;
+  transform: rotate(-2.5deg); align-items: center;
+}
+#app-container #beer-canvas { width: 32px; height: 50px; }
+#app-container .beer-ticket > div { min-width: 0; }
+#app-container .beer-ticket .ticket-label {
+  display: block !important; font: 700 clamp(8px, 2.2cqw, 9.5px)/1.25 Rubik, sans-serif;
+  letter-spacing: 0; white-space: nowrap;
+}
+#app-container .beer-ticket strong {
+  font: 900 clamp(26px, 8.5cqw, 36px)/1.1 Rubik, sans-serif;
+  letter-spacing: -1.5px; white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+#app-container .beer-ticket strong span { font-size: .55em; letter-spacing: -1px; }
+#app-container .beer-track {
+  position: absolute; left: 14px; right: 12px; bottom: 8px;
+  height: 9px; margin: 0; border: 1.5px solid var(--hud-color);
+  padding: 1.5px; background: #f9e5be70;
+}
+#app-container .beer-track i { background: #ffb719; }
+#app-container .duel-ticket {
+  grid-column: 2; grid-row: 1; height: 75px;
+  margin-top: 2px; padding: 10px 10px 9px; transform: rotate(2.5deg);
+}
+#app-container .duel-ticket > span { font: 700 9px/1.3 Rubik, sans-serif; letter-spacing: .02em; }
+#app-container .duel-ticket > strong {
+  font: 900 clamp(26px, 9.5cqw, 38px)/1.15 Rubik, sans-serif;
+  color: #bd442c; letter-spacing: -1.5px; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+#app-container .duel-ticket small { font-size: .65em; letter-spacing: -1px; }
+#app-container #pause-button {
+  position: static; top: auto; right: auto;
+  grid-column: 3; grid-row: 1; width: 38px; height: 38px;
+  margin-top: 47px; padding: 2px; font: 900 24px/1 Rubik, sans-serif;
+  transform: rotate(3deg);
+}
+#app-container.playing #sound-button {
+  left: auto; right: 12px; top: var(--hud-top);
+  width: 38px; height: 38px; padding: 7px; transform: rotate(-5deg);
+}
+#app-container .score-ticket {
+  container-type: inline-size;
+  position: absolute; top: var(--hud-row-top); right: 0; width: var(--hud-score-width); max-width: none;
+  padding: 6px 6px; transform: rotate(1.5deg);
+  background: var(--hud-ink) center / 100% 125% no-repeat;
+  filter: drop-shadow(1px 3px 2px #36271e35);
+}
+#app-container .score-ticket::before,
+#app-container .duel-ticket::before {
+  content: ''; position: absolute; top: -3px; left: 18%; width: 20px; height: 15px;
+  background: #dbb86f99; transform: rotate(-12deg);
+  clip-path: polygon(3% 0, 100% 4%, 96% 100%, 0 94%); pointer-events: none;
+}
+#app-container .duel-ticket::before { left: 65%; width: 13px; height: 19px; background: #ead6b799; transform: rotate(-23deg); }
+#app-container .score-ticket strong {
+  padding: 0; border: 0; background: none; clip-path: none;
+  font: 500 min(20px, calc(100cqw / (var(--score-digits, 6) * .65)))/1.15 Rubik, sans-serif; letter-spacing: -.6px;
+  text-align: center; color: #f7e8c6; font-variant-numeric: tabular-nums;
+}
+#app-container .duel-status {
+  top: var(--hud-row-top); left: 12px; width: var(--hud-status-width); max-width: none;
+  min-height: 24px; padding: 6px 8px; border-radius: 0;
+  background: var(--hud-ink) center / 100% 125% no-repeat;
+  color: #f7e8c6; font: 700 clamp(8px, 2.1cqw, 9.5px)/1.25 Rubik, sans-serif;
+  filter: drop-shadow(1px 3px 2px #36271e35); transform: rotate(-1deg);
+}
+#app-container .duel-status::before { content: '♛'; margin-right: 5px; color: #f1cf8f; font-size: 14px; vertical-align: -1px; }
+#app-container #arcade-chain {
+  top: var(--chain-top); left: calc(18px + var(--hud-status-width)) !important;
+  width: var(--hud-chain-width); max-width: none;
+}
+#app-container .chain-row {
+  padding: 7px 8px 11px; border: 0; border-radius: 0;
+  background: var(--hud-ink) center / 100% 125% no-repeat;
+  color: #fff5de; filter: drop-shadow(1px 3px 2px #36271e30);
+}
+#app-container .chain-value { font: 900 min(22px, 5.8cqw)/1.1 Rubik, sans-serif; letter-spacing: -1px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#app-container .chain-count { color: #ffbf26; }
+#app-container .chain-timer { left: 12px; right: 12px; bottom: 8px; height: 3px; background: #eee0bf40; }
+#app-container .chain-timer i { background: #f4c960; }
+#app-container #ride-coach {
+  padding: 6px 14px 7px; max-width: min(340px, calc(100% - 24px)); width: max-content;
+  transform: rotate(-1.5deg); text-shadow: none;
+}
+#app-container #ride-coach strong { font: 900 14px/1.2 Rubik, sans-serif; display: block; }
+#app-container #ride-coach span { color: var(--hud-color); font: 500 11.5px/1.25 Rubik, sans-serif; margin-top: 3px; display: block; }
+#app-container #ride-coach span:empty { display: none; }
+#app-container #rush-meter {
+  top: auto; left: auto; right: 15px;
+  bottom: max(calc(var(--action-size, 72px) + 68px), calc(env(safe-area-inset-bottom) + var(--action-size, 72px) + 60px));
+  width: 72px; padding: 7px 6px 7px; transform: rotate(2deg);
+}
+#app-container #rush-meter strong { font: 700 10px/1.2 Rubik, sans-serif; }
+#app-container #rush-meter span { gap: 4px; padding-top: 4px; }
+#app-container #rush-meter i { width: 11px; height: 11px; background: transparent; border: 1.5px solid var(--hud-color); }
+#app-container #rush-meter i.lit { background: #ffbf26; border-color: #aa6635; }
+#app-container.in-rush #rush-meter { filter: drop-shadow(0 0 6px #ffcc57); }
+#app-container[data-input-mode="touch"] .steer-controls { display: flex; }
+#app-container .steer-controls { left: 16px; gap: 12px; bottom: max(22px, calc(env(safe-area-inset-bottom) + 14px)); }
+#app-container .steer-controls button {
+  width: clamp(64px, 18cqw, 77px); height: clamp(64px, 18cqw, 77px);
+  background: var(--hud-crown) center / contain no-repeat;
+  border: 0; border-radius: 0; box-shadow: none; clip-path: none; padding: 0;
+  filter: drop-shadow(1px 3px 2px #183e4666); opacity: 1;
+  color: transparent; font-size: 0; transform: rotate(-7deg);
+  position: relative;
+}
+#app-container .steer-controls button:last-child { transform: rotate(7deg); }
+#app-container .steer-controls button::after {
+  content: ''; position: absolute; width: 27%; height: 27%; left: 41%; top: 35%;
+  border-left: 7px solid var(--hud-color); border-bottom: 7px solid var(--hud-color);
+  transform: rotate(45deg);
+}
+#app-container .steer-controls button:last-child::after { left: 31%; transform: rotate(225deg); }
+#app-container #jump-button {
+  background: var(--hud-crown) center / contain no-repeat;
+  width: var(--action-size, 72px); height: var(--action-size, 72px);
+  bottom: max(54px, calc(env(safe-area-inset-bottom) + 46px));
+  border: 0; border-radius: 0; box-shadow: none; clip-path: none;
+  color: #f8e8c6; opacity: 1; padding: 0;
+  filter: drop-shadow(1px 3px 2px #183e4666);
+}
+#app-container #jump-button::before {
+  content: ''; display: block; position: absolute; inset: 15%;
+  background: #20434c var(--hud-ink) center / 190% 190% no-repeat;
+  border-radius: 50%; clip-path: none; transform: none; padding: 0;
+  width: auto; height: auto; z-index: 0;
+}
+#app-container #jump-button > * { position: relative; z-index: 1; }
+#app-container #jump-button .jump-icon { width: 65%; height: 65%; stroke-width: 3; margin-top: -4px; }
+#app-container #jump-button .jump-action {
+  display: block; position: absolute; left: 7%; right: 7%; bottom: -4px;
+  padding: 4px 1px; font: 700 10px/1 Rubik, sans-serif; color: #f8e8c6;
+  background: #b7483f; clip-path: var(--paper-edge); transform: rotate(-5deg);
+}
+#app-container #jump-button.spin-ready,
+#app-container #jump-button.special-ready { filter: drop-shadow(0 0 7px #ffca4b); outline: 0; }
+#app-container .steer-controls button.learn-control,
+#app-container #jump-button.learn-control { outline: 0; filter: drop-shadow(0 0 6px #ffca4b); }
+#app-container .steer-controls button.pressed,
+#app-container #jump-button:active { scale: .93; filter: brightness(1.12) drop-shadow(0 1px 1px #183e4666); }
+#app-container[data-jump-side="left"] #rush-meter { right: auto; left: 15px; }
+#app-container .speed-ticket { display: none; }
+#app-container .bottom-hud {
+  left: 24%; right: 24%; bottom: max(14px, calc(env(safe-area-inset-bottom) + 8px));
+  pointer-events: none; justify-content: center;
+}
+#app-container .route-ticket {
+  width: 100%; max-width: 220px; height: 6px;
+  border: 1px solid var(--hud-color); background: #f9e5be50;
+  border-radius: 3px; overflow: hidden; margin: 0 auto;
+}
+@container mobile-screen (max-width:370px) {
+  #app-container .hud { gap: 6px; left: 8px; right: 8px; }
+  #app-container #beer-canvas { width: 28px; height: 44px; }
+  #app-container .beer-ticket { padding-right: 7px; height: 74px; }
+  #app-container .duel-ticket { padding-left: 8px; padding-right: 7px; height: 72px; }
+  #app-container .duel-ticket > strong { font-size: 30px; }
+  #app-container .score-ticket strong { font-size: min(18px, calc(100cqw / (var(--score-digits, 6) * .65))); }
+}
+@container mobile-screen (max-height:520px) {
+  #app-container { --hud-top: 10px; --hud-row-top: 96px; }
+  #app-container.beer-duel { --chain-top: var(--hud-row-top); --message-top: calc(var(--hud-row-top) + 48px); }
+  #app-container.beer-duel:has(#arcade-chain.has-chain) { --message-top: calc(var(--hud-row-top) + 52px); }
+  #app-container .beer-ticket { height: 76px; padding-top: 6px; padding-bottom: 16px; }
+  #app-container .beer-ticket strong { font-size: 28px; }
+  #app-container #beer-canvas { height: 44px; width: 28px; }
+  #app-container .beer-track { bottom: 8px; height: 9px; padding: 1px; }
+  #app-container .duel-ticket { height: 74px; padding-top: 8px; }
+  #app-container .duel-ticket > strong { font-size: 30px; }
+  #app-container #pause-button { margin-top: 44px; height: 34px; width: 34px; font-size: 22px; }
+  #app-container.playing #sound-button { height: 34px; width: 34px; padding: 6px; }
+  #app-container .score-ticket { top: var(--hud-row-top); }
+  #app-container .chain-row { padding-top: 6px; padding-bottom: 9px; }
+  #app-container .chain-value { font-size: 20px; }
+  #app-container #ride-coach,
+  #app-container:has(#arcade-chain.has-chain) #ride-coach { padding: 5px 12px; max-width: calc(100% - 122px); }
+  #app-container #ride-coach strong { font-size: 13px; }
+  #app-container #ride-coach span { font-size: 11px; margin-top: 2px; }
+  #app-container .steer-controls button { width: 56px; height: 56px; }
+  #app-container #jump-button { bottom: 24px; }
+  #app-container #rush-meter { bottom: calc(var(--action-size, 72px) + 38px); width: 68px; padding: 6px 5px; }
+}
+
+/* UI pass: calmer top HUD, sound lives in pause, courage rides on the jump cap, steering caps are a quiet backup to tilt. */
+#app-container { --hud-top: max(14px, calc(env(safe-area-inset-top) + 4px)); --hud-row-top: calc(var(--hud-top) + 78px); }
+#app-container.playing #sound-button { display: none; }
+#app-container #pause-button { margin-top: 0; }
+#app-container .hud { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 40px; }
+#app-container .beer-ticket { height: 70px; }
+#app-container .duel-ticket {
+  justify-self: end; width: max-content; min-width: 76px; height: 60px;
+  padding: 8px 12px 7px; text-align: center;
+}
+#app-container .duel-ticket > strong { font-size: clamp(24px, 7.5cqw, 30px); }
+#app-container .duel-status { width: max-content; max-width: var(--hud-status-width); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#app-container .score-ticket { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+#app-container .score-ticket > span { display: block; font: 700 8px/1 Rubik, sans-serif; letter-spacing: .08em; color: #f1cf8f; }
+
+/* Courage ring around the jump cap replaces the separate meter. */
+#app-container #rush-meter { display: none; }
+#app-container #jump-button { --courage: 0; }
+#app-container #jump-button::after {
+  content: ''; position: absolute; inset: 9%; border-radius: 50%; z-index: 0; pointer-events: none;
+  background: conic-gradient(from -90deg, #ffbf26 calc(var(--courage) * 1turn), #20434c55 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+  transition: --courage .3s;
+}
+#app-container #jump-button.courage-full { animation: courage-pulse 1s ease-in-out infinite; }
+@keyframes courage-pulse { 50% { filter: drop-shadow(0 0 9px #ffca4b); scale: 1.05; } }
+
+/* Tilt is primary: caps stay as a dimmed, smaller backup. */
+#app-container[data-input-mode="gyro"] .steer-controls { display: flex; }
+#app-container[data-input-mode="gyro"] .steer-controls button {
+  width: clamp(50px, 14cqw, 58px); height: clamp(50px, 14cqw, 58px);
+  opacity: .55; filter: drop-shadow(1px 2px 1px #183e4644);
+}
+#app-container[data-input-mode="gyro"] .steer-controls button::after { border-width: 5px; }
+#app-container[data-input-mode="gyro"] .steer-controls button.pressed,
+#app-container[data-input-mode="gyro"] .steer-controls button.learn-control { opacity: 1; }
+#app-container .steer-controls button.learn-control { filter: drop-shadow(0 0 4px #ffca4b99); }
+
+@container mobile-screen (max-height: 740px) {
+  #app-container { --hud-top: max(8px, env(safe-area-inset-top)); --hud-row-top: calc(var(--hud-top) + 64px); }
+  #app-container.beer-duel { --chain-top: var(--hud-row-top); --message-top: calc(var(--hud-row-top) + 38px); }
+  #app-container.beer-duel:has(#arcade-chain.has-chain) { --message-top: calc(var(--hud-row-top) + 42px); }
+  #app-container .beer-ticket { height: 58px; padding: 4px 8px 12px 3px; }
+  #app-container .beer-ticket strong { font-size: 24px; }
+  #app-container #beer-canvas { width: 24px; height: 38px; }
+  #app-container .beer-track { bottom: 5px; height: 7px; }
+  #app-container .duel-ticket { height: 52px; padding: 5px 8px 5px; min-width: 68px; }
+  #app-container .duel-ticket > strong { font-size: 24px; }
+  #app-container #pause-button { width: 32px; height: 32px; font-size: 18px; }
+  #app-container .duel-status { min-height: 20px; padding: 4px 6px; font-size: 8.5px; }
+  #app-container .chain-row { padding: 4px 6px 7px; }
+  #app-container .chain-value { font-size: 17px; }
+  #app-container #ride-coach { padding: 4px 10px 5px; }
+  #app-container #ride-coach strong { font-size: 12px; }
+  #app-container #ride-coach span { font-size: 10px; margin-top: 1px; }
+  #app-container .steer-controls { bottom: max(12px, calc(env(safe-area-inset-bottom) + 6px)); gap: 8px; }
+  #app-container .steer-controls button { width: clamp(52px, 15cqw, 62px); height: clamp(52px, 15cqw, 62px); }
+  #app-container #jump-button { width: 62px; height: 62px; bottom: max(38px, calc(env(safe-area-inset-bottom) + 30px)); }
+}
+
+
+/* Source: css/pause.css */
+/* A pause poster made from the title screen's paper, surf cutouts and ink badge. */
+#pause-screen {
+  padding: 0;
+  display: block;
+  overflow: hidden;
+  background: #f1e5c9;
+  color: #193b44;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+#pause-screen .pause-card {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(180px, 1fr) auto;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: url('../assets/sprites/sky-paper-grain.svg') center / 180px 180px;
+  transform: none;
+  filter: none;
+  isolation: isolate;
+}
+#pause-screen .pause-heading {
+  position: relative;
+  z-index: 3;
+  padding: max(38px, calc(env(safe-area-inset-top) + 20px)) 20px 8px;
+}
+#pause-screen .eyebrow {
+  margin: 0;
+  font: 500 11px/1.4 Rubik, sans-serif;
+  letter-spacing: .22em;
+}
+#pause-screen h2 {
+  margin: 14px 0 0;
+  font: 400 clamp(36px, 12.6cqw, 55px)/1.1 'Russo One', Impact, sans-serif;
+  letter-spacing: -.055em;
+  transform: rotate(-3deg);
+}
+.pause-art {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.pause-sun {
+  position: absolute;
+  width: 96%;
+  aspect-ratio: 1;
+  max-height: 100%;
+  left: 2%;
+  top: 7%;
+  background: #ffc43d url('../assets/sprites/sky-paper-grain.svg') center / 160px 160px;
+  -webkit-mask: url('../assets/sprites/sky-paper-disc.svg') center / 100% 100% no-repeat;
+  mask: url('../assets/sprites/sky-paper-disc.svg') center / 100% 100% no-repeat;
+  transform: rotate(-12deg);
+}
+.pause-hero {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 112%;
+  object-fit: contain;
+  object-position: center bottom;
+  transform: rotate(3deg);
+  filter: drop-shadow(3px 5px 1px #46381c20);
+}
+.pause-wave {
+  position: absolute;
+  z-index: 1;
+  width: 165%;
+  height: 48%;
+  left: -32%;
+  bottom: -9%;
+  object-fit: fill;
+  transform: rotate(-7deg);
+}
+#pause-screen .pause-actions {
+  position: relative;
+  z-index: 3;
+  padding: 42px 32px max(22px, calc(env(safe-area-inset-bottom) + 12px));
+  background: #ffc43d url('../assets/sprites/sky-paper-grain.svg') center / 180px 180px;
+}
+.pause-actions::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: -24px;
+  width: 100%;
+  height: 42px;
+  background: #ffc43d url('../assets/sprites/sky-paper-grain.svg') center / 180px 180px;
+  clip-path: polygon(0 38%, 4% 47%, 8% 22%, 12% 31%, 16% 9%, 20% 28%, 25% 12%, 30% 35%, 35% 23%, 39% 38%, 43% 17%, 48% 26%, 52% 5%, 57% 23%, 62% 10%, 66% 32%, 71% 17%, 75% 35%, 80% 11%, 84% 25%, 89% 7%, 93% 26%, 97% 15%, 100% 24%, 100% 100%, 0 100%);
+}
+#pause-screen #resume-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px;
+  margin: 0;
+  padding: 16px 20px;
+  background: url('../assets/comics/button-play-base.webp') center / 100% 100% no-repeat;
+  color: #fff3d5;
+  clip-path: none;
+  box-shadow: none;
+  font: 400 clamp(18px, 5.2cqw, 23px)/1.1 'Russo One', Impact, sans-serif;
+  letter-spacing: .02em;
+  transform: rotate(-2deg);
+  transition: translate .15s, filter .15s;
+}
+#pause-screen #resume-button span { margin: 0; font-size: 26px; }
+#pause-screen #resume-button:hover { filter: brightness(1.12); translate: 0 -2px; }
+#pause-screen #resume-button:active { translate: 0 2px; }
+#pause-screen button:focus-visible,
+#pause-screen summary:focus-visible { outline: 3px solid #193b44; outline-offset: 4px; }
+#pause-screen .pause-secondary {
+  display: flex;
+  justify-content: center;
+  gap: 36px;
+  margin-top: 10px;
+}
+#pause-screen .text-button {
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 8px;
+  font: 500 14px/1.4 Rubik, sans-serif;
+  color: #193b44;
+}
+#pause-screen .text-button:hover { text-decoration: underline; text-underline-offset: 4px; }
+#pause-screen .text-button:disabled { opacity: .5; cursor: default; text-decoration: none; }
+#pause-screen .pause-options {
+  width: 100%;
+  margin: 5px 0 0;
+  text-align: center;
+  font: 400 13px/1.5 Rubik, sans-serif;
+}
+.pause-options summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  cursor: pointer;
+  list-style: none;
+  touch-action: manipulation;
+}
+.pause-options summary::-webkit-details-marker { display: none; }
+.pause-options summary span { font-size: 20px; transition: transform .15s; }
+.pause-options[open] summary span { transform: rotate(45deg); }
+#pause-screen .pause-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 3px 6px;
+  padding-top: 8px;
+  border-top: 1px solid #193b4430;
+}
+#pause-screen .pause-help {
+  grid-column: 1 / -1;
+  margin: 0 0 8px;
+  font: 400 12px/1.6 Rubik, sans-serif;
+}
+#pause-screen .pause-settings .text-button { font-size: 12px; padding: 8px 4px; }
+#pause-screen #center-button { grid-column: 1 / -1; }
+#app-container:has(#pause-screen:not(.hidden)) .hud,
+#app-container:has(#pause-screen:not(.hidden)) .steer-controls,
+#app-container:has(#pause-screen:not(.hidden)) #jump-button {
+  visibility: hidden;
+  pointer-events: none;
+}
+@container mobile-screen (max-height: 740px) {
+  #pause-screen .pause-heading { padding-top: max(24px, calc(env(safe-area-inset-top) + 12px)); }
+  #pause-screen h2 { margin-top: 10px; font-size: 11.8cqw; }
+  #pause-screen .pause-actions { padding-top: 30px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  #pause-screen #resume-button { min-height: 64px; }
+  #pause-screen .pause-secondary { margin-top: 4px; }
+  #pause-screen .pause-options { margin-top: 0; }
+}
+@container mobile-screen (max-height: 560px) {
+  #pause-screen .pause-card { grid-template-rows: auto minmax(100px, 1fr) auto; }
+  #pause-screen .pause-heading { padding-top: max(16px, env(safe-area-inset-top)); }
+  #pause-screen h2 { font-size: 9.8cqw; margin-top: 6px; }
+  #pause-screen .pause-actions { padding-top: 20px; }
+  #pause-screen #resume-button { min-height: 56px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #pause-screen #resume-button, .pause-options summary span { transition: none; }
+}
+
+
+/* Source: css/results.css */
+/* A finish poster with the same sun-cutout, ink and paper colors as the title. */
+#result-screen {
+  display: block;
+  overflow: hidden;
+  padding: 0;
+  color: #193b44;
+  background: #f1e5c9 url('../assets/sprites/sky-paper-grain.svg') center / 180px 180px;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+#result-screen .result-card {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(185px, 1fr) auto;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  text-align: center;
+  background: url('../assets/sprites/sky-paper-grain.svg') center / 180px 180px;
+  transform: none;
+  filter: none;
+  isolation: isolate;
+}
+#result-screen .result-heading {
+  position: relative;
+  z-index: 2;
+  padding: max(28px, calc(env(safe-area-inset-top) + 14px)) 18px 7px;
+}
+#result-screen .eyebrow {
+  margin: 0;
+  font: 500 11px/1.4 Rubik, sans-serif;
+  letter-spacing: .22em;
+}
+#result-screen .result-heading h2 {
+  margin: 10px 0 4px;
+  font: 400 clamp(36px, 12cqw, 54px)/1.06 'Russo One', Impact, sans-serif;
+  letter-spacing: -.055em;
+  transform: rotate(-2deg);
+}
+#result-screen[data-outcome="victory"] .result-heading h2 { color: #165973; }
+#result-screen[data-outcome="tie"] .result-heading h2 { color: #b75236; }
+#result-screen #result-comment {
+  margin: 5px 0 0;
+  font: 700 21px/1.1 Caveat, cursive;
+  color: #45615c;
+}
+.result-art {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  background: #f3bd37;
+}
+.result-art #result-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 47%;
+}
+.result-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: none;
+}
+.result-trophy {
+  position: absolute;
+  z-index: 2;
+  top: 9%;
+  left: -2%;
+  width: min(49%, 200px);
+  height: auto;
+  overflow: visible;
+  transform: rotate(8deg);
+  filter: drop-shadow(3px 6px 0 #17384650);
+}
+.trophy-rays {
+  fill: none;
+  stroke: #fff0bd;
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-dasharray: 10 9;
+}
+.trophy-handles-back {
+  fill: none;
+  stroke: #f7ebd0;
+  stroke-width: 26;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.trophy-handles {
+  fill: none;
+  stroke: #173b44;
+  stroke-width: 14;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.trophy-cup-back {
+  fill: #f7ebd0;
+  stroke: #f7ebd0;
+  stroke-width: 28;
+  stroke-linejoin: round;
+}
+.trophy-cup {
+  fill: url(#trophy-gold);
+  stroke: #173b44;
+  stroke-width: 8;
+  stroke-linejoin: round;
+}
+.trophy-stem, .trophy-base {
+  fill: url(#trophy-gold);
+  stroke: #173b44;
+  stroke-width: 8;
+  stroke-linejoin: round;
+}
+.trophy-shine {
+  fill: none;
+  stroke: #fff4c4;
+  stroke-width: 8;
+  stroke-linecap: round;
+}
+.trophy-star {
+  fill: #fff0ad;
+  stroke: #dd8525;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+#result-screen #result-crab { display: none; }
+#result-screen .result-details {
+  position: relative;
+  z-index: 2;
+  padding: 33px 30px max(14px, calc(env(safe-area-inset-bottom) + 8px));
+  background: #ffc43d url('../assets/sprites/sky-paper-grain.svg') center / 180px 180px;
+}
+#result-screen .result-details::before {
+  content: '';
+  position: absolute;
+  top: -23px;
+  left: 0;
+  width: 100%;
+  height: 36px;
+  background: #ffc43d url('../assets/sprites/sky-paper-grain.svg') center / 180px 180px;
+  clip-path: polygon(0 38%, 4% 48%, 9% 20%, 14% 34%, 19% 12%, 24% 33%, 30% 14%, 36% 35%, 42% 18%, 49% 34%, 55% 9%, 61% 31%, 67% 15%, 73% 38%, 79% 18%, 85% 33%, 91% 11%, 96% 34%, 100% 20%, 100% 100%, 0 100%);
+}
+#result-screen .duel-results {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 0 0 5px;
+}
+#result-screen .duel-results > div {
+  padding: 0 4px 7px;
+  border-top: 2px solid #193b443d;
+  border-bottom: 2px solid #193b443d;
+}
+#result-screen .duel-results span {
+  display: block;
+  margin: 6px 0 1px;
+  font: 700 10px/1.2 Rubik, sans-serif;
+  letter-spacing: .08em;
+}
+#result-screen .duel-results .result-beer {
+  display: block;
+  margin: 0;
+  font: 400 clamp(30px, 9cqw, 39px)/1.12 'Russo One', sans-serif;
+  letter-spacing: -.035em;
+  color: #125577;
+}
+#result-screen #result-beer-bonus { color: #ad492e; }
+#result-screen .result-summary {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 10px;
+  margin: 6px 0 2px;
+}
+#result-screen .result-summary span { font: 500 12px/1.3 Rubik, sans-serif; letter-spacing: .07em; }
+#result-screen .result-summary strong { font: 400 26px/1.2 'Russo One', sans-serif; }
+#result-screen .result-record { display: none; }
+#result-screen .result-record.is-record {
+  display: table;
+  margin: 4px auto 7px !important;
+  padding: 4px 10px;
+  background: #f4e8cb;
+  font: 700 10px/1.3 Rubik, sans-serif !important;
+  letter-spacing: .03em;
+  transform: rotate(-1deg);
+}
+#result-screen .result-goals { margin: 0; }
+#result-screen .result-goals #result-missions { display: none; }
+#result-screen .result-stars { font: 400 13px/1.4 'Russo One', sans-serif; color: #875d1f; }
+#result-screen .result-stars[hidden] { display: none; }
+#result-screen .result-companion[hidden] { display: none !important; }
+#result-screen #replay-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 68px;
+  margin: 6px 0 0;
+  padding: 13px 15px;
+  background: #f5aa19 url('../assets/comics/paper-panel-v2.webp') center / 100% 100%;
+  background-blend-mode: multiply;
+  color: #173a45;
+  font: 400 20px/1.1 'Russo One', Impact, sans-serif;
+  letter-spacing: .035em;
+  filter: drop-shadow(2px 4px 0 #76551840);
+  transform: rotate(-2deg);
+}
+#result-screen #replay-button span { margin: 0; font-size: 24px; }
+#result-screen .result-share {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 3px;
+}
+#result-screen .result-share .text-button,
+#result-screen .result-share .menu-link {
+  min-height: 40px;
+  margin: 0;
+  padding: 10px 4px;
+  color: #193b44;
+  font: 500 11px/1.35 Rubik, sans-serif !important;
+  letter-spacing: .035em;
+  text-decoration: none !important;
+}
+#result-screen button:focus-visible { outline: 3px solid #193b44; outline-offset: 4px; }
+#app-container:has(#result-screen:not(.hidden)) .sound-button { z-index: 20; }
+@container mobile-screen (max-height: 740px) {
+  #result-screen .result-heading { padding-top: max(18px, calc(env(safe-area-inset-top) + 8px)); }
+  #result-screen .result-heading h2 { margin-top: 7px; font-size: 11cqw; }
+  #result-screen .result-details { padding-top: 26px; padding-bottom: max(9px, env(safe-area-inset-bottom)); }
+  #result-screen #replay-button { min-height: 58px; margin-top: 3px; }
+  #result-screen .duel-results { margin-bottom: 1px; }
+}
+@container mobile-screen (max-height: 560px) {
+  #result-screen .result-card { grid-template-rows: auto minmax(115px, 1fr) auto; }
+  #result-screen .result-heading { padding-top: max(13px, env(safe-area-inset-top)); }
+  #result-screen .result-heading h2 { margin: 4px 0 0; font-size: 9.5cqw; }
+  #result-screen #result-comment { margin-top: 2px; font-size: 17px; }
+  #result-screen .result-details { padding-top: 22px; }
+  #result-screen .duel-results .result-beer { font-size: 26px; }
+  #result-screen #replay-button { min-height: 50px; }
+}
+@container mobile-screen (orientation: landscape) and (max-height: 520px) {
+  #result-screen .result-card {
+    grid-template-columns: 1.05fr 1fr;
+    grid-template-rows: auto 1fr;
+    overflow: hidden;
+  }
+  #result-screen .result-heading {
+    grid-column: 1;
+    grid-row: 1;
+    padding: max(8px, env(safe-area-inset-top)) 16px 2px;
+  }
+  #result-screen .result-heading h2 {
+    margin: 2px 0 0;
+    font-size: 28px;
+  }
+  #result-screen #result-comment {
+    margin: 1px 0 0;
+    font-size: 16px;
+  }
+  #result-screen .result-art {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 0;
+  }
+  #result-screen .result-details {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 8px 24px;
+  }
+  #result-screen .duel-results {
+    margin-bottom: 2px;
+  }
+  #result-screen .duel-results .result-beer {
+    font-size: 22px;
+  }
+  #result-screen .result-summary {
+    margin: 2px 0;
+  }
+  #result-screen .result-summary strong {
+    font-size: 20px;
+  }
+  #result-screen #replay-button {
+    min-height: 44px;
+    margin: 4px 0 2px;
+    font-size: 17px;
+    padding: 8px 12px;
+  }
+  #result-screen .result-share {
+    gap: 12px;
+    margin-top: 1px;
+  }
+  #result-screen .result-share .text-button,
+  #result-screen .result-share .menu-link {
+    min-height: 32px;
+    padding: 6px 2px;
+  }
+}
+@media (prefers-reduced-motion: reduce) { #result-screen button { transition: none !important; } }

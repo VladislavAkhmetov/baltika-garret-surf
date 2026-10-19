@@ -4596,8 +4596,9 @@ class ArcadeJuice {
     this.liveCamera=live;try{localStorage.setItem('garret_comics_camera',live?'live':'calm');}catch(_){}
     if(!live){this.roll=this.trauma=0;}
   }
+  get baseFov(){return this.game?.baseFov||58;}
   reset(){
-    this.stop=this.trauma=this.kick=this.roll=this.lineFrame=0;this.fov=58;this.offset.set(0,0,0);
+    this.stop=this.trauma=this.kick=this.roll=this.lineFrame=0;this.fov=this.baseFov;this.offset.set(0,0,0);
     this.words.forEach(w=>{w.life=0;w.el.classList.remove('visible');});
     this.lines?.style.setProperty('--lines','0');
   }
@@ -4615,11 +4616,11 @@ class ArcadeJuice {
   }
   // Runs after lookAt: roll and FOV are part of the camera pose for this frame only.
   updateCamera(dt,camera){
-    const p=this.game.p;
+    const p=this.game.p,base=this.baseFov;
     this.kick*=Math.exp(-dt*2.4);
-    if(this.calm){this.roll=0;this.fov=58;}
+    if(this.calm){this.roll=0;this.fov=base;}
     else{
-      const target=Math.min(70,58+THREE.MathUtils.clamp((p.speed-25)*.6,0,6)+this.kick);
+      const target=Math.min(base+12,base+THREE.MathUtils.clamp((p.speed-25)*.6,0,6)+this.kick);
       this.fov+=(target-this.fov)*(1-Math.exp(-dt*6));
       const roll=THREE.MathUtils.clamp(-p.smoothLean*.024,-.024,.024);
       if(p.airborne||p.fallen)this.roll=0;
@@ -7532,6 +7533,10 @@ class PaperSurfGame {
     this.flowTest?.mount();
     document.getElementById('cap-icon').src = SPRITE_ASSETS.cap_fish;
     window.addEventListener('resize', () => this.resize());
+    if (typeof ResizeObserver !== 'undefined' && this.container) {
+      this._containerObserver = new ResizeObserver(() => this.resize());
+      this._containerObserver.observe(this.container);
+    }
     document.addEventListener('visibilitychange', () => {if (document.hidden && this.state === 'playing') this.pause();});
     window.addEventListener('blur',()=>{if(this.state==='playing')this.pause();});
     window.addEventListener('keydown', e => {if(!document.getElementById('controls-screen').classList.contains('hidden')||e.target.closest?.('input,select,textarea'))return;if (e.code === 'Escape' || e.code === 'KeyP') {if (this.state === 'playing') this.pause(); else if (this.state === 'paused') this.resume();}});
@@ -8231,17 +8236,18 @@ class PaperSurfGame {
       this.cameraChaseLift+=(chaseLiftTarget-this.cameraChaseLift)*easing;
     }
     const wide=this.camera.aspect>1.3;
+    const midAspect=!wide&&this.camera.aspect>0.48?Math.min(1,(this.camera.aspect-0.48)/0.22):0;
     const airTarget=p.airborne?1.9+Math.min(3.1,this.jump.lastHeight*.4)+this.jump.launchStrength*.6+(this.jump.takeoffRamp?.type==='side'?2.5:0):0;
     if(snap)this.cameraAirPull=airTarget;
     else this.cameraAirPull+=(airTarget-this.cameraAirPull)*(1-Math.exp(-dt*(p.airborne?4:3)));
-    const back=(wide?15.5:11.7)+this.cameraChasePull*.9+this.cameraAirPull;
+    const back=(wide?15.5:(11.7+midAspect*1.0))+this.cameraChasePull*.9+this.cameraAirPull;
     const ground=this.wave.height(p.x,p.z,this.time,false);
     // Release the takeoff crest during flight so the camera can descend before
     // touchdown, instead of holding a high-water offset until the landing frame.
     const release=this.wave.smooth((this.jump.airTime-.25)/.75);
     const base=p.airborne?THREE.MathUtils.lerp(p.takeoffHeight??ground,ground,release):ground;
     // Begin low to show the distant crest, then lift to keep the rider clear of the approaching wall.
-    const targetY=(wide?7.5:6.1)+base*.94+(p.airborne?Math.max(0,p.y-base)*.8+1.4*this.wave.smooth(this.jump.airTime/.18):0)+this.cameraChaseLift*.25;
+    const targetY=(wide?7.5:(6.1+midAspect*0.45))+base*.94+(p.airborne?Math.max(0,p.y-base)*.8+1.4*this.wave.smooth(this.jump.airTime/.18):0)+this.cameraChaseLift*.25;
     if(snap){
       this.camera.position.set(-p.x,targetY,p.z-back);
       this.cameraLateralSpeed=this.cameraVerticalSpeed=0;this.cameraForwardSpeed=p.speed*Math.cos(p.heading);
@@ -8422,7 +8428,19 @@ class PaperSurfGame {
     this.renderDirty=true;
     this.container.style.setProperty('--panel-size',Math.max(width,height)+'px');
     this.renderer.setSize(width,height,false);
-    this.camera.aspect=width/height;
+    const aspect=width/height;
+    this.camera.aspect=aspect;
+    let baseFov=58;
+    if(aspect<1.0){
+      const baseFovRad=58*Math.PI/180;
+      const baseAspect=0.46;
+      if(aspect>baseAspect){
+        const targetFov=2*Math.atan(Math.tan(baseFovRad/2)*(baseAspect/aspect))*180/Math.PI;
+        baseFov=Math.max(45,Math.min(58,targetFov));
+      }
+    }
+    this.baseFov=baseFov;
+    this.camera.fov=baseFov;
     this.camera.updateProjectionMatrix();
     this.paperSky.update();
   }
