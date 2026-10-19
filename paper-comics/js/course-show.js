@@ -115,7 +115,6 @@ class CourseShow {
   }
   mount(){
     const g=this.game;
-    this.ticket=document.createElement('div');this.ticket.id='course-ticket';this.ticket.setAttribute('aria-live','polite');g.container.append(this.ticket);
     this.delivery=document.createElement('div');this.delivery.id='delivery-scene';this.delivery.className='hidden';
     const line=document.createElement('p');line.id='delivery-line';this.delivery.append(line);
     const button=document.createElement('button');button.className='yellow-button';button.textContent='К РЕЗУЛЬТАТАМ';button.addEventListener('click',()=>this.endDelivery());this.delivery.append(button);g.container.append(this.delivery);
@@ -123,7 +122,7 @@ class CourseShow {
   reset(){
     this.enabled=!this.game.flowTest;this.index=-1;this.events=[];this.wakeWins=new Set();this.wakeSeconds=0;this.wakeSource=null;this.wakeUntil=0;
     this.deliveryActive=false;this.deliveryTime=0;this.delivery.classList.add('hidden');this.game.container.classList.remove('delivery-active');
-    this.ticket.textContent='';this.ticketUntil=0;this.confetti.forEach(m=>m.visible=false);this.finishBanner.visible=true;
+    this.confetti.forEach(m=>m.visible=false);this.finishBanner.visible=true;
     this.applyPalette(0);this.glass.visible=this.borisGlass.visible=false;
   }
   sectionAt(z){const index=this.sections.findIndex(s=>z<s.to);return index<0?this.sections.length-1:index;}
@@ -132,7 +131,6 @@ class CourseShow {
     const g=this.game,p=g.p,index=Math.max(0,Math.min(5,this.sectionAt(Math.min(p.z,1359))));
     if(index!==this.index){
       this.index=index;this.events.push({type:'section',id:this.sections[index].id,z:p.z,time:g.time});
-      this.ticket.textContent=(index+1)+' / 6 · '+this.sections[index].name;this.ticketUntil=g.time+2.5;
       if(index===5)g.companion.react('home');
     }
     if(p.fallen||p.recovering>0){this.wakeSeconds=0;this.wakeSource=null;this.wakeUntil=0;return;}
@@ -180,8 +178,6 @@ class CourseShow {
     const g=this.game,z=g.p.z;this.applyPalette(z);
     for(const p of this.props){p.mesh.visible=this.enabled&&p.z-z+p.extent> -22&&p.z-z-p.extent<165;if(p.mesh.userData.bob&&p.mesh.visible)p.mesh.position.y=g.wave.height(-p.mesh.position.x,p.z)*.45;}
     for(let i=0;i<this.flags.length;i++)this.flags[i].rotation.y=g.reducedMotion?0:Math.sin(g.time*2+i)*.18;
-    const urgent=['danger','chase','balance','landing'].includes(document.getElementById('ride-coach').dataset.lesson);
-    this.ticket.classList.toggle('visible',this.enabled&&g.state==='playing'&&g.time<this.ticketUntil&&!urgent&&!g.p.fallen&&!g.comics.active&&!g.comics.pending);
     // The skyline yields to nearby architecture and vanishes on open water.
     g.town.material.opacity=this.enabled&&z>875&&z<1080?.15:1;
     const open=this.enabled&&z>880&&z<1120;g.world.beach.visible=g.world.shore.visible=!open;

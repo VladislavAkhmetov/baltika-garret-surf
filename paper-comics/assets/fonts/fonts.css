@@ -3,54 +3,54 @@
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url(caveat-600.ttf) format('truetype');
+  src: url(caveat-600.woff2) format('woff2'), url(caveat-600.ttf) format('truetype');
 }
 @font-face {
   font-family: 'Caveat';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url(caveat-700.ttf) format('truetype');
+  src: url(caveat-700.woff2) format('woff2'), url(caveat-700.ttf) format('truetype');
 }
 @font-face {
   font-family: 'Rubik';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(rubik-400.ttf) format('truetype');
+  src: url(rubik-400.woff2) format('woff2'), url(rubik-400.ttf) format('truetype');
 }
 @font-face {
   font-family: 'Rubik';
   font-style: normal;
   font-weight: 500;
   font-display: swap;
-  src: url(rubik-500.ttf) format('truetype');
+  src: url(rubik-500.woff2) format('woff2'), url(rubik-500.ttf) format('truetype');
 }
 @font-face {
   font-family: 'Rubik';
   font-style: normal;
   font-weight: 600;
   font-display: swap;
-  src: url(rubik-600.ttf) format('truetype');
+  src: url(rubik-600.woff2) format('woff2'), url(rubik-600.ttf) format('truetype');
 }
 @font-face {
   font-family: 'Rubik';
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url(rubik-700.ttf) format('truetype');
+  src: url(rubik-700.woff2) format('woff2'), url(rubik-700.ttf) format('truetype');
 }
 @font-face {
   font-family: 'Rubik';
   font-style: normal;
   font-weight: 900;
   font-display: swap;
-  src: url(rubik-900.ttf) format('truetype');
+  src: url(rubik-900.woff2) format('woff2'), url(rubik-900.ttf) format('truetype');
 }
 @font-face {
   font-family: 'Russo One';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url(russo-one-400.ttf) format('truetype');
+  src: url(russo-one-400.woff2) format('woff2'), url(russo-one-400.ttf) format('truetype');
 }

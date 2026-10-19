@@ -31,15 +31,15 @@ class SpeedBlur {
           float burst=uBurst*perimeter*smoothstep(5.0,12.0,distance);
           float amount=max(uAmount*edge*farMask*(1.0-warm*.9),burst*2.8);
           if(amount<.001){gl_FragColor=base;return;}
-          vec4 sum=base;float weight=1.0;
-          for(int i=1;i<=${maxSamples};i++){
-            float t=float(i)/${maxSamples}.0;vec2 uv=clamp(vUv-ray*amount*t*.075,vec2(.002),vec2(.998));
-            float sampleDistance=distanceAt(uv);
-            vec4 sampleColor=texture2D(uColor,uv);
-            float safe=smoothstep(mix(23.0,5.0,uBurst),mix(35.0,12.0,uBurst),sampleDistance)*(1.0-step(.12,abs(sampleColor.a-base.a)));
-            float w=(1.0-t*.6)*safe;sum+=sampleColor*w;weight+=w;
-          }
-          gl_FragColor=sum/weight;
+          vec2 shift=ray*amount*0.026;
+          vec2 uvR=clamp(vUv-shift,vec2(.002),vec2(.998));
+          vec2 uvB=clamp(vUv+shift*.85,vec2(.002),vec2(.998));
+          float safeR=smoothstep(mix(23.0,5.0,uBurst),mix(35.0,12.0,uBurst),distanceAt(uvR));
+          float safeB=smoothstep(mix(23.0,5.0,uBurst),mix(35.0,12.0,uBurst),distanceAt(uvB));
+          vec4 colR=texture2D(uColor,uvR);
+          vec4 colB=texture2D(uColor,uvB);
+          vec3 comicShift=vec3(mix(base.r,colR.r,safeR),base.g,mix(base.b,colB.b,safeB));
+          gl_FragColor=vec4(comicShift,base.a);
         }`
     });
     this.scene=new THREE.Scene();this.scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),this.material));

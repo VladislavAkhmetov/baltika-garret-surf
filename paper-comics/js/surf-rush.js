@@ -111,7 +111,7 @@ class SurfRush {
   reward(name){
     if(!this.enabled||this.active>0)return;
     const family=['360°','КОСОЙ 360°','ПЕРЕВОРОТ!','ПРЯМОЙ ВЫЛЕТ','БОКОВОЙ ПЕРЕЛЁТ','МЯГКАЯ ПОСАДКА'].includes(name)?'air':
-      name==='ЧИСТЫЙ ОБГОН'?'pass':['ВПРИТЫК!','НАД ПРЕДМЕТОМ!','РАЗОШЛИСЬ','НАД АКУЛОЙ!','УЗКИЙ ПРОХОД','НАД КАНАТОМ!'].includes(name)?'dodge':
+      name==='ЧИСТЫЙ ОБГОН'?'pass':['ВПРИТЫК!','НАД ПРЕДМЕТОМ!','НАД БУЕМ!','РАЗОШЛИСЬ','НАД АКУЛОЙ!','УЗКИЙ ПРОХОД','НАД КАНАТОМ!'].includes(name)?'dodge':
       ['КАТБЭК','КАРВИНГ','НА ХВОСТЕ','СЛАЛОМ'].includes(name)?'carve':['ПОЙМАЛ ВОЛНУ','ПОПУТНОЕ ТЕЧЕНИЕ'].includes(name)?'wave':null;
     if(!family||this.moves.has(family)||this.game.time-this.lastMove<.35)return;
     this.moves.add(family);this.window=6.5;this.lastMove=this.game.time;
@@ -147,7 +147,9 @@ class SurfRush {
       p.speed=Math.min(46,p.speed+3);this.padBoost=Math.max(this.padBoost,pad.strength*.7);
       this.padEvents.push({index:pad.index,z:p.z,time:g.time,speed:p.speed});
       pad.flash=.8;pad.mesh.material.map=this.activePadTexture;
-      g.speedBlur?.triggerBurst();g.audio.playAccelerator(pad.strength);g.juice.punch(3.2);g.juice.buzz(20);this.splash(.65);g.emit(20,1.1,true);
+      g.speedBlur?.triggerBurst();g.audio.playAccelerator(pad.strength);g.juice.punch(2.8);g.juice.buzz(20);this.splash(.85);
+      g.emitRoosterTail?.(28);g.emit(16,1.2,true);
+      g.juice.pop('ВЖУХ!',p.x,p.y+1.9,p.z,'pocket');
       g.moment('РАЗГОН!','',false,.7);
     }
   }

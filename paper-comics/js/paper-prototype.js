@@ -183,7 +183,7 @@ class PaperSurfGame {
     const amber=document.createElement('canvas');amber.width=64;amber.height=64;const ac=amber.getContext('2d');
     ac.fillStyle='#f9b52c';ac.strokeStyle='#fff0bb';ac.lineWidth=5;ac.beginPath();ac.moveTo(31,6);ac.bezierCurveTo(60,34,52,56,30,58);ac.bezierCurveTo(8,54,6,32,31,6);ac.fill();ac.stroke();this.beerDropTexture=new THREE.CanvasTexture(amber);
     this.particles=[];
-    for(let i=0;i<85;i++){const mesh=this.sprite(this.dropTexture,.2,.3);mesh.visible=false;this.particles.push({mesh,life:0,x:0,y:0,z:0,vx:0,vy:0,vz:0});}
+    for(let i=0;i<140;i++){const mesh=this.sprite(this.dropTexture,.2,.3);mesh.visible=false;this.particles.push({mesh,life:0,x:0,y:0,z:0,vx:0,vy:0,vz:0});}
   }
   initTrail() {
     this.trailPoints = [];
@@ -536,12 +536,13 @@ class PaperSurfGame {
     const surfaceDrive=-slope*9+(p.airborne?0:s.flowZ*.4);
     const drive=this.waveRide.caught||bank||wake>.3?surfaceDrive:THREE.MathUtils.clamp(surfaceDrive,-2,2);
     const target=this.flowTest?this.flowTest.targetSpeed(slope):THREE.MathUtils.clamp((p.airborne?Math.max(this.assist?25:27,p.speed-.8):(this.assist?22:24)+this.waveRide.boost)+this.waveRide.momentum+this.jump.landingBoost+this.race.boost+this.rush.boost+this.rush.padBoost+drive+trim-Math.abs(p.heading)*1.2+(wake>.3?5*wake:0)-(p.recovering>0?5:0),18,this.rush.active>0||this.rush.padBoost>1?46:42);
-    p.speed+=(target-p.speed)*(1-Math.exp(-(this.rush.padTime>0&&target>p.speed?3.2:1.65)*dt));
+    p.speed+=(target-p.speed)*(1-Math.exp(-(this.rush.padTime>0&&target>p.speed?4.2:1.65)*dt));
     p.x=THREE.MathUtils.clamp(p.x+p.sideVelocity*dt,-9,9.2);p.z+=p.speed*Math.cos(p.heading)*dt;
     const next=this.trickRoute.stepRide(dt,previousPosition,this.wave.sample(p.x,p.z));this.jump.step(dt,next);
     const vertical=(p.y-previousY)/dt,verticalImpulse=THREE.MathUtils.clamp((vertical-p.verticalVelocity)*.16,-1.5,1.5);
     p.verticalVelocity+=(vertical-p.verticalVelocity)*(1-Math.exp(-10*dt));
-    const autoKnees=THREE.MathUtils.clamp(.12+Math.abs(p.lean)*.4+Math.abs(next.dx)*.15+Math.abs(vertical)*.035+wake*.35+this.jump.charge*.5+(this.flowTest?.catchPulse||this.waveRide.catchPulse||0)*.55,.12,.85);
+    const padAero=this.rush?.padTime>0?.28:0;
+    const autoKnees=THREE.MathUtils.clamp(.12+padAero+Math.abs(p.lean)*.4+Math.abs(next.dx)*.15+Math.abs(vertical)*.035+wake*.35+this.jump.charge*.5+(this.flowTest?.catchPulse||this.waveRide.catchPulse||0)*.55,.12,.85);
     p.crouch+=(autoKnees-p.crouch)*(1-Math.exp(-10*dt));
     this.balance.step(dt,next,wake,Math.abs(p.lean-p.smoothLean));
     this.onboarding.step(dt);
@@ -560,6 +561,8 @@ class PaperSurfGame {
     this.updateLandingEffects(dt);
     if(!p.airborne)this.sprayAccumulator+=dt*(5+Math.abs(p.lean)*42+this.waveRide.boost*.65+wake*16+(this.rush.active>0?25:0)+this.rush.padBoost*2);
     if(this.sprayAccumulator>1){const n=Math.floor(this.sprayAccumulator);this.emit(n,.8+Math.abs(p.lean),true);this.sprayAccumulator-=n;}
+    if(!p.airborne&&this.rush.padTime>0){const rn=Math.floor(dt*42);if(rn>0)this.emitRoosterTail(rn);}
+    if(this.trail?.material?.uniforms?.uRush)this.trail.material.uniforms.uRush.value=this.rush.padTime>0?1:0;
     this.trailClock+=dt;if(!p.airborne&&this.trailClock>.035){this.trailClock=0;this.trailPoints.unshift({x:p.x,z:p.z-.7});if(this.trailPoints.length>34)this.trailPoints.pop();}
     this.momentTime-=dt;if(this.momentTime<=0)document.getElementById('moment').classList.remove('visible');
     this.hintTime-=dt;if(this.hintTime<=0)document.getElementById('hint').classList.add('invisible');
@@ -644,6 +647,21 @@ class PaperSurfGame {
       d.mesh.material.map=soft?this.sprayTexture:this.dropTexture;
       d.x=-p.x+(Math.random()-.5)*.7;d.y=p.y+.12;d.z=p.z-.45;
       d.vx=(Math.random()-.5)*5*strength+p.lean*5;d.vy=2+Math.random()*3*strength;d.vz=-3-Math.random()*7;d.life=.45+Math.random()*.3;d.size=soft?1.15:.45;d.mesh.visible=true;
+    }
+  }
+  emitRoosterTail(count) {
+    const p=this.p;
+    for(let i=0;i<count;i++){
+      const d=this.particles.find(item=>item.life<=0);if(!d)break;
+      const soft=i%2===0;
+      d.mesh.material.map=soft?this.sprayTexture:this.dropTexture;
+      d.x=-p.x+(Math.random()-.5)*.42;d.y=p.y+.14;d.z=p.z-.55;
+      d.vx=(Math.random()-.5)*3.8+p.lean*3.5;
+      d.vy=4.5+Math.random()*5.5;
+      d.vz=-9-Math.random()*15;
+      d.life=.55+Math.random()*.35;
+      d.size=soft?1.35:.65;
+      d.mesh.visible=true;
     }
   }
   emitBeer(side,count){
@@ -811,7 +829,8 @@ class PaperSurfGame {
     const airTarget=p.airborne?1.9+Math.min(3.1,this.jump.lastHeight*.4)+this.jump.launchStrength*.6+(this.jump.takeoffRamp?.type==='side'?2.5:0):0;
     if(snap)this.cameraAirPull=airTarget;
     else this.cameraAirPull+=(airTarget-this.cameraAirPull)*(1-Math.exp(-dt*(p.airborne?4:3)));
-    const back=(wide?15.5:(11.7+midAspect*1.0))+this.cameraChasePull*.9+this.cameraAirPull;
+    const padLag=this.rush?.padTime>0&&!this.juice.calm?THREE.MathUtils.smoothstep(this.rush.padTime,0,.4)*.85:0;
+    const back=(wide?15.5:(11.7+midAspect*1.0))+this.cameraChasePull*.9+this.cameraAirPull+padLag;
     const ground=this.wave.height(p.x,p.z,this.time,false);
     // Release the takeoff crest during flight so the camera can descend before
     // touchdown, instead of holding a high-water offset until the landing frame.

@@ -66,9 +66,16 @@ class ArcadeJuice {
     const frame=Math.floor(g.time*12);
     if(frame!==this.lineFrame&&this.lines){
       this.lineFrame=frame;
-      const speed=THREE.MathUtils.clamp((g.p.speed-29)/6,0,1)*.5,kick=this.kick/6*.55,pocket=g.chase.level===2?.18:0;
-      const amount=this.calm||g.state!=='playing'?0:Math.min(.85,speed+kick+pocket);
-      this.lines.style.setProperty('--lines',amount.toFixed(3));this.lines.style.setProperty('--lines-turn',(frame%3)*4+'deg');
+      const padRush=g.rush?.padTime>0&&!g.p.fallen?THREE.MathUtils.smoothstep(g.rush.padTime,0,.35)*.95:0;
+      const ride=g.waveRide;
+      const crestRush=ride?.caught&&ride.zone==='crest'&&!g.p.airborne&&g.p.recovering===0
+        ?THREE.MathUtils.clamp(.22+(ride.crestTime||0)*.25,.22,.42):0;
+      const courageRush=g.rush?.active>0&&!g.p.fallen?.55:0;
+      const kick=(this.kick/6)*.35;
+      const amount=this.calm||g.state!=='playing'||g.p.fallen?0:Math.min(1.0,Math.max(padRush,crestRush,courageRush,kick));
+      const turns=['0deg','17deg','31deg','8deg','24deg','13deg'];
+      const turn=turns[frame%turns.length];
+      this.lines.style.setProperty('--lines',amount.toFixed(3));this.lines.style.setProperty('--lines-turn',turn);
     }
   }
 }

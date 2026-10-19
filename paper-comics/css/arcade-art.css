@@ -10,7 +10,7 @@
 #app-container.countdown #start-countdown{visibility:visible;opacity:1}
 @keyframes start-countdown-beat{from{opacity:0;transform:translate(-50%,-50%) scale(1.35)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 .sky{pointer-events:none}
-.speed-lines{opacity:calc(var(--lines,0) * .34);background:repeating-conic-gradient(from var(--lines-turn,0deg) at 50% 57%,#fff6df99 0deg .25deg,transparent .25deg 14deg);-webkit-mask:radial-gradient(ellipse 62% 55% at 50% 57%,transparent 65%,#000 100%);mask:radial-gradient(ellipse 62% 55% at 50% 57%,transparent 65%,#000 100%)}
+.speed-lines{opacity:calc(var(--lines,0) * .85);background:repeating-conic-gradient(from var(--lines-turn,0deg) at 50% 57%,#0f3448 0deg .75deg,transparent .75deg 5.5deg,#09202d 5.5deg 6.8deg,transparent 6.8deg 12.5deg),repeating-conic-gradient(from calc(var(--lines-turn,0deg) + 2.6deg) at 50% 57%,#fff4d0 0deg .65deg,transparent .65deg 5deg,#ffd264 5deg 5.8deg,transparent 5.8deg 11deg);-webkit-mask:radial-gradient(ellipse 54% 48% at 50% 57%,transparent 58%,#000 94%);mask:radial-gradient(ellipse 54% 48% at 50% 57%,transparent 58%,#000 94%);transition:opacity .15s ease-out}
 
 #arcade-chain{top:var(--chain-top);left:var(--ride-left)!important;right:auto!important;bottom:auto!important;width:min(var(--ride-width),calc(100% - 124px));transform:none!important;gap:3px;transition:opacity .15s}
 .chase-row{grid-template-columns:auto minmax(12px,1fr) auto auto;padding:4px 10px;background:#0d3d4b70;background-image:none;border:1px solid #dcfff72c;border-radius:7px;clip-path:none;filter:none;color:#ecfff9;gap:4px 7px}
