@@ -57,6 +57,14 @@ class SurfAudio {
     // Ambient seagulls timing
     this.seagullTimer = 0;
     this.nextSeagullTime = 6 + Math.random() * 8;
+
+    // Menu ambient (ocean + seagulls on start/comic screens)
+    this.menuAmbientGain = null;
+    this.menuOceanNode = null;
+    this.menuSeagullTimer = 0;
+    this.menuNextSeagullTime = 3 + Math.random() * 5;
+    this.menuAmbientActive = false;
+    this._menuAmbientRAF = null;
     
     // Jetski engine node
     this.jetskiSource = null;
@@ -368,6 +376,7 @@ class SurfAudio {
 
   startBGM() {
     this.stopMenuBGM();
+    this.stopMenuAmbient();
     this.bgmPlaying = true;
     this.rideActive = true;
     if (this.ambientGain) this.ambientGain.gain.setTargetAtTime(0.9, this.ctx.currentTime, 0.12);
@@ -429,6 +438,7 @@ class SurfAudio {
     if (this.bgmPlaying) {
       this.stopBGM();
     }
+    this.startMenuAmbient();
     if (this.isMuted) return;
 
     if (!this.menuAudio) {
@@ -466,6 +476,123 @@ class SurfAudio {
     if (this.menuAudio) {
       this.menuAudio.pause();
     }
+    this.stopMenuAmbient();
+  }
+
+  // --- Menu Ambient (ocean + seagulls on start & comic screens) ---
+
+  startMenuAmbient() {
+    if (this.menuAmbientActive) return;
+    this.menuAmbientActive = true;
+    this.init();
+    if (!this.ctx) return;
+
+    // Dedicated gain node for menu ambient, connected to masterGain (bypasses sceneGain/ambientGain)
+    if (!this.menuAmbientGain) {
+      this.menuAmbientGain = this.ctx.createGain();
+      this.menuAmbientGain.gain.setValueAtTime(0, this.ctx.currentTime);
+      this.menuAmbientGain.connect(this.masterGain);
+    }
+
+    // Fade in
+    this.menuAmbientGain.gain.cancelScheduledValues(this.ctx.currentTime);
+    this.menuAmbientGain.gain.setTargetAtTime(0.55, this.ctx.currentTime, 0.35);
+
+    // Start ocean loop (separate source from the ride ambient)
+    if (!this.menuOceanNode) {
+      this.loadBuffer('ocean_ambient').then(buf => {
+        if (!buf || !this.ctx || !this.menuAmbientActive) return;
+        if (this.menuOceanNode) return;
+        try {
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(2200, this.ctx.currentTime);
+          filter.Q.setValueAtTime(0.3, this.ctx.currentTime);
+
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime(0.60, this.ctx.currentTime);
+
+          const src = this.ctx.createBufferSource();
+          src.buffer = buf;
+          src.loop = true;
+          src.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.menuAmbientGain);
+          src.start(0);
+          this.menuOceanNode = src;
+          this._menuOceanFilter = filter;
+          this._menuOceanGain = gain;
+        } catch (e) {}
+      });
+    }
+
+    // Start seagull timer loop
+    this.menuSeagullTimer = 0;
+    this.menuNextSeagullTime = 2 + Math.random() * 4;
+    this._startMenuAmbientTick();
+  }
+
+  stopMenuAmbient() {
+    if (!this.menuAmbientActive) return;
+    this.menuAmbientActive = false;
+
+    // Fade out
+    if (this.menuAmbientGain && this.ctx) {
+      this.menuAmbientGain.gain.cancelScheduledValues(this.ctx.currentTime);
+      this.menuAmbientGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.12);
+    }
+
+    // Stop ocean loop after fade
+    const ocean = this.menuOceanNode;
+    if (ocean) {
+      this.menuOceanNode = null;
+      setTimeout(() => {
+        try { ocean.stop(); } catch (_) {}
+        try { ocean.disconnect(); } catch (_) {}
+        try { this._menuOceanFilter?.disconnect(); } catch (_) {}
+        try { this._menuOceanGain?.disconnect(); } catch (_) {}
+        this._menuOceanFilter = null;
+        this._menuOceanGain = null;
+      }, 600);
+    }
+
+    // Stop tick loop
+    if (this._menuAmbientRAF) {
+      cancelAnimationFrame(this._menuAmbientRAF);
+      this._menuAmbientRAF = null;
+    }
+  }
+
+  _startMenuAmbientTick() {
+    if (!this.menuAmbientActive) return;
+    let lastTime = performance.now();
+    const tick = (now) => {
+      if (!this.menuAmbientActive) return;
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+      this._updateMenuAmbient(dt);
+      this._menuAmbientRAF = requestAnimationFrame(tick);
+    };
+    this._menuAmbientRAF = requestAnimationFrame(tick);
+  }
+
+  _updateMenuAmbient(dt) {
+    if (!this.ctx || this.isMuted || !this.menuAmbientActive) return;
+    this.menuSeagullTimer += dt;
+    if (this.menuSeagullTimer >= this.menuNextSeagullTime) {
+      this.menuSeagullTimer = 0;
+      this.menuNextSeagullTime = 6 + Math.random() * 10;
+      this._playMenuSeagull();
+    }
+  }
+
+  _playMenuSeagull() {
+    if (!this.ctx || this.isMuted) return;
+    const gulls = ['seagull_1', 'seagull_2', 'seagull_distant'];
+    const pick = gulls[Math.floor(Math.random() * gulls.length)];
+    const pan = (Math.random() - 0.5) * 1.3;
+    const vol = pick === 'seagull_distant' ? 0.18 : 0.26;
+    this.playSound(pick, { volume: vol, pan, rate: 0.93 + Math.random() * 0.12, output: this.menuAmbientGain });
   }
 
   // --- Ocean Surf Ambience ---

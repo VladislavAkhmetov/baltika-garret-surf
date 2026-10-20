@@ -151,6 +151,8 @@
   top: calc(min(calc(100cqw * 810 / 579), 72cqh) - 12cqh);
   height: min(22cqh, 44cqw);
   transform: rotate(-19deg);
+  transform-origin: 50% 85%;
+  animation: bottle-bob-lemon 3s ease-in-out infinite;
 }
 
 .title-bottle-raspberry {
@@ -158,6 +160,25 @@
   top: calc(min(calc(100cqw * 810 / 579), 72cqh) - 9cqh);
   height: min(25cqh, 49cqw);
   transform: rotate(12deg);
+  transform-origin: 50% 85%;
+  animation: bottle-bob-raspberry 3s ease-in-out infinite;
+  animation-delay: 0.55s;
+}
+
+@keyframes bottle-bob-lemon {
+  0%   { transform: rotate(-19deg) translateY(0); }
+  25%  { transform: rotate(-16.5deg) translateY(-3px); }
+  50%  { transform: rotate(-21deg) translateY(2px); }
+  75%  { transform: rotate(-17.5deg) translateY(-1px); }
+  100% { transform: rotate(-19deg) translateY(0); }
+}
+
+@keyframes bottle-bob-raspberry {
+  0%   { transform: rotate(12deg) translateY(0); }
+  25%  { transform: rotate(14.5deg) translateY(-3px); }
+  50%  { transform: rotate(9.5deg) translateY(2px); }
+  75%  { transform: rotate(13.5deg) translateY(-1px); }
+  100% { transform: rotate(12deg) translateY(0); }
 }
 
 /* Play button overlay */
