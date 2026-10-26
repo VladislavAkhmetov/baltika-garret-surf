@@ -13,6 +13,8 @@ function createServer() {
     catch (_) {res.writeHead(400);res.end();return;}
     // Keep the document and its relative CSS, scripts and assets in the same directory.
     if (pathname === '/' || pathname === '/index.html' ||
+        pathname === '/prototype.html' || pathname === '/garret-surf.html' ||
+        pathname === '/sandbox.html' || pathname === '/slice.html' ||
         /^\/(paper|papet)(\/index(\.html)?)?\/?$/.test(pathname) ||
         pathname === '/paper-comics' || pathname === '/paper-comics/index') {
       res.writeHead(302, {'Location':'/paper-comics/index.html' + url.search, 'Cache-Control':'no-cache'});
