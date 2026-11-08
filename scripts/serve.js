@@ -12,7 +12,7 @@ function createServer() {
     try {url = new URL(req.url, 'http://localhost');pathname = decodeURIComponent(url.pathname);}
     catch (_) {res.writeHead(400);res.end();return;}
     // Keep the document and its relative CSS, scripts and assets in the same directory.
-    if (pathname === '/aviasales' || pathname === '/paper-comics/aviasales') {
+    if (pathname === '/aviasales' || pathname === '/aviasales.html' || pathname === '/paper-comics/aviasales') {
       res.writeHead(302, {'Location':'/paper-comics/aviasales.html' + url.search, 'Cache-Control':'no-cache'});
       res.end();return;
     }
