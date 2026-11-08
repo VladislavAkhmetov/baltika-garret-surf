@@ -17,16 +17,19 @@ class SurfJourney {
     this.storyVersion=new URLSearchParams(window.location.search).get('story')||(this.isAviasales?'aviasales':'v6');
     this.stories={
       aviasales:[
-        {label:'Проспал! Катер в аэропорт уходит',panels:[
-          {id:'overslept',alt:'Макс в шоке подпрыгивает в кровати, глядя на будильник в телефоне',lines:[
-            {speaker:'Макс',line:'11:45?! БУДИЛЬНИК?!\nРЕГИСТРАЦИЯ ЗАКРЫВАЕТСЯ!',tail:'left'}
+        {label:'Макс проспал',panels:[
+          {id:'prologue-sleep',alt:'Макс спит щекой на полу бунгало. Клешня проходит с мятой банкой и звонящим телефоном.'},
+          {id:'prologue-phone',alt:'Макс приподнимается с пола и спросонья смотрит в телефон.'},
+          {id:'prologue-shock',alt:'Резкий отъезд от Макса показывает бунгало: вещи на полу, открытый ноутбук на диване и край доски.',lines:[
+            {speaker:'Макс',line:'Да блииииин...',raster:true}
+          ]}
+        ]},
+        {label:'Одна минута до катера',panels:[
+          {id:'prologue-pack',alt:'Вид сверху. Макс бросает одежду в открытый синий чемодан и говорит по телефону.',lines:[
+            {speaker:'Макс',line:'Хэллоу, Ваян! Ай лейт э литл, кэн ю стоп э боат?',raster:true},
+            {speaker:'Ваян, по телефону',line:'Yes, you have a one minute!',raster:true,voice:'phone'}
           ]},
-          {id:'boat-departing',alt:'Катер-шаттл в аэропорт уже отчалил от пирса и уходит по бухте',lines:[
-            {speaker:'Капитан',line:'Отдать швартовы!\nСамолёт ждать не будет!',tail:'left-down'}
-          ]},
-          {id:'surf-dash',alt:'Макс бежит в прибой с синей доской и держит паспорт высоко над водой',lines:[
-            {speaker:'Макс',line:'На волну! Главное\u00A0—\nНЕ НАМОЧИТЬ ПАСПОРТ!',tail:'left-high'}
-          ],sound:'ПОГНАЛИ!'}
+          {id:'prologue-pier',alt:'Вид сбоку. Макс бежит по пирсу с доской под мышкой, чемоданом в руке и загранпаспортом в зубах.'}
         ]}
       ],
       v6:[
@@ -66,6 +69,7 @@ class SurfJourney {
       ]
     };
     this.comicImages=new Map();this.storyRender=0;
+    this.loaderStart=document.getElementById('loader-start');
     const bindTap=(id,handler)=>{
       const el=typeof id==='string'?document.getElementById(id):id;if(!el)return;
       let localTouchTime=0;
@@ -91,7 +95,11 @@ class SurfJourney {
     bindTap('assist-toggle',()=>{game.assist=!game.assist;this.renderSelection();});
     bindTap('story-next',()=>this.advance());
     bindTap('story-skip',()=>this.launch());
-    bindTap('story-prev',()=>{if(this.page>0){this.page--;this.renderStory();}else this.open('setup');});
+    bindTap('loader-start',()=>{
+      if(this.screen!=='loader'||this.launching||this.loaderStart.disabled)return;
+      this.loaderStart.disabled=true;this.launch(true);
+    });
+    bindTap('story-prev',()=>{if(this.page>0){this.page--;this.renderStory();}else this.open(this.isAviasales?'start':'setup');});
     document.querySelectorAll('[data-journey-back]').forEach(b=>bindTap(b,()=>this.open(b.dataset.journeyBack)));
     document.querySelectorAll('[data-home]').forEach(b=>bindTap(b,()=>this.home()));
     document.querySelectorAll('[data-setup]').forEach(b=>bindTap(b,()=>{this.home();this.open('setup');}));
@@ -106,7 +114,7 @@ class SurfJourney {
       if(this.screen==='story'&&['ArrowRight','Enter'].includes(e.code)&&e.target.tagName!=='BUTTON'){e.preventDefault();this.advance();}
       if(this.screen==='story'&&e.code==='ArrowLeft'){e.preventDefault();if(this.page>0){this.page--;this.renderStory();}}
       if(this.screen==='setup'&&['ArrowLeft','ArrowRight'].includes(e.code)){e.preventDefault();this.cycle(e.target.closest('[data-choice="location"]')?'location':'hero',e.code==='ArrowRight'?1:-1);}
-      if(e.code==='Escape'&&this.screen!=='start')this.open(this.screen==='setup'?'start':'setup');
+      if(e.code==='Escape'&&this.screen!=='start')this.open(this.isAviasales||this.screen==='setup'?'start':'setup');
     });
     if(new URLSearchParams(window.location.search).has('comic'))this.open('story');
   }
@@ -132,7 +140,7 @@ class SurfJourney {
   }
   preloadStoryFlow(){
     if(this._storyFlowPreload)return this._storyFlowPreload;
-    const hero=new Image();hero.decoding='async';hero.src='assets/comics/hero-crest-close.webp';
+    const hero=new Image();hero.decoding='async';hero.src=this.loaderStart?'assets/comics/hero-loader-aviasales.webp':'assets/comics/hero-crest-close.webp';
     const loc=new Image();loc.decoding='async';loc.src='assets/comics/story-panels-v2.webp';
     const wave=new Image();wave.decoding='async';wave.src='assets/comics/level-wave-cutout.webp';
     const p1=new Promise(r=>{hero.onload=hero.onerror=r;});
@@ -148,6 +156,7 @@ class SurfJourney {
     const clamped=Math.min(100,Math.max(0,Math.round(pct)));
     if(bar)bar.style.width=clamped+'%';
     if(percentEl)percentEl.textContent=clamped+'%';
+    document.getElementById('loader-progress')?.setAttribute('aria-valuenow',clamped);
   }
   getShuffledPhrases(){
     const pool = this.isAviasales ? (SurfJourney.funnyPhrasesAviasales || SurfJourney.funnyPhrases) : SurfJourney.funnyPhrases;
@@ -196,6 +205,7 @@ class SurfJourney {
     const assist=document.getElementById('assist-toggle');assist.textContent='Сложность: '+(this.game.assist?'обычная':'высокая');assist.setAttribute('aria-pressed',!this.game.assist);assist.setAttribute('aria-label','Сложность: '+(this.game.assist?'обычная. Включить высокую':'высокая. Включить обычную'));
   }
   hideAll(){this.stopPhraseRotator();this.screens.forEach(name=>document.getElementById(name+'-screen')?.classList.add('hidden'));}
+  openIntro(){this.page=0;this.open(this.isAviasales?'story':'setup');}
   open(name){
     if(name==='character'||name==='location')name='setup';
     this.game.state='start';this.game.input.reset();this.game.jump.cancel();this.game.comics.reset();
@@ -205,8 +215,9 @@ class SurfJourney {
     if(name==='story'){this.updateStoryToggleUI();this.renderStory();}
     if(name==='setup'){this.renderSelection();this.prefetchPage(0);this.prefetchPage(1);}
     if(name==='loader'){
-      this.startPhraseRotator();
-      this.setLoaderProgress(5);
+      if(this.loaderStart){this.loaderStart.hidden=true;this.loaderStart.disabled=true;}
+      else this.startPhraseRotator();
+      this.setLoaderProgress(0);
     }
     (document.querySelector('#'+name+'-screen [data-primary]')||document.querySelector('#'+name+'-screen button'))?.focus({preventScroll:true});
     if(['start','setup','story'].includes(name)){
@@ -239,7 +250,9 @@ class SurfJourney {
   }
   renderStory(){
     const s=this.story[this.page],el=document.getElementById('story-screen'),book=document.getElementById('comic-page'),version=++this.storyRender;
-    el.dataset.page=this.page;book.dataset.comicPage=this.page;book.setAttribute('aria-label',s.label);book.replaceChildren();
+    el.dataset.page=this.page;book.dataset.comicPage=this.page;book.dataset.comicStory=this.storyVersion;book.setAttribute('aria-label',s.label);book.replaceChildren();
+    const pageNumber=document.getElementById('comic-page-number');
+    if(pageNumber)pageNumber.textContent=(this.page+1)+' / '+this.story.length;
     const loading=document.getElementById('comic-loading'),retry=document.getElementById('comic-retry');
     loading.hidden=true;retry.hidden=true;
     let isInstant=false;
@@ -256,8 +269,13 @@ class SurfJourney {
       const panel=document.createElement('figure');panel.className='comic-panel comic-'+p.id;
       if(p.lines&&p.lines.length){
         p.lines.forEach((l,idx)=>{
-          const bubble=document.createElement('p');bubble.className='comic-bubble comic-bubble-'+(idx+1)+(l.speaker?' speaker-'+l.speaker.toLowerCase():'');
-          bubble.textContent=l.line;bubble.setAttribute('aria-label',(l.speaker?l.speaker+': ':'')+l.line.replace(/\n/g,' '));
+          const bubble=document.createElement('p');bubble.className='comic-bubble comic-bubble-'+(idx+1)+(l.speaker&&!l.voice?' speaker-'+l.speaker.toLowerCase():'');
+          if(l.voice==='phone')bubble.classList.add('comic-bubble-phone');
+          if(l.raster){
+            bubble.classList.add('comic-bubble-raster');
+            const text=document.createElement('span');text.textContent=l.line;bubble.append(text);
+          }else bubble.textContent=l.line;
+          bubble.setAttribute('aria-label',(l.speaker?l.speaker+': ':'')+l.line.replace(/\n/g,' '));
           if(l.tail&&COMIC_TAIL_SVGS[l.tail]){bubble.classList.add('has-svg-tail');bubble.insertAdjacentHTML('beforeend',COMIC_TAIL_SVGS[l.tail]);}
           panel.append(bubble);
         });
@@ -277,28 +295,40 @@ class SurfJourney {
       if(version!==this.storyRender)return;
       isInstant=true;clearTimeout(showLoadingTimer);loading.hidden=false;loading.querySelector('span').textContent='КАДР НЕ ЗАГРУЗИЛСЯ';retry.hidden=false;book.removeAttribute('aria-busy');
     });
-    document.getElementById('story-next').textContent=this.page===this.story.length-1?'НА ВОЛНУ ↗':'ДАЛЬШЕ →';
-    document.getElementById('story-prev').setAttribute('aria-label',this.page?'Предыдущая страница комикса':'Вернуться к выбору');
+    document.getElementById('story-next').textContent=this.storyNextLabel();
+    document.getElementById('story-prev').setAttribute('aria-label',this.page?'Предыдущая страница комикса':this.isAviasales?'В главное меню':'Вернуться к выбору');
     el.classList.remove('story-enter');void el.offsetWidth;el.classList.add('story-enter');
   }
+  storyNextLabel(){return this.page<this.story.length-1?'ДАЛЬШЕ →':this.loaderStart?'К ЗАЕЗДУ →':'НА ВОЛНУ ↗';}
   advance(){if(this.launching)return;if(this.launchFailed||this.page===this.story.length-1)this.launch();else{this.page++;this.renderStory();}}
-  async launch(){
+  async prepareBriefing(){
+    this.launching=true;this.game.meta.markStorySeen();this.open('loader');
+    this.loaderStart.hidden=false;
+    try{
+      await this.game.prepareGameplay(pct=>{if(this.screen==='loader')this.setLoaderProgress(pct);});
+      if(this.screen==='loader')this.loaderStart.disabled=false;
+    }catch(error){
+      console.error(error);this.showError('Игра не загрузилась. Проверь соединение и нажми «Повторить», чтобы загрузить её заново.');
+    }finally{this.launching=false;}
+  }
+  async launch(fromBriefing=false){
     if(this.launchFailed){location.reload();return;}
-    if(this.launching)return;this.launching=true;this.launchFailed=false;this.game.meta.markStorySeen();
+    if(this.launching)return;
+    if(this.loaderStart&&!fromBriefing){await this.prepareBriefing();return;}
+    this.launching=true;this.launchFailed=false;this.game.meta.markStorySeen();
     document.getElementById('story-error').classList.add('hidden');
     const buttons=['story-next','story-skip','story-prev'].map(id=>document.getElementById(id));buttons.forEach(b=>b.disabled=true);
     document.getElementById('story-screen').setAttribute('aria-busy','true');buttons[0].textContent='НА ВОДУ…';
-    this.open('loader');
-    this.setLoaderProgress(10);
+    if(this.screen!=='loader')this.open('loader');
     try{
-      await this.game.start(true,pct=>this.setLoaderProgress(pct));
+      await this.game.start(true,pct=>{if(!fromBriefing)this.setLoaderProgress(pct);});
     }catch(error){
       console.error(error);
       this.showError('Игра не загрузилась. Проверь соединение и нажми «Повторить», чтобы загрузить её заново.');
     }finally{
       this.stopPhraseRotator();
       this.launching=false;buttons.forEach(b=>b.disabled=false);document.getElementById('story-screen').removeAttribute('aria-busy');
-      buttons[0].textContent=this.launchFailed?'ПОВТОРИТЬ':this.page===this.story.length-1?'НА ВОЛНУ ↗':'ДАЛЬШЕ →';
+      buttons[0].textContent=this.launchFailed?'ПОВТОРИТЬ':this.storyNextLabel();
       if(this.game.state==='playing'||this.game.state==='countdown'){
         const loader=document.getElementById('loader-screen');
         if(loader){

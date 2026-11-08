@@ -10,9 +10,9 @@
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <link rel="manifest" href="site.webmanifest">
-  <link rel="preload" as="image" href="assets/comics/start-poster.webp" type="image/webp" fetchpriority="high">
+  <link rel="preload" as="image" href="assets/comics/start-poster-aviasales.webp" type="image/webp" fetchpriority="high">
   <link rel="stylesheet" href="assets/fonts/fonts.css">
-  <link rel="stylesheet" href="css/game-bundle.css">
+  <link rel="stylesheet" href="css/game-bundle-aviasales.css">
   <script>
     window.IS_AVIASALES = true;
     (function(){
@@ -26,26 +26,211 @@
     })();
   </script>
   <style>
-    .aviasales-badge {
+    .title-screen {
+      --poster-yellow: #feb606;
+      --poster-height: min(79%, 156cqw);
+      --play-width: min(82cqw, 330px);
+      --play-height: calc(var(--play-width) / 4);
+      --play-bottom: max(calc(env(safe-area-inset-bottom) + 54px), calc((100% - var(--poster-height) - var(--play-height)) / 2));
+    }
+    #start-screen .title-poster-stage {
+      inset: 0 0 auto;
+      width: 100%;
+      height: var(--poster-height);
+      aspect-ratio: auto;
+      transform: none;
+      clip-path: none;
+      background: #f4e9cd;
+    }
+    #start-screen .title-poster-img { object-fit: cover; object-position: center top; }
+    #start-screen .title-poster-stage::after { inset: auto 0 0; height: 8%; }
+    #start-screen .title-menu-actions {
+      top: auto;
+      bottom: var(--play-bottom);
+      width: var(--play-width);
+      aspect-ratio: 4 / 1;
+      transform: translateX(-50%);
+      background: none;
+      mask-image: none;
+    }
+    #start-screen #start-button.poster-play {
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+    #start-screen .boot-status {
+      top: auto !important;
+      bottom: calc(var(--play-bottom) + var(--play-height) + 4px) !important;
+    }
+    #app-container:has(#start-screen:not(.hidden)) #sound-button {
+      top: auto;
+      bottom: max(4px, env(safe-area-inset-bottom));
+      right: 12px;
+    }
+    .poster-title-label {
       position: absolute;
-      top: max(20px, env(safe-area-inset-top));
-      left: 12%;
-      z-index: 10;
-      background: #0c73fe;
-      color: #fff;
-      font: 700 13px/1 'Russo One', sans-serif;
-      padding: 6px 14px;
-      border: 2px solid #17282c;
-      box-shadow: 3px 3px 0 #17282c;
-      transform: rotate(-2deg);
-      letter-spacing: 1px;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
     }
-    .menu-title.aviasales-title {
+    @container mobile-screen (max-height: 619px) {
+      .title-screen { --play-width: min(62cqw, 260px); --play-bottom: 3cqh; }
+    }
+    #comic-page-number {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      color: var(--comic-paper);
+      font: 700 12px Rubik, Arial, sans-serif;
+      letter-spacing: .12em;
+    }
+    #comic-page[data-comic-story="aviasales"] {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: minmax(0, 29fr) minmax(0, 29fr) minmax(0, 42fr);
+      gap: 5px;
+    }
+    #comic-page[data-comic-story="aviasales"][data-comic-page="1"] {
+      grid-template-rows: minmax(0, 55fr) minmax(0, 45fr);
+    }
+    #comic-page[data-comic-story="aviasales"] .comic-panel {
+      grid-area: auto;
+      margin: 0;
+      overflow: hidden;
+      --panel-clip: none;
+    }
+    .comic-prologue-shock { --speech-art: url('assets/comics/speech-aviasales-wake.webp'); }
+    .comic-prologue-pack { --speech-art: url('assets/comics/speech-aviasales-pack.webp'); }
+    #comic-page[data-comic-story="aviasales"] .comic-bubble-raster {
+      top: 4%;
+      left: 3%;
+      right: auto;
+      width: 43%;
+      max-width: none;
+      aspect-ratio: 2.55;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      color: #000;
+      background: var(--speech-art) center / 100% 100% no-repeat;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      filter: drop-shadow(1px 2px 0 #0003);
+      font: 700 clamp(10px, 3.5cqw, 15px)/1.13 Rubik, Arial, sans-serif;
+      letter-spacing: -.15px;
+      transform: none;
+      white-space: normal;
+    }
+    #comic-page .comic-bubble-raster::before,
+    #comic-page .comic-bubble-raster::after { content: none; }
+    .comic-bubble-raster span {
+      width: 77%;
+      transform: translate(-2%, -3%);
+    }
+    #comic-page[data-comic-story="aviasales"] .comic-prologue-shock .comic-bubble-raster {
+      left: 14%;
+      top: 19%;
+      width: 42%;
+      aspect-ratio: 2.18;
+    }
+    #comic-page[data-comic-story="aviasales"] .comic-prologue-pack .comic-bubble-1 {
+      width: 52%;
+      aspect-ratio: 1.65;
+      top: 3%;
+    }
+    .comic-prologue-pack .comic-bubble-1 span {
+      position: absolute;
+      top: 38%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    #comic-page[data-comic-story="aviasales"] .comic-bubble-phone {
+      --speech-art: url('assets/comics/speech-aviasales-phone.webp');
+      width: 40%;
+      aspect-ratio: 2.2;
+      top: 13%;
+      left: auto;
+      right: 3%;
+    }
+    .comic-bubble-phone span { transform: translate(3%, -5%); }
+    #comic-page[data-comic-story="aviasales"] .comic-prologue-pack img {
+      object-position: center 82%;
+    }
+    @container mobile-screen (max-height: 650px) {
+      #comic-page[data-comic-story="aviasales"] .comic-prologue-pier img {
+        object-fit: contain;
+        background: var(--comic-paper);
+      }
+    }
+    @container mobile-screen (orientation: landscape) and (max-height: 599px) {
+      #comic-page[data-comic-story="aviasales"] {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: minmax(0, 44fr) minmax(0, 56fr);
+      }
+      #comic-page[data-comic-story="aviasales"][data-comic-page="1"] { grid-template-rows: minmax(0, 1fr); }
+      #comic-page[data-comic-story="aviasales"] .comic-prologue-shock { grid-column: 1 / -1; }
+      #comic-page[data-comic-story="aviasales"] .comic-bubble-raster { font-size: clamp(8px, 2.2cqw, 11px); }
+      #comic-page[data-comic-story="aviasales"] .comic-prologue-pack .comic-bubble-1 { width: 58%; }
+      #comic-page[data-comic-story="aviasales"] .comic-bubble-phone { top: 20%; }
+    }
+    #loader-screen .loader-stage {
+      gap: clamp(8px, 1.5cqh, 14px);
+      padding: max(clamp(16px, 4cqh, 34px), env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+    }
+    .loader-brief {
+      width: 100%;
+      flex: none;
+      padding: 0 4px;
+      text-align: center;
       color: #17282c;
-      text-shadow: 2px 2px 0 #f4e9cd, 4px 4px 0 #0c73fe33;
     }
-    .menu-title.aviasales-title span:first-child {
+    .loader-brief h2 {
+      margin: 0 0 clamp(12px, 2.2cqh, 22px);
+      font: 400 clamp(34px, 11.5cqw, 51px)/.93 'Russo One', Impact, sans-serif;
       color: #0c73fe;
+      text-transform: uppercase;
+      letter-spacing: -.045em;
+      transform: rotate(-4deg) skewX(-6deg);
+    }
+    .loader-brief p {
+      max-width: 32ch;
+      margin: 0 auto;
+      font: 500 clamp(15px, 4.3cqw, 19px)/1.28 Rubik, Arial, sans-serif;
+    }
+    .loader-brief .loader-goal { margin-top: 8px; font-weight: 700; }
+    #loader-screen .loader-art { min-height: 0; max-height: none; overflow: hidden; }
+    .loader-collage { position: relative; width: 100%; height: min(100%, 92cqw); }
+    #loader-screen .loader-sun { top: auto; bottom: 7%; width: auto; height: min(89%, 320px); }
+    #loader-screen .loader-wave { width: 100%; max-height: 59%; }
+    #loader-screen .loader-hero {
+      width: min(60%, 224px);
+      max-height: 92%;
+      object-fit: contain;
+      bottom: 6%;
+    }
+    #loader-screen .loader-actions { width: min(100%, 340px); display: grid; gap: 8px; flex: none; }
+    #loader-screen .loader-bar-wrap {
+      width: min(66%, 222px);
+      justify-self: center;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 38px;
+      gap: 7px;
+    }
+    #loader-screen .loader-actions:has(#loader-start:not([hidden]):enabled) .loader-bar-wrap { visibility: hidden; }
+    #loader-screen .loader-bar-track { height: 6px; border: 0; padding: 0; box-shadow: none; }
+    #loader-screen .loader-bar-fill { background: #0c73fe; }
+    #loader-screen .loader-percent { color: #17282c; font-size: 12px; }
+    #loader-start { min-height: 49px; transform: rotate(-1deg); font: 400 clamp(18px, 5cqw, 22px) 'Russo One', sans-serif; }
+    #loader-start:disabled { opacity: .55; cursor: wait; }
+    @container mobile-screen (max-height: 510px) {
+      #loader-screen .loader-stage { gap: 8px; }
+      .loader-brief h2 { font-size: clamp(23px, 6.5cqw, 29px); margin-bottom: 8px; }
+      .loader-brief h2 br { display: none; }
+      .loader-brief p { font-size: 14px; }
+      .loader-brief .loader-goal { margin-top: 5px; }
     }
     .result-trophy {
       display: none !important;
@@ -63,7 +248,7 @@
       text-align: center;
       font-family: 'Russo One', sans-serif;
       background: #fbf7ec;
-      box-shadow: 3px 4px 0 #103f5822;
+      box-shadow: 3px 4px 0 #0c73fe22;
       pointer-events: none;
     }
     .result-stamp strong {
@@ -125,41 +310,35 @@
     <div class="steer-controls"><button id="steer-left" class="paper" aria-label="Повернуть влево">‹</button><button id="steer-right" class="paper" aria-label="Повернуть вправо">›</button></div><button id="jump-button" aria-label="Прыжок: нажать один раз" title="Прыжок · пробел"><svg class="jump-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="20" cy="10" r="3"/><path d="m19 16-6 10 8 3-5 9m5-9 8 7m-10-20 9 5 5-5M9 39c10 3 23-1 27-10m-2 1 3-8 4 6"/></svg><b id="jump-glyph">↑</b><small class="jump-action"></small></button>
     <div id="bottom-hud" class="bottom-hud">
       <div class="speed-ticket"><strong id="speed-value">26</strong><span>М/С</span><div id="speed-meter"></div></div>
-      <div class="route-ticket" aria-label="Путь до пирса" role="progressbar" aria-valuemin="0" aria-valuemax="1200" aria-valuenow="0"><div class="route-track"><i id="route-fill"></i></div></div>
+      <div class="route-ticket" aria-label="Путь до пирса" role="progressbar" aria-valuemin="0" aria-valuemax="1360" aria-valuenow="0"><div class="route-track"><i id="route-fill"></i></div></div>
     </div>
     <div class="touch-guide" id="touch-guide"><span>↔ КУРС · НАЖМИ ДЛЯ ПРЫЖКА</span></div>
 
     <section id="start-screen" class="screen journey menu-screen title-screen" aria-label="Главное меню">
-      <div class="title-poster-stage" aria-hidden="true">
-        <img class="title-poster-img" src="assets/comics/start-poster.webp" alt="Успеть на рейс! Главное меню" fetchpriority="high" decoding="sync">
+      <div class="title-poster-stage">
+        <img class="title-poster-img" src="assets/comics/start-poster-aviasales.webp" alt="Макс на волне с синим чемоданом" fetchpriority="high" decoding="sync">
       </div>
-      <div class="aviasales-badge">✈ АВИАСЕЙЛС СПЕЦПРОЕКТ</div>
       <div class="title-menu-actions">
-        <button id="quick-button" class="text-button menu-quick poster-quick" aria-label="Быстрый заезд" title="Быстрый заезд"></button>
-        <button id="start-button" class="yellow-button menu-play poster-play" data-primary aria-label="Погнали!">ПОГНАЛИ!</button>
+        <button id="start-button" class="yellow-button menu-play poster-play" type="button" data-primary>ИГРАТЬ</button>
       </div>
-      <h2 class="menu-title aviasales-title sr-overlay" aria-hidden="true"><span>УСПЕТЬ</span> <span>НА РЕЙС!</span></h2>
-      <p class="menu-wager sr-overlay" aria-hidden="true">Катер в аэропорт вот-вот отчалит.<br>Сохрани паспорт сухим — успей на самолёт!</p>
-      <img class="menu-hero sr-overlay" src="assets/comics/hero-crest-close.webp" onerror="this.onerror=null;this.src='assets/comics/hero-crest-close.png'" alt="" aria-hidden="true" loading="lazy" decoding="async">
-      <p id="daily-label" class="menu-daily sr-overlay" aria-hidden="true"></p>
+      <h2 class="poster-title-label">Успеть на рейс! Авиасейлс</h2>
       <p id="boot-status" class="boot-status" role="status" hidden></p>
       <script>
         (function(){
           var failed=false,timer=null;
           var status=document.getElementById('boot-status');
-          var s=document.getElementById('start-button'),q=document.getElementById('quick-button');
+          var s=document.getElementById('start-button');
           function syncButtonLabel(){
             if(!s)return;
             var txt=(s.textContent||'').trim();
-            if(txt&&txt!=='ПОГНАЛИ!'){
+            if(txt&&txt!=='ИГРАТЬ'){
               s.classList.add('has-status');
             }else{
               s.classList.remove('has-status');
             }
           }
           function restore(){
-            s.disabled=false;s.textContent='ПОГНАЛИ!';delete s.dataset.pending;syncButtonLabel();
-            q.disabled=false;q.textContent='БЫСТРЫЙ СТАРТ ↗';delete q.dataset.pending;
+            s.disabled=false;s.textContent='ИГРАТЬ';delete s.dataset.pending;syncButtonLabel();
           }
           window.__surfBootFailed=function(reason){
             if(window.game)return;
@@ -172,30 +351,25 @@
             if(timer!==null)return;
             timer=setTimeout(function(){window.__surfBootFailed('timeout');},30000);
           }
-          function act(quick){
+          function act(){
             if(window.game){
               return;
             }else if(failed){
               location.reload();
             }else{
-              window.__queuedStart=quick?'quick':'play';
-              var b=document.getElementById(quick?'quick-button':'start-button');
-              if(b&&!b.dataset.pending){b.dataset.pending='1';b.textContent='ЗАГРУЗКА…';syncButtonLabel();}
+              window.__queuedStart='play';
+              if(!s.dataset.pending){s.dataset.pending='1';s.textContent='ЗАГРУЗКА…';syncButtonLabel();}
               status.hidden=false;status.textContent='Загружаем игру…';watch();
             }
           }
           if(s){
-            s.addEventListener('pointerup',function(e){if(e.pointerType!=='mouse')act(false);});
-            s.addEventListener('click',function(){act(false);});
+            s.addEventListener('pointerup',function(e){if(e.pointerType!=='mouse')act();});
+            s.addEventListener('click',act);
             try {
               var obs=new MutationObserver(syncButtonLabel);
               obs.observe(s,{childList:true,characterData:true,subtree:true});
             } catch(e){}
             syncButtonLabel();
-          }
-          if(q){
-            q.addEventListener('pointerup',function(e){if(e.pointerType!=='mouse')act(true);});
-            q.addEventListener('click',function(){act(true);});
           }
           window.addEventListener('error',function(e){
             if(e.filename&&e.filename.indexOf('game-bundle.js')!==-1)window.__surfBootFailed('init');
@@ -209,7 +383,7 @@
       <div class="selection-choices">
         <article class="selection-choice" data-choice="hero">
           <div class="selection-art selection-hero">
-            <img src="assets/comics/hero-crest-close.webp" onerror="this.onerror=null;this.src='assets/comics/hero-crest-close.png'" alt="Макс, сёрфер с паспортом наготове" loading="lazy" decoding="async">
+            <img src="assets/comics/hero-front-aviasales.webp" alt="Макс, сёрфер с чемоданом и загранпаспортом" loading="lazy" decoding="async">
             <span class="selection-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5z"/><path d="M12 14v3"/></svg>СКОРО</span>
           </div>
           <div class="selection-arrows"><button data-cycle="hero" data-direction="-1" aria-label="Предыдущий персонаж">‹</button><h3 id="hero-name" aria-live="polite">МАКС</h3><button data-cycle="hero" data-direction="1" aria-label="Следующий персонаж">›</button></div>
@@ -226,33 +400,40 @@
     </section>
 
     <section id="story-screen" class="screen journey story-screen hidden" aria-label="Комикс: начало истории" data-page="0">
-      <header class="comic-toolbar"><button id="story-prev" aria-label="Вернуться к выбору">←</button><button id="story-skip">Пропустить</button></header>
+      <header class="comic-toolbar"><button id="story-prev" aria-label="В главное меню">←</button><span id="comic-page-number" aria-live="polite">1 / 2</span><button id="story-skip">Пропустить</button></header>
       <div class="comic-book">
-        <div id="comic-page" class="comic-page" data-comic-page="0" role="group" aria-label="Проспал! Катер в аэропорт уходит"></div>
+        <div id="comic-page" class="comic-page" data-comic-page="0" role="group" aria-label="Макс проспал"></div>
         <div id="comic-loading" class="comic-loading" role="status"><span>РИСУЕМ ВОЛНУ…</span><button id="comic-retry" class="yellow-button" hidden>ПОВТОРИТЬ</button></div>
       </div>
-      <nav class="comic-nav" aria-label="Страницы комикса"><button id="story-next" class="yellow-button" data-primary>НА ВОЛНУ ↗</button></nav>
+      <nav class="comic-nav" aria-label="Страницы комикса"><button id="story-next" class="yellow-button" data-primary>ДАЛЬШЕ →</button></nav>
       <p id="story-error" class="story-error paper hidden" role="alert"></p>
     </section>
 
-    <section id="loader-screen" class="screen journey menu-screen level-loader-screen hidden" aria-label="Загрузка уровня" role="status">
+    <section id="loader-screen" class="screen journey menu-screen level-loader-screen hidden" aria-labelledby="loader-title">
       <div class="loader-backdrop"></div>
       <div class="loader-stage">
+        <header class="loader-brief">
+          <h2 id="loader-title" tabindex="-1" data-primary>Последний <br>катер</h2>
+          <p>Максу нужно успеть на самолёт. Катер до аэропорта отходит через минуту.</p>
+          <p class="loader-goal">Догони катер и сохрани паспорт сухим.</p>
+        </header>
         <div class="loader-art" aria-hidden="true">
-          <div class="loader-sun"></div>
-          <img class="loader-wave" src="assets/comics/level-wave-cutout.webp" onerror="this.onerror=null;this.src='assets/comics/wave-swell-cutout-v5.webp'" alt="">
-          <img class="loader-hero" src="assets/comics/hero-crest-close.webp" alt="">
+          <div class="loader-collage">
+            <div class="loader-sun"></div>
+            <img class="loader-wave" src="assets/comics/level-wave-cutout.webp" onerror="this.onerror=null;this.src='assets/comics/wave-swell-cutout-v5.webp'" alt="">
+            <img class="loader-hero" src="assets/comics/hero-loader-aviasales.webp" alt="">
+          </div>
         </div>
-        <div class="loader-card paper">
-          <h2 class="loader-title" id="loader-title">РИСУЕМ ВОЛНУ…</h2>
+        <div class="loader-actions">
           <div class="loader-bar-wrap">
-            <div class="loader-bar-track">
+            <div class="loader-bar-track" id="loader-progress" role="progressbar" aria-label="Загрузка игры" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <div class="loader-bar-fill" id="loader-progress-bar" style="width: 0%;"></div>
             </div>
             <div class="loader-percent-wrap">
-              <span class="loader-percent" id="loader-percent">0%</span>
+              <span class="loader-percent" id="loader-percent" aria-hidden="true">0%</span>
             </div>
           </div>
+          <button id="loader-start" class="yellow-button" type="button" hidden disabled>НА ВОЛНУ ↗</button>
         </div>
       </div>
     </section>
@@ -263,7 +444,7 @@
         <div class="pause-art" aria-hidden="true">
           <div class="pause-sun"></div>
           <img class="pause-wave" src="assets/comics/wave-swell-cutout-v5.webp" onerror="this.onerror=null;this.src='assets/comics/wave-swell-cutout-v5.png'" alt="" loading="lazy" decoding="async">
-          <img class="pause-hero" src="assets/comics/hero-crest-close.webp" onerror="this.onerror=null;this.src='assets/comics/hero-crest-close.png'" alt="" loading="lazy" decoding="async">
+          <img class="pause-hero" src="assets/comics/hero-front-aviasales.webp" alt="" loading="lazy" decoding="async">
         </div>
         <footer class="pause-actions">
           <button id="resume-button" class="yellow-button" type="button">ПРОДОЛЖИТЬ <span aria-hidden="true">↗</span></button>
@@ -330,7 +511,7 @@
           <nav class="result-share" aria-label="Дополнительные действия">
             <button id="comic-button" class="text-button" type="button">КОМИКС</button>
             <button id="challenge-button" class="text-button" type="button">ВЫЗОВ</button>
-            <button class="text-button menu-link" type="button" data-setup>В МЕНЮ</button>
+            <button class="text-button menu-link" type="button" data-home>В МЕНЮ</button>
           </nav>
         </footer>
         <div class="result-companion" hidden><span id="result-crab-line"></span></div>

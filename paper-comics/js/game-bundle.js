@@ -3023,7 +3023,15 @@ class HeroAnimator {
     // used by the deck fit, finger overlay and animated grip attachment.
     this.sourceGrip=[916/1133*384,210/1388*512];
     this.sourceSoles=[[540/1133*384,1129/1388*512],[840/1133*384,1318/1388*512]];
-    this.poseDefinitions={
+    this.poseDefinitions=game.isAviasales?{
+      base:{src:'assets/comics/hero-rear-aviasales.png',grip:[242,192],feet:[[427,1114],[672,1313]]},
+      left:{src:'assets/comics/hero-aviasales/carve-left.webp',grip:[140,243],feet:[[361,1071],[679,1323]]},
+      right:{src:'assets/comics/hero-aviasales/carve-right.webp',grip:[222,164],feet:[[298,1090],[590,1323]]},
+      compress:{src:'assets/comics/hero-aviasales/compress.webp',grip:[116,360],feet:[[277,1141],[590,1306]]},
+      air:{src:'assets/comics/hero-aviasales/air.webp',grip:[63,167],feet:[[362,1096],[641,1340]]},
+      trick:{src:'assets/comics/hero-aviasales/trick.webp',grip:[147,283],feet:[[245,1076],[560,1286]],scale:.82},
+      landing:{src:'assets/comics/hero-aviasales/landing.webp',grip:[154,251],feet:[[265,1159],[610,1332]]}
+    }:{
       base:{src:'assets/comics/hero-rear-grip-v6.png',grip:[916,210],feet:[[540,1129],[840,1318]]},
       left:{src:'assets/comics/hero-v7/carve-left.png',grip:[948,205],feet:[[610,1082],[955,1296]]},
       right:{src:'assets/comics/hero-v7/carve-right.png',grip:[936,197],feet:[[585,1132],[870,1328]]},
@@ -3046,10 +3054,11 @@ class HeroAnimator {
   load() {
     if (this._readyPromise) return this._readyPromise;
     this._readyPromise = Promise.all(Object.entries(this.poseDefinitions).map(([key,definition])=>new Promise((resolve,reject)=>{
-      const image=new Image();let fallbackTried=false;
+      const image=new Image(),preferred=definition.src.replace(/\.png$/,'.webp');
+      let fallbackTried=preferred===definition.src;
       image.onload=()=>resolve([key,image]);
       image.onerror=()=>{if(!fallbackTried){fallbackTried=true;image.src=definition.src;}else reject(new Error('Не удалось загрузить позу персонажа: '+key));};
-      image.src=definition.src.replace(/\.png$/,'.webp');
+      image.src=preferred;
     }))).then(entries=>this.buildAtlases(Object.fromEntries(entries)));
     this._readyPromise.then(()=>{
       for(const [key,t] of Object.entries(this.atlases)){
@@ -3427,6 +3436,7 @@ class HandBeer {
     this.texture=new THREE.CanvasTexture(this.canvas);this.texture.minFilter=THREE.LinearFilter;this.texture.generateMipmaps=false;
     this.frame=new Image();
     this.pivot=new THREE.Group();
+    this.pivot.visible=!game.isAviasales; // The Aviasales cutout already holds its passport.
     this.mesh=new THREE.Mesh(new THREE.PlaneGeometry(1.12,1.4),new THREE.MeshBasicMaterial({map:this.texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
     this.mesh.scale.set(1,1,1);
     this.gripCanvas={x:332,y:230};
@@ -3548,14 +3558,14 @@ class HandBeer {
     }
     c.restore();
 
-    // Dark Navy Passport Booklet
+    // Burgundy travel passport icon.
     const px = 120, py = 120, pw = 175, ph = 265, r = 12;
     c.save();
     // Drop shadow
     c.shadowColor = 'rgba(16, 63, 88, 0.25)';
     c.shadowBlur = 14;
     c.shadowOffsetY = 6;
-    c.fillStyle = '#0f2942';
+    c.fillStyle = '#682334';
     c.strokeStyle = '#17282c';
     c.lineWidth = 4;
     c.beginPath();
@@ -4432,16 +4442,19 @@ class SurfJourney {
     this.storyVersion=new URLSearchParams(window.location.search).get('story')||(this.isAviasales?'aviasales':'v6');
     this.stories={
       aviasales:[
-        {label:'Проспал! Катер в аэропорт уходит',panels:[
-          {id:'overslept',alt:'Макс в шоке подпрыгивает в кровати, глядя на будильник в телефоне',lines:[
-            {speaker:'Макс',line:'11:45?! БУДИЛЬНИК?!\nРЕГИСТРАЦИЯ ЗАКРЫВАЕТСЯ!',tail:'left'}
+        {label:'Макс проспал',panels:[
+          {id:'prologue-sleep',alt:'Макс спит щекой на полу бунгало. Клешня проходит с мятой банкой и звонящим телефоном.'},
+          {id:'prologue-phone',alt:'Макс приподнимается с пола и спросонья смотрит в телефон.'},
+          {id:'prologue-shock',alt:'Резкий отъезд от Макса показывает бунгало: вещи на полу, открытый ноутбук на диване и край доски.',lines:[
+            {speaker:'Макс',line:'Да блииииин...',raster:true}
+          ]}
+        ]},
+        {label:'Одна минута до катера',panels:[
+          {id:'prologue-pack',alt:'Вид сверху. Макс бросает одежду в открытый синий чемодан и говорит по телефону.',lines:[
+            {speaker:'Макс',line:'Хэллоу, Ваян! Ай лейт э литл, кэн ю стоп э боат?',raster:true},
+            {speaker:'Ваян, по телефону',line:'Yes, you have a one minute!',raster:true,voice:'phone'}
           ]},
-          {id:'boat-departing',alt:'Катер-шаттл в аэропорт уже отчалил от пирса и уходит по бухте',lines:[
-            {speaker:'Капитан',line:'Отдать швартовы!\nСамолёт ждать не будет!',tail:'left-down'}
-          ]},
-          {id:'surf-dash',alt:'Макс бежит в прибой с синей доской и держит паспорт высоко над водой',lines:[
-            {speaker:'Макс',line:'На волну! Главное\u00A0—\nНЕ НАМОЧИТЬ ПАСПОРТ!',tail:'left-high'}
-          ],sound:'ПОГНАЛИ!'}
+          {id:'prologue-pier',alt:'Вид сбоку. Макс бежит по пирсу с доской под мышкой, чемоданом в руке и загранпаспортом в зубах.'}
         ]}
       ],
       v6:[
@@ -4481,6 +4494,7 @@ class SurfJourney {
       ]
     };
     this.comicImages=new Map();this.storyRender=0;
+    this.loaderStart=document.getElementById('loader-start');
     const bindTap=(id,handler)=>{
       const el=typeof id==='string'?document.getElementById(id):id;if(!el)return;
       let localTouchTime=0;
@@ -4506,7 +4520,11 @@ class SurfJourney {
     bindTap('assist-toggle',()=>{game.assist=!game.assist;this.renderSelection();});
     bindTap('story-next',()=>this.advance());
     bindTap('story-skip',()=>this.launch());
-    bindTap('story-prev',()=>{if(this.page>0){this.page--;this.renderStory();}else this.open('setup');});
+    bindTap('loader-start',()=>{
+      if(this.screen!=='loader'||this.launching||this.loaderStart.disabled)return;
+      this.loaderStart.disabled=true;this.launch(true);
+    });
+    bindTap('story-prev',()=>{if(this.page>0){this.page--;this.renderStory();}else this.open(this.isAviasales?'start':'setup');});
     document.querySelectorAll('[data-journey-back]').forEach(b=>bindTap(b,()=>this.open(b.dataset.journeyBack)));
     document.querySelectorAll('[data-home]').forEach(b=>bindTap(b,()=>this.home()));
     document.querySelectorAll('[data-setup]').forEach(b=>bindTap(b,()=>{this.home();this.open('setup');}));
@@ -4521,7 +4539,7 @@ class SurfJourney {
       if(this.screen==='story'&&['ArrowRight','Enter'].includes(e.code)&&e.target.tagName!=='BUTTON'){e.preventDefault();this.advance();}
       if(this.screen==='story'&&e.code==='ArrowLeft'){e.preventDefault();if(this.page>0){this.page--;this.renderStory();}}
       if(this.screen==='setup'&&['ArrowLeft','ArrowRight'].includes(e.code)){e.preventDefault();this.cycle(e.target.closest('[data-choice="location"]')?'location':'hero',e.code==='ArrowRight'?1:-1);}
-      if(e.code==='Escape'&&this.screen!=='start')this.open(this.screen==='setup'?'start':'setup');
+      if(e.code==='Escape'&&this.screen!=='start')this.open(this.isAviasales||this.screen==='setup'?'start':'setup');
     });
     if(new URLSearchParams(window.location.search).has('comic'))this.open('story');
   }
@@ -4547,7 +4565,7 @@ class SurfJourney {
   }
   preloadStoryFlow(){
     if(this._storyFlowPreload)return this._storyFlowPreload;
-    const hero=new Image();hero.decoding='async';hero.src='assets/comics/hero-crest-close.webp';
+    const hero=new Image();hero.decoding='async';hero.src=this.loaderStart?'assets/comics/hero-loader-aviasales.webp':'assets/comics/hero-crest-close.webp';
     const loc=new Image();loc.decoding='async';loc.src='assets/comics/story-panels-v2.webp';
     const wave=new Image();wave.decoding='async';wave.src='assets/comics/level-wave-cutout.webp';
     const p1=new Promise(r=>{hero.onload=hero.onerror=r;});
@@ -4563,6 +4581,7 @@ class SurfJourney {
     const clamped=Math.min(100,Math.max(0,Math.round(pct)));
     if(bar)bar.style.width=clamped+'%';
     if(percentEl)percentEl.textContent=clamped+'%';
+    document.getElementById('loader-progress')?.setAttribute('aria-valuenow',clamped);
   }
   getShuffledPhrases(){
     const pool = this.isAviasales ? (SurfJourney.funnyPhrasesAviasales || SurfJourney.funnyPhrases) : SurfJourney.funnyPhrases;
@@ -4611,6 +4630,7 @@ class SurfJourney {
     const assist=document.getElementById('assist-toggle');assist.textContent='Сложность: '+(this.game.assist?'обычная':'высокая');assist.setAttribute('aria-pressed',!this.game.assist);assist.setAttribute('aria-label','Сложность: '+(this.game.assist?'обычная. Включить высокую':'высокая. Включить обычную'));
   }
   hideAll(){this.stopPhraseRotator();this.screens.forEach(name=>document.getElementById(name+'-screen')?.classList.add('hidden'));}
+  openIntro(){this.page=0;this.open(this.isAviasales?'story':'setup');}
   open(name){
     if(name==='character'||name==='location')name='setup';
     this.game.state='start';this.game.input.reset();this.game.jump.cancel();this.game.comics.reset();
@@ -4620,8 +4640,9 @@ class SurfJourney {
     if(name==='story'){this.updateStoryToggleUI();this.renderStory();}
     if(name==='setup'){this.renderSelection();this.prefetchPage(0);this.prefetchPage(1);}
     if(name==='loader'){
-      this.startPhraseRotator();
-      this.setLoaderProgress(5);
+      if(this.loaderStart){this.loaderStart.hidden=true;this.loaderStart.disabled=true;}
+      else this.startPhraseRotator();
+      this.setLoaderProgress(0);
     }
     (document.querySelector('#'+name+'-screen [data-primary]')||document.querySelector('#'+name+'-screen button'))?.focus({preventScroll:true});
     if(['start','setup','story'].includes(name)){
@@ -4654,7 +4675,9 @@ class SurfJourney {
   }
   renderStory(){
     const s=this.story[this.page],el=document.getElementById('story-screen'),book=document.getElementById('comic-page'),version=++this.storyRender;
-    el.dataset.page=this.page;book.dataset.comicPage=this.page;book.setAttribute('aria-label',s.label);book.replaceChildren();
+    el.dataset.page=this.page;book.dataset.comicPage=this.page;book.dataset.comicStory=this.storyVersion;book.setAttribute('aria-label',s.label);book.replaceChildren();
+    const pageNumber=document.getElementById('comic-page-number');
+    if(pageNumber)pageNumber.textContent=(this.page+1)+' / '+this.story.length;
     const loading=document.getElementById('comic-loading'),retry=document.getElementById('comic-retry');
     loading.hidden=true;retry.hidden=true;
     let isInstant=false;
@@ -4671,8 +4694,13 @@ class SurfJourney {
       const panel=document.createElement('figure');panel.className='comic-panel comic-'+p.id;
       if(p.lines&&p.lines.length){
         p.lines.forEach((l,idx)=>{
-          const bubble=document.createElement('p');bubble.className='comic-bubble comic-bubble-'+(idx+1)+(l.speaker?' speaker-'+l.speaker.toLowerCase():'');
-          bubble.textContent=l.line;bubble.setAttribute('aria-label',(l.speaker?l.speaker+': ':'')+l.line.replace(/\n/g,' '));
+          const bubble=document.createElement('p');bubble.className='comic-bubble comic-bubble-'+(idx+1)+(l.speaker&&!l.voice?' speaker-'+l.speaker.toLowerCase():'');
+          if(l.voice==='phone')bubble.classList.add('comic-bubble-phone');
+          if(l.raster){
+            bubble.classList.add('comic-bubble-raster');
+            const text=document.createElement('span');text.textContent=l.line;bubble.append(text);
+          }else bubble.textContent=l.line;
+          bubble.setAttribute('aria-label',(l.speaker?l.speaker+': ':'')+l.line.replace(/\n/g,' '));
           if(l.tail&&COMIC_TAIL_SVGS[l.tail]){bubble.classList.add('has-svg-tail');bubble.insertAdjacentHTML('beforeend',COMIC_TAIL_SVGS[l.tail]);}
           panel.append(bubble);
         });
@@ -4692,28 +4720,40 @@ class SurfJourney {
       if(version!==this.storyRender)return;
       isInstant=true;clearTimeout(showLoadingTimer);loading.hidden=false;loading.querySelector('span').textContent='КАДР НЕ ЗАГРУЗИЛСЯ';retry.hidden=false;book.removeAttribute('aria-busy');
     });
-    document.getElementById('story-next').textContent=this.page===this.story.length-1?'НА ВОЛНУ ↗':'ДАЛЬШЕ →';
-    document.getElementById('story-prev').setAttribute('aria-label',this.page?'Предыдущая страница комикса':'Вернуться к выбору');
+    document.getElementById('story-next').textContent=this.storyNextLabel();
+    document.getElementById('story-prev').setAttribute('aria-label',this.page?'Предыдущая страница комикса':this.isAviasales?'В главное меню':'Вернуться к выбору');
     el.classList.remove('story-enter');void el.offsetWidth;el.classList.add('story-enter');
   }
+  storyNextLabel(){return this.page<this.story.length-1?'ДАЛЬШЕ →':this.loaderStart?'К ЗАЕЗДУ →':'НА ВОЛНУ ↗';}
   advance(){if(this.launching)return;if(this.launchFailed||this.page===this.story.length-1)this.launch();else{this.page++;this.renderStory();}}
-  async launch(){
+  async prepareBriefing(){
+    this.launching=true;this.game.meta.markStorySeen();this.open('loader');
+    this.loaderStart.hidden=false;
+    try{
+      await this.game.prepareGameplay(pct=>{if(this.screen==='loader')this.setLoaderProgress(pct);});
+      if(this.screen==='loader')this.loaderStart.disabled=false;
+    }catch(error){
+      console.error(error);this.showError('Игра не загрузилась. Проверь соединение и нажми «Повторить», чтобы загрузить её заново.');
+    }finally{this.launching=false;}
+  }
+  async launch(fromBriefing=false){
     if(this.launchFailed){location.reload();return;}
-    if(this.launching)return;this.launching=true;this.launchFailed=false;this.game.meta.markStorySeen();
+    if(this.launching)return;
+    if(this.loaderStart&&!fromBriefing){await this.prepareBriefing();return;}
+    this.launching=true;this.launchFailed=false;this.game.meta.markStorySeen();
     document.getElementById('story-error').classList.add('hidden');
     const buttons=['story-next','story-skip','story-prev'].map(id=>document.getElementById(id));buttons.forEach(b=>b.disabled=true);
     document.getElementById('story-screen').setAttribute('aria-busy','true');buttons[0].textContent='НА ВОДУ…';
-    this.open('loader');
-    this.setLoaderProgress(10);
+    if(this.screen!=='loader')this.open('loader');
     try{
-      await this.game.start(true,pct=>this.setLoaderProgress(pct));
+      await this.game.start(true,pct=>{if(!fromBriefing)this.setLoaderProgress(pct);});
     }catch(error){
       console.error(error);
       this.showError('Игра не загрузилась. Проверь соединение и нажми «Повторить», чтобы загрузить её заново.');
     }finally{
       this.stopPhraseRotator();
       this.launching=false;buttons.forEach(b=>b.disabled=false);document.getElementById('story-screen').removeAttribute('aria-busy');
-      buttons[0].textContent=this.launchFailed?'ПОВТОРИТЬ':this.page===this.story.length-1?'НА ВОЛНУ ↗':'ДАЛЬШЕ →';
+      buttons[0].textContent=this.launchFailed?'ПОВТОРИТЬ':this.storyNextLabel();
       if(this.game.state==='playing'||this.game.state==='countdown'){
         const loader=document.getElementById('loader-screen');
         if(loader){
@@ -5410,7 +5450,7 @@ class RunComic {
     c.fillStyle=ink;c.font='400 30px "Russo One"';c.fillText('СЧЁТ',60,1236);
     c.font='400 92px "Russo One"';c.fillText(Math.round(g.score).toLocaleString('ru-RU'),56,1320);
     const duel=g.duel.result;
-    c.fillStyle=duel?.outcome==='victory'?'#125577':coral;c.font='400 38px "Russo One"';c.textAlign='right';
+    c.fillStyle=duel?.outcome==='victory'?(g.isAviasales?'#0c73fe':'#125577'):coral;c.font='400 38px "Russo One"';c.textAlign='right';
     if(g.isAviasales){
       c.fillText('РЕЙС СПАСЁН! · ПАСПОРТ '+(duel?.max??Math.round(g.mug.level*100))+'% СУХОЙ',W-60,1262);
       c.fillStyle=ink;c.font='700 34px Caveat';c.fillText('Бонус за сухой паспорт +'+(duel?.beerBonus??g.deliveryBonus).toLocaleString('ru-RU'),W-60,1302);
@@ -7063,6 +7103,7 @@ class SurfControlSettings {
     game.container.append(this.screen);
     const pad=document.createElement('div');pad.id='steer-pad';pad.setAttribute('aria-hidden','true');pad.innerHTML='<i></i>';game.container.append(pad);
     for(const [parent,label] of [['start-screen','Управление'],['selection-footer','Управление'],['pause-settings','Управление']]) {
+      if(game.isAviasales&&parent==='start-screen')continue;
       const button=document.createElement('button');button.type='button';button.className='text-button controls-open';button.textContent=label;
       button.addEventListener('click',e=>{if(performance.now()-(window.__lastTouchTime||0)<350)return;this.open(button);});
       (document.getElementById(parent)||document.querySelector('.'+parent)).append(button);
@@ -7231,30 +7272,32 @@ class CourseShow {
   }
   makeBar(){
     const g=this.group(1372,40);this.bar=g;
-    this.box(g,-13,.8,0,13,1.4,23,0xa97851);
-    for(let i=0;i<12;i++)this.box(g,-13,1.53,-10.5+i*1.9,13,.05,.07,0xf0d9ac);
-    for(const x of [-19,-7])for(const z of [-10,0,10])this.box(g,x,-1,z,.5,5,.5,0x65513d);
-    this.cutout('bar-delivery-v14.png',g,-13,1.5,4,16,10.67);
-    this.pennants(g,-20,8,9.5,-7,24);
-    // A physical glass on the counter uses the actual delivered fraction.
-    this.glass=new THREE.Group();this.glass.position.set(-13,6.6,2);this.glass.scale.setScalar(2);g.add(this.glass);
-    this.box(this.glass,0,.36,0,.45,.72,.45,0xffe7bb);
-    this.drink=this.box(this.glass,0,.34,-.24,.32,.57,.035,0xe7a526);
-    this.foam=this.box(this.glass,0,.66,-.25,.34,.10,.045,0xfff5d9);
-    this.borisGlass=this.glass.clone(true);this.borisGlass.position.x=-10.5;g.add(this.borisGlass);
-    this.borisDrink=this.borisGlass.children[1];this.borisFoam=this.borisGlass.children[2];
-    // The counter shows the same paper glass and liquid as each rider's hand.
-    this.maxCup=new THREE.Sprite(new THREE.SpriteMaterial({map:this.game.handBeer.texture,transparent:true,depthWrite:false,depthTest:false}));
-    this.borisCup=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,depthWrite:false,depthTest:false}));
-    for(const [cup,holder] of [[this.maxCup,this.glass],[this.borisCup,this.borisGlass]]){cup.center.set(.5,0);cup.scale.set(.78,1,1);cup.renderOrder=6;holder.add(cup);}
+    const dockX=this.game.isAviasales?9:-13;
+    this.box(g,dockX,.8,0,13,1.4,23,0xa97851);
+    for(let i=0;i<12;i++)this.box(g,dockX,1.53,-10.5+i*1.9,13,.05,.07,0xf0d9ac);
+    for(const x of [dockX-6,dockX+6])for(const z of [-10,0,10])this.box(g,x,-1,z,.5,5,.5,0x65513d);
     if(this.game.isAviasales){
-      this.borisGlass.visible=false;
-      this.sign(g,'ТРАП',-13,6.3,1.5,1.8,'#27596b');
-    } else {
+      this.shuttle=this.cutout('airport-shuttle-aviasales.png',g,-3.5,-.8,0,13.2,8.8);
+      this.sign(g,'АЭРОПОРТ-ЭКСПРЕСС',dockX-2,3.5,-8,7.5,'#0c73fe');
+      this.sign(g,'ТРАП',dockX-4.8,2.3,-6,2,'#0c73fe');
+    }else{
+      this.cutout('bar-delivery-v14.png',g,-13,1.5,4,16,10.67);
+      this.pennants(g,-20,8,9.5,-7,24);
+      // A physical glass on the counter uses the actual delivered fraction.
+      this.glass=new THREE.Group();this.glass.position.set(-13,6.6,2);this.glass.scale.setScalar(2);g.add(this.glass);
+      this.box(this.glass,0,.36,0,.45,.72,.45,0xffe7bb);
+      this.drink=this.box(this.glass,0,.34,-.24,.32,.57,.035,0xe7a526);
+      this.foam=this.box(this.glass,0,.66,-.25,.34,.10,.045,0xfff5d9);
+      this.borisGlass=this.glass.clone(true);this.borisGlass.position.x=-10.5;g.add(this.borisGlass);
+      this.borisDrink=this.borisGlass.children[1];this.borisFoam=this.borisGlass.children[2];
+      // The counter shows the same paper glass and liquid as each rider's hand.
+      this.maxCup=new THREE.Sprite(new THREE.SpriteMaterial({map:this.game.handBeer.texture,transparent:true,depthWrite:false,depthTest:false}));
+      this.borisCup=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,depthWrite:false,depthTest:false}));
+      for(const [cup,holder] of [[this.maxCup,this.glass],[this.borisCup,this.borisGlass]]){cup.center.set(.5,0);cup.scale.set(.78,1,1);cup.renderOrder=6;holder.add(cup);}
       this.sign(g,'МАКС',-13,6.3,1.5,1.8,'#27596b');this.sign(g,'БОРИС',-10.5,6.3,1.5,1.8,'#b7633d');
     }
     this.finishBanner=this.sign(g,this.game.isAviasales?'ПОСАДКА':'ФИНИШ',1,8,-10,10,'#b7633d');
-    for(const x of [-6,8])this.box(g,x,3.8,-10,.20,8,.20,0xf4dbb0);
+    this.finishBannerPosts=[-6,8].map(x=>this.box(g,x,3.8,-10,.20,8,.20,0xf4dbb0));
     this.confetti=[];
     for(let i=0;i<28;i++){
       const m=new THREE.Mesh(new THREE.PlaneGeometry(.13,.3),this.ink([0xefc44b,0xe98563,0xf7e6ba][i%3]));m.visible=false;g.add(m);this.confetti.push(m);
@@ -7263,14 +7306,39 @@ class CourseShow {
   mount(){
     const g=this.game;
     this.delivery=document.createElement('div');this.delivery.id='delivery-scene';this.delivery.className='hidden';
-    const line=document.createElement('p');line.id='delivery-line';this.delivery.append(line);
-    const button=document.createElement('button');button.className='yellow-button';button.textContent='К РЕЗУЛЬТАТАМ';button.addEventListener('click',()=>this.endDelivery());this.delivery.append(button);g.container.append(this.delivery);
+    this.deliveryLine=document.createElement('p');this.deliveryLine.id='delivery-line';this.delivery.append(this.deliveryLine);
+    if(g.isAviasales){
+      this.boardingCard=document.createElement('section');this.boardingCard.className='boarding-card hidden';
+      this.boardingCard.setAttribute('aria-labelledby','boarding-title');
+      this.boardingCard.innerHTML=`<img class="boarding-art" width="1024" height="1280" decoding="async" fetchpriority="low" alt="Макс с чемоданом и загранпаспортом поднимается на катер у пирса">
+        <div class="boarding-copy"><h2 id="boarding-title">УСПЕЛ!</h2><p class="boarding-metrics"><span id="boarding-passport"></span><span id="boarding-bonus"></span></p></div>`;
+      const art=this.boardingCard.querySelector('img');
+      art.addEventListener('error',()=>{art.hidden=true;});
+      art.src='assets/comics/comic-boarding-aviasales.webp';
+      this.boardingPassport=this.boardingCard.querySelector('#boarding-passport');
+      this.boardingBonus=this.boardingCard.querySelector('#boarding-bonus');
+      this.delivery.append(this.boardingCard);
+    }
+    this.deliveryButton=document.createElement('button');this.deliveryButton.type='button';this.deliveryButton.className='yellow-button';this.deliveryButton.textContent='К РЕЗУЛЬТАТАМ';
+    this.deliveryButton.addEventListener('click',()=>this.endDelivery());this.delivery.append(this.deliveryButton);g.container.append(this.delivery);
+  }
+  get deliveryAnimating(){return this.deliveryActive&&!this.boardingShown;}
+  hideDelivery(){
+    this.deliveryActive=false;this.boardingShown=false;
+    this.delivery.classList.add('hidden');this.delivery.classList.remove('boarding-open');
+    this.boardingCard?.classList.add('hidden');this.deliveryLine.hidden=false;
+    this.game.container.classList.remove('delivery-active');
+    this.confetti.forEach(m=>m.visible=false);
   }
   reset(){
     this.enabled=!this.game.flowTest;this.index=-1;this.events=[];this.wakeWins=new Set();this.wakeSeconds=0;this.wakeSource=null;this.wakeUntil=0;
-    this.deliveryActive=false;this.deliveryTime=0;this.delivery.classList.add('hidden');this.game.container.classList.remove('delivery-active');
-    this.confetti.forEach(m=>m.visible=false);this.finishBanner.visible=true;
-    this.applyPalette(0);this.glass.visible=this.borisGlass.visible=false;
+    this.deliveryTime=0;this.hideDelivery();this.finishBanner.visible=true;
+    this.applyPalette(0);
+    if(this.shuttle){
+      this.shuttle.position.set(-3.5,-.8,0);
+      this.finishBannerPosts.forEach(post=>post.visible=true);
+    }
+    else this.glass.visible=this.borisGlass.visible=false;
   }
   sectionAt(z){const index=this.sections.findIndex(s=>z<s.to);return index<0?this.sections.length-1:index;}
   step(dt){
@@ -7324,6 +7392,10 @@ class CourseShow {
   update(dt){
     const g=this.game,z=g.p.z;this.applyPalette(z);
     for(const p of this.props){p.mesh.visible=this.enabled&&p.z-z+p.extent> -22&&p.z-z-p.extent<165;if(p.mesh.userData.bob&&p.mesh.visible)p.mesh.position.y=g.wave.height(-p.mesh.position.x,p.z)*.45;}
+    if(this.shuttle&&this.bar.visible){
+      const p=this.shuttle.position;
+      p.y=-.8+g.wave.height(-p.x,this.bar.position.z+p.z)*.45;
+    }
     for(let i=0;i<this.flags.length;i++)this.flags[i].rotation.y=g.reducedMotion?0:Math.sin(g.time*2+i)*.18;
     // The skyline yields to nearby architecture and vanishes on open water.
     g.town.material.opacity=this.enabled&&z>875&&z<1080?.15:1;
@@ -7333,34 +7405,72 @@ class CourseShow {
     // Concentrate existing collage cliffs around the gate and swell, leaving the
     // waterfront, breathing bay and finish distinct rather than repeating rocks.
     if(this.enabled)for(const p of g.rush.scenery)if(p.mesh.isSprite&&(p.z<250||p.z>360&&p.z<610||p.z>800&&p.z<880||p.z>1160))p.mesh.visible=false;
-    if(this.deliveryActive)this.updateDelivery(dt);
+    if(this.deliveryAnimating)this.updateDelivery(dt);
   }
   beginDelivery(success){
     if(!this.enabled)return;
-    const g=this.game;this.success=success;this.deliveryActive=true;this.deliveryTime=0;this.glass.visible=true;this.borisGlass.visible=g.duel.arrived;this.finishBanner.visible=false;
-    for(const [drink,foam,level] of [[this.drink,this.foam,g.mug.level],[this.borisDrink,this.borisFoam,g.duel.deliveredBeer??0]]){
-      drink.visible=foam.visible=false;drink.scale.y=.57*level;drink.position.y=.055+.285*level;foam.position.y=.075+.57*level;
+    const g=this.game;this.success=success;this.deliveryActive=true;this.deliveryTime=0;this.finishBanner.visible=false;
+    if(this.shuttle)this.finishBannerPosts.forEach(post=>post.visible=false);
+    if(!this.shuttle){
+      this.glass.visible=true;this.borisGlass.visible=g.duel.arrived;
+      for(const [drink,foam,level] of [[this.drink,this.foam,g.mug.level],[this.borisDrink,this.borisFoam,g.duel.deliveredBeer??0]]){
+        drink.visible=foam.visible=false;drink.scale.y=.57*level;drink.position.y=.055+.285*level;foam.position.y=.075+.57*level;
+      }
+      this.glass.children[0].visible=this.borisGlass.children[0].visible=false;
+      g.handBeer.draw();g.handBeer.texture.needsUpdate=true;g.duel.printFrame=-1;g.duel.update();
+      this.borisCup.material.map=g.duel.glassTexture;this.borisCup.material.needsUpdate=true;
     }
-    this.glass.children[0].visible=this.borisGlass.children[0].visible=false;
-    g.handBeer.draw();g.handBeer.texture.needsUpdate=true;g.duel.printFrame=-1;g.duel.update();
-    this.borisCup.material.map=g.duel.glassTexture;this.borisCup.material.needsUpdate=true;
     this.cameraFrom=g.camera.position.clone();this.lookFrom=new THREE.Vector3(0,0,-1).applyQuaternion(g.camera.quaternion).multiplyScalar(22).add(g.camera.position);
-    this.delivery.classList.remove('hidden');g.container.classList.add('delivery-active');
+    g.container.classList.add('delivery-active');
     const result=g.duel.result;
-    if(g.isAviasales){
-      document.getElementById('delivery-line').textContent=(success?'КАПИТАН: «УСПЕЛ! ЗАПРЫГИВАЙ НА БОРТ!»':'КАПИТАН: «КАТЕР УШЁЛ...»')+'\nПАСПОРТ '+result.max+'% СУХОЙ · БОНУС +'+result.beerBonus.toLocaleString('ru-RU');
-    } else {
-      document.getElementById('delivery-line').textContent=(success?'ТОНИ: «МАКС ПЕРВЫЙ! КУБОК ТВОЙ!»':result.outcome==='tie'?'ТОНИ: «ФОТОФИНИШ! ОБЪЯВЛЯЮ НИЧЬЮ.»':'ТОНИ: «БОРИС ПЕРВЫЙ. РЕВАНШ?»')+'\nПИВО '+result.max+'% · БОНУС +'+result.beerBonus.toLocaleString('ru-RU');
+    if(success&&this.boardingCard){
+      this.boardingPassport.textContent='Паспорт сухой на '+result.max+'%';
+      this.boardingBonus.textContent='Бонус +'+result.beerBonus.toLocaleString('ru-RU');
+      const {x,y,z,heading,lean}=g.p;
+      this.boardingFrom={x,y,z,heading,lean};
+      this.boardingZ=Math.max(z,this.bar.position.z-5);
+      if(g.reducedMotion)this.showBoarding();
+      else g.container.focus({preventScroll:true});
+      g.renderDirty=true;return;
     }
-    this.delivery.querySelector('button').focus({preventScroll:true});g.renderDirty=true;
+    this.delivery.classList.remove('hidden');
+    if(g.isAviasales){
+      this.deliveryLine.textContent='КАПИТАН: «КАТЕР УШЁЛ...»\nПАСПОРТ '+result.max+'% СУХОЙ · БОНУС +'+result.beerBonus.toLocaleString('ru-RU');
+    } else {
+      this.deliveryLine.textContent=(success?'ТОНИ: «МАКС ПЕРВЫЙ! КУБОК ТВОЙ!»':result.outcome==='tie'?'ТОНИ: «ФОТОФИНИШ! ОБЪЯВЛЯЮ НИЧЬЮ.»':'ТОНИ: «БОРИС ПЕРВЫЙ. РЕВАНШ?»')+'\nПИВО '+result.max+'% · БОНУС +'+result.beerBonus.toLocaleString('ru-RU');
+    }
+    this.deliveryButton.focus({preventScroll:true});g.renderDirty=true;
+  }
+  showBoarding(){
+    this.boardingShown=true;this.deliveryLine.hidden=true;
+    this.boardingCard.classList.remove('hidden');
+    this.delivery.classList.add('boarding-open');this.delivery.classList.remove('hidden');
+    this.deliveryButton.focus({preventScroll:true});
+  }
+  updateBoardingApproach(){
+    const g=this.game,p=g.p,from=this.boardingFrom,lerp=THREE.MathUtils.lerp;
+    const t=Math.min(1,this.deliveryTime/1.05),glide=1-(1-t)**2;
+    p.x=lerp(from.x,-.8,glide);p.z=lerp(from.z,this.boardingZ,glide);
+    p.y=lerp(from.y,g.wave.height(p.x,p.z),glide);
+    p.heading=lerp(from.heading,0,glide);p.lean=lerp(from.lean,0,glide);
+    p.airborne=false;p.fallen=false;
+    g.camera.position.copy(this.cameraFrom).lerp(new THREE.Vector3(.8,4.7,this.boardingZ-15),glide);
+    g.camera.lookAt(this.lookFrom.clone().lerp(new THREE.Vector3(-.7,2.8,this.bar.position.z),glide));
+    if(t===1)this.showBoarding();
   }
   updateDelivery(dt){
-    const g=this.game;if(!this.deliveryActive||document.hidden)return;
-    this.deliveryTime+=Math.min(dt,.05);const t=g.wave.smooth(this.deliveryTime/2.4);
+    const g=this.game;if(!this.deliveryAnimating||document.hidden)return;
+    this.deliveryTime+=Math.min(dt,.05);
+    if(this.success&&this.boardingCard){this.updateBoardingApproach();return;}
+    const t=g.wave.smooth(this.deliveryTime/2.4);
+    if(this.shuttle&&!this.success){
+      this.shuttle.position.x=-3.5-9*t;
+      this.shuttle.position.z=25*t;
+    }
     if(!g.reducedMotion){
       const pullback=g.camera.aspect<.7?43:32;
       g.camera.position.copy(this.cameraFrom).lerp(new THREE.Vector3(2,8,1372-pullback),t);
-      g.camera.lookAt(this.lookFrom.clone().lerp(new THREE.Vector3(-8,4.8,1372),t));
+      g.camera.lookAt(this.lookFrom.clone().lerp(new THREE.Vector3(this.shuttle?0:-8,4.8,1372),t));
     }
     this.confetti.forEach((m,i)=>{
       m.visible=this.success&&!g.reducedMotion;
@@ -7370,7 +7480,7 @@ class CourseShow {
   }
   endDelivery(){
     if(!this.deliveryActive)return;
-    this.deliveryActive=false;this.delivery.classList.add('hidden');this.game.container.classList.remove('delivery-active');this.confetti.forEach(m=>m.visible=false);
+    this.hideDelivery();
     this.game.renderDirty=true;document.getElementById('replay-button').focus({preventScroll:true});
   }
 }
@@ -7763,7 +7873,7 @@ class BeerDuel {
   }
   mount(){
     this.ticket=document.createElement('div');this.ticket.className='duel-ticket paper';
-    this.ticket.innerHTML=this.game.isAviasales ? '<span>ДО ПИРСА</span><strong id="race-place-value">1200<small> М</small></strong>' : '<span>МЕСТО</span><strong id="race-place-value">1<small> / 2</small></strong>';
+    this.ticket.innerHTML=this.game.isAviasales ? `<span>ДО ПИРСА</span><strong id="race-place-value">${this.game.distance}<small> М</small></strong>` : '<span>МЕСТО</span><strong id="race-place-value">1<small> / 2</small></strong>';
     document.getElementById('hud').insertBefore(this.ticket,document.getElementById('pause-button'));
     this.status=document.createElement('div');this.status.className='duel-status';this.status.setAttribute('role','status');this.status.setAttribute('aria-live','polite');this.game.container.append(this.status);
     this.glassCanvas=document.createElement('canvas');this.glassCanvas.width=128;this.glassCanvas.height=200;
@@ -7924,7 +8034,7 @@ class BeerDuel {
   }
   updateHUD(){
     if(this.game.isAviasales){
-      const dist=Math.max(0,Math.round(1200-(this.game.p?.z??0)));
+      const dist=Math.max(0,Math.ceil(this.game.distance-Math.max(0,this.game.p?.z??0)));
       const el=document.getElementById('race-place-value');
       if(el){el.innerHTML=dist+'<small> М</small>';el.setAttribute('aria-label',dist+' метров до пирса');}
       const line=dist<=0?'ПИРС ДОСТИГНУТ! ПОСАДКА':dist<300?'КАШЛЯЕТ МОТОР · УСПЕВАЕШЬ!':'ГАЗУЙ! КАТЕР ЖДЁТ · '+dist+' М';
@@ -8424,7 +8534,7 @@ class PaperSurfGame {
       el.addEventListener('touchend',activate,{passive:true});
       el.addEventListener('click',activate);
     };
-    bindTap('start-button',()=>this.flowTest?this.start(false):this.journey.open('setup'));
+    bindTap('start-button',()=>this.flowTest?this.start(false):this.journey.openIntro());
     bindTap('replay-button',()=>this.start(false));
     bindTap('pause-button',()=>this.pause());
     const sound=document.getElementById('sound-button');
@@ -8450,6 +8560,7 @@ class PaperSurfGame {
       if(e.repeat||e.target.closest?.('input,textarea')||!document.getElementById('controls-screen').classList.contains('hidden'))return;
       if(this.ribbon&&e.code==='KeyL'){e.preventDefault();this.ribbon.setEnabled(!this.ribbon.enabled);return;}
       const sharing=!document.getElementById('share-screen').classList.contains('hidden');
+      if(this.isAviasales&&this.courseShow.deliveryActive)return;
       if(this.state==='finished'&&!sharing&&(e.code==='KeyR'||e.code==='Enter'&&e.target.tagName!=='BUTTON')){e.preventDefault();this.start(false);}
       else if(this.state==='playing'&&e.code==='KeyR'){e.preventDefault();this.start(false);}
       else if(sharing&&e.code==='Escape'){e.preventDefault();this.runComic.close();}
@@ -8458,8 +8569,8 @@ class PaperSurfGame {
   }
   renderMenuMeta(){
     const meta=this.meta,best=meta.daily?.score,label=document.getElementById('daily-label');
-    label.textContent='ВОЛНА ДНЯ · '+meta.dayLabel+(best?' · РЕКОРД '+best.toLocaleString('ru-RU'):'')+(meta.challenge?' · ВЫЗОВ '+meta.challenge.toLocaleString('ru-RU'):'');
-    document.getElementById('quick-button').classList.remove('hidden');
+    if(label)label.textContent='ВОЛНА ДНЯ · '+meta.dayLabel+(best?' · РЕКОРД '+best.toLocaleString('ru-RU'):'')+(meta.challenge?' · ВЫЗОВ '+meta.challenge.toLocaleString('ru-RU'):'');
+    document.getElementById('quick-button')?.classList.remove('hidden');
   }
   reset() {
     this.clearStartCountdown();this.container.classList.remove('countdown');
@@ -8581,7 +8692,7 @@ class PaperSurfGame {
     this._boardReadyOverride = v;
   }
   preloadGameplayAssets() {
-    if (this._gameplayAssetsPromise) return this._gameplayAssetsPromise;
+    if (this._gameplayAssetList) return this._gameplayAssetList;
     this.loadPrototypeTextures();
     this.wave?.load?.();
     this.heroAnimator?.load?.();
@@ -8595,7 +8706,7 @@ class PaperSurfGame {
     this.handBeer?.load?.();
     this.skyAdvertiser?.load?.();
     this.comics?.load?.();
-    this._gameplayAssetsPromise = Promise.all([
+    this._gameplayAssetList = [
       this.heroAnimator?.ready,
       this.handBeer?.ready,
       this.rivalCast?.ready,
@@ -8609,8 +8720,22 @@ class PaperSurfGame {
       this.demo?.ready,
       this.duel?.ready,
       this.skyAdvertiser?.ready
-    ]);
-    return this._gameplayAssetsPromise;
+    ];
+    return this._gameplayAssetList;
+  }
+
+  async prepareGameplay(onProgress, calibration=Promise.resolve()) {
+    const assets=this.preloadGameplayAssets();
+    let loaded=0, timer;
+    const tracked=assets.map(async asset=>{
+      await asset;
+      onProgress?.(Math.round(++loaded/assets.length*100));
+    });
+    try {
+      await Promise.race([Promise.all([...tracked,calibration]),new Promise((_,reject)=>{
+        timer=setTimeout(()=>reject(Error('Загрузка игры заняла слишком много времени')),45000);
+      })]);
+    } finally {clearTimeout(timer);}
   }
 
   async start(calibrate = true, onProgress = null) {
@@ -8619,38 +8744,13 @@ class PaperSurfGame {
       if (this.journey && this.journey.screen !== 'loader' && !this.flowTest) {
         this.journey.open('loader');
       }
-      this.preloadGameplayAssets();
       this.audio.unlock();
       if(!this.audio.isMuted)this.audio.startBGM();
       const button=document.getElementById('start-button');button.disabled=true;
       if(this.flowTest)calibrate=false;
       const needsCalibration=this.input.preferredMode==='gyro'&&(calibrate||this.input.mode!=='gyro');
       if(needsCalibration)button.textContent='ЗАПОМИНАЕМ НАКЛОН…';
-      const assetList=[
-        this.heroAnimator.ready,this.handBeer.ready,this.rivalCast.ready,
-        this.comics.ready,this.world.ready,this.coastReady,this.wave.ready,
-        this.companion.ready,this.rush.ready,this.courseShow.ready,
-        this.demo.ready,this.duel.ready,this.skyAdvertiser.ready
-      ];
-      let loadedCount=0;
-      assetList.forEach(p=>{
-        p.then(()=>{
-          loadedCount++;
-          const pct=Math.round((loadedCount/assetList.length)*100);
-          if(onProgress)onProgress(pct);
-          else this.journey?.setLoaderProgress?.(pct);
-        }).catch(()=>{});
-      });
-      const assets=Promise.all([
-        ...assetList,
-        needsCalibration?this.input.calibrate():Promise.resolve()
-      ]);
-      let loadTimer;
-      try {
-        await Promise.race([assets,new Promise((_,reject)=>{loadTimer=setTimeout(()=>reject(Error('Загрузка игры заняла слишком много времени')),45000);})]);
-      } finally {clearTimeout(loadTimer);}
-      if(onProgress)onProgress(100);
-      else this.journey?.setLoaderProgress?.(100);
+      await this.prepareGameplay(onProgress??(pct=>this.journey?.setLoaderProgress(pct)),needsCalibration?this.input.calibrate():undefined);
       this.rivalCast.run++;
       this.reset();
       const useCountdown=!this.flowTest&&!!document.getElementById('start-countdown');
@@ -8945,7 +9045,7 @@ class PaperSurfGame {
     if(this.state==='finished')return;
     this.world.finish();
     this.chain.bank();this.chase.end('finish');
-    this.runComic.capture('finish','ДОВЁЗ!','БАР УЖЕ ТУТ',6,true);this.renderDirty=true;
+    this.runComic.capture('finish',this.isAviasales?'У ПИРСА!':'ДОВЁЗ!',this.isAviasales?'АЭРОПОРТ-ЭКСПРЕСС':'БАР УЖЕ ТУТ',6,true);this.renderDirty=true;
     this.state='finished';this.audio.stopBGM();this.audio.stopJetski?.();this.input.reset();this.juice.reset();
     const result=this.duel.settle(arrivalTime),success=result.outcome==='victory';
     this.raceScore=Math.round(this.score);this.deliveryBonus=result.beerBonus;this.score=this.raceScore+this.deliveryBonus;
@@ -9187,7 +9287,7 @@ class PaperSurfGame {
       if(this.hudRouteTicket){
         const curZ=Math.min(this.distance,Math.round(this.p.z));
         this.hudRouteTicket.setAttribute('aria-valuenow',curZ);
-        this.hudRouteTicket.setAttribute('aria-valuetext','До бара '+Math.max(0,Math.ceil(this.distance-this.p.z))+' метров');
+        this.hudRouteTicket.setAttribute('aria-valuetext',(this.isAviasales?'До пирса ':'До бара ')+Math.max(0,Math.ceil(this.distance-this.p.z))+' метров');
       }
     }
     const earned=Math.min(3,this.waveRide.totalCaught);
@@ -9314,7 +9414,7 @@ class PaperSurfGame {
     requestAnimationFrame(this.animate);
     const realDt=this.lastTime?Math.min((now-this.lastTime)/1000,.25):1/60,dt=Math.min(realDt,.05);this.lastTime=now;
     const countdownFrame=this.state==='countdown';
-    if(this.state!=='playing'&&!countdownFrame&&!this.renderDirty&&!this.courseShow.deliveryActive)return;
+    if(this.state!=='playing'&&!countdownFrame&&!this.renderDirty&&!this.courseShow.deliveryAnimating)return;
     this.renderDirty=false;
     if(countdownFrame)this.advanceStartCountdown(realDt);
     else if(this.state==='playing'){
@@ -9360,7 +9460,7 @@ function initPaperSurf() {
       if (mode === 'quick' || window.FLOW_TEST_MODE) {
         window.game.start(true);
       } else if (window.game.journey) {
-        window.game.journey.open('setup');
+        window.game.journey.openIntro();
       } else {
         window.game.start(false);
       }

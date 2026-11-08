@@ -19,6 +19,7 @@ class HandBeer {
     this.texture=new THREE.CanvasTexture(this.canvas);this.texture.minFilter=THREE.LinearFilter;this.texture.generateMipmaps=false;
     this.frame=new Image();
     this.pivot=new THREE.Group();
+    this.pivot.visible=!game.isAviasales; // The Aviasales cutout already holds its passport.
     this.mesh=new THREE.Mesh(new THREE.PlaneGeometry(1.12,1.4),new THREE.MeshBasicMaterial({map:this.texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
     this.mesh.scale.set(1,1,1);
     this.gripCanvas={x:332,y:230};
@@ -140,14 +141,14 @@ class HandBeer {
     }
     c.restore();
 
-    // Dark Navy Passport Booklet
+    // Burgundy travel passport icon.
     const px = 120, py = 120, pw = 175, ph = 265, r = 12;
     c.save();
     // Drop shadow
     c.shadowColor = 'rgba(16, 63, 88, 0.25)';
     c.shadowBlur = 14;
     c.shadowOffsetY = 6;
-    c.fillStyle = '#0f2942';
+    c.fillStyle = '#682334';
     c.strokeStyle = '#17282c';
     c.lineWidth = 4;
     c.beginPath();

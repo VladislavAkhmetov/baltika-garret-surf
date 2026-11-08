@@ -37,7 +37,7 @@ class BeerDuel {
   }
   mount(){
     this.ticket=document.createElement('div');this.ticket.className='duel-ticket paper';
-    this.ticket.innerHTML=this.game.isAviasales ? '<span>ДО ПИРСА</span><strong id="race-place-value">1200<small> М</small></strong>' : '<span>МЕСТО</span><strong id="race-place-value">1<small> / 2</small></strong>';
+    this.ticket.innerHTML=this.game.isAviasales ? `<span>ДО ПИРСА</span><strong id="race-place-value">${this.game.distance}<small> М</small></strong>` : '<span>МЕСТО</span><strong id="race-place-value">1<small> / 2</small></strong>';
     document.getElementById('hud').insertBefore(this.ticket,document.getElementById('pause-button'));
     this.status=document.createElement('div');this.status.className='duel-status';this.status.setAttribute('role','status');this.status.setAttribute('aria-live','polite');this.game.container.append(this.status);
     this.glassCanvas=document.createElement('canvas');this.glassCanvas.width=128;this.glassCanvas.height=200;
@@ -198,7 +198,7 @@ class BeerDuel {
   }
   updateHUD(){
     if(this.game.isAviasales){
-      const dist=Math.max(0,Math.round(1200-(this.game.p?.z??0)));
+      const dist=Math.max(0,Math.ceil(this.game.distance-Math.max(0,this.game.p?.z??0)));
       const el=document.getElementById('race-place-value');
       if(el){el.innerHTML=dist+'<small> М</small>';el.setAttribute('aria-label',dist+' метров до пирса');}
       const line=dist<=0?'ПИРС ДОСТИГНУТ! ПОСАДКА':dist<300?'КАШЛЯЕТ МОТОР · УСПЕВАЕШЬ!':'ГАЗУЙ! КАТЕР ЖДЁТ · '+dist+' М';

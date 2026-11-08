@@ -285,7 +285,7 @@ class PaperSurfGame {
       el.addEventListener('touchend',activate,{passive:true});
       el.addEventListener('click',activate);
     };
-    bindTap('start-button',()=>this.flowTest?this.start(false):this.journey.open('setup'));
+    bindTap('start-button',()=>this.flowTest?this.start(false):this.journey.openIntro());
     bindTap('replay-button',()=>this.start(false));
     bindTap('pause-button',()=>this.pause());
     const sound=document.getElementById('sound-button');
@@ -311,6 +311,7 @@ class PaperSurfGame {
       if(e.repeat||e.target.closest?.('input,textarea')||!document.getElementById('controls-screen').classList.contains('hidden'))return;
       if(this.ribbon&&e.code==='KeyL'){e.preventDefault();this.ribbon.setEnabled(!this.ribbon.enabled);return;}
       const sharing=!document.getElementById('share-screen').classList.contains('hidden');
+      if(this.isAviasales&&this.courseShow.deliveryActive)return;
       if(this.state==='finished'&&!sharing&&(e.code==='KeyR'||e.code==='Enter'&&e.target.tagName!=='BUTTON')){e.preventDefault();this.start(false);}
       else if(this.state==='playing'&&e.code==='KeyR'){e.preventDefault();this.start(false);}
       else if(sharing&&e.code==='Escape'){e.preventDefault();this.runComic.close();}
@@ -319,8 +320,8 @@ class PaperSurfGame {
   }
   renderMenuMeta(){
     const meta=this.meta,best=meta.daily?.score,label=document.getElementById('daily-label');
-    label.textContent='ВОЛНА ДНЯ · '+meta.dayLabel+(best?' · РЕКОРД '+best.toLocaleString('ru-RU'):'')+(meta.challenge?' · ВЫЗОВ '+meta.challenge.toLocaleString('ru-RU'):'');
-    document.getElementById('quick-button').classList.remove('hidden');
+    if(label)label.textContent='ВОЛНА ДНЯ · '+meta.dayLabel+(best?' · РЕКОРД '+best.toLocaleString('ru-RU'):'')+(meta.challenge?' · ВЫЗОВ '+meta.challenge.toLocaleString('ru-RU'):'');
+    document.getElementById('quick-button')?.classList.remove('hidden');
   }
   reset() {
     this.clearStartCountdown();this.container.classList.remove('countdown');
@@ -442,7 +443,7 @@ class PaperSurfGame {
     this._boardReadyOverride = v;
   }
   preloadGameplayAssets() {
-    if (this._gameplayAssetsPromise) return this._gameplayAssetsPromise;
+    if (this._gameplayAssetList) return this._gameplayAssetList;
     this.loadPrototypeTextures();
     this.wave?.load?.();
     this.heroAnimator?.load?.();
@@ -456,7 +457,7 @@ class PaperSurfGame {
     this.handBeer?.load?.();
     this.skyAdvertiser?.load?.();
     this.comics?.load?.();
-    this._gameplayAssetsPromise = Promise.all([
+    this._gameplayAssetList = [
       this.heroAnimator?.ready,
       this.handBeer?.ready,
       this.rivalCast?.ready,
@@ -470,8 +471,22 @@ class PaperSurfGame {
       this.demo?.ready,
       this.duel?.ready,
       this.skyAdvertiser?.ready
-    ]);
-    return this._gameplayAssetsPromise;
+    ];
+    return this._gameplayAssetList;
+  }
+
+  async prepareGameplay(onProgress, calibration=Promise.resolve()) {
+    const assets=this.preloadGameplayAssets();
+    let loaded=0, timer;
+    const tracked=assets.map(async asset=>{
+      await asset;
+      onProgress?.(Math.round(++loaded/assets.length*100));
+    });
+    try {
+      await Promise.race([Promise.all([...tracked,calibration]),new Promise((_,reject)=>{
+        timer=setTimeout(()=>reject(Error('Загрузка игры заняла слишком много времени')),45000);
+      })]);
+    } finally {clearTimeout(timer);}
   }
 
   async start(calibrate = true, onProgress = null) {
@@ -480,38 +495,13 @@ class PaperSurfGame {
       if (this.journey && this.journey.screen !== 'loader' && !this.flowTest) {
         this.journey.open('loader');
       }
-      this.preloadGameplayAssets();
       this.audio.unlock();
       if(!this.audio.isMuted)this.audio.startBGM();
       const button=document.getElementById('start-button');button.disabled=true;
       if(this.flowTest)calibrate=false;
       const needsCalibration=this.input.preferredMode==='gyro'&&(calibrate||this.input.mode!=='gyro');
       if(needsCalibration)button.textContent='ЗАПОМИНАЕМ НАКЛОН…';
-      const assetList=[
-        this.heroAnimator.ready,this.handBeer.ready,this.rivalCast.ready,
-        this.comics.ready,this.world.ready,this.coastReady,this.wave.ready,
-        this.companion.ready,this.rush.ready,this.courseShow.ready,
-        this.demo.ready,this.duel.ready,this.skyAdvertiser.ready
-      ];
-      let loadedCount=0;
-      assetList.forEach(p=>{
-        p.then(()=>{
-          loadedCount++;
-          const pct=Math.round((loadedCount/assetList.length)*100);
-          if(onProgress)onProgress(pct);
-          else this.journey?.setLoaderProgress?.(pct);
-        }).catch(()=>{});
-      });
-      const assets=Promise.all([
-        ...assetList,
-        needsCalibration?this.input.calibrate():Promise.resolve()
-      ]);
-      let loadTimer;
-      try {
-        await Promise.race([assets,new Promise((_,reject)=>{loadTimer=setTimeout(()=>reject(Error('Загрузка игры заняла слишком много времени')),45000);})]);
-      } finally {clearTimeout(loadTimer);}
-      if(onProgress)onProgress(100);
-      else this.journey?.setLoaderProgress?.(100);
+      await this.prepareGameplay(onProgress??(pct=>this.journey?.setLoaderProgress(pct)),needsCalibration?this.input.calibrate():undefined);
       this.rivalCast.run++;
       this.reset();
       const useCountdown=!this.flowTest&&!!document.getElementById('start-countdown');
@@ -806,7 +796,7 @@ class PaperSurfGame {
     if(this.state==='finished')return;
     this.world.finish();
     this.chain.bank();this.chase.end('finish');
-    this.runComic.capture('finish','ДОВЁЗ!','БАР УЖЕ ТУТ',6,true);this.renderDirty=true;
+    this.runComic.capture('finish',this.isAviasales?'У ПИРСА!':'ДОВЁЗ!',this.isAviasales?'АЭРОПОРТ-ЭКСПРЕСС':'БАР УЖЕ ТУТ',6,true);this.renderDirty=true;
     this.state='finished';this.audio.stopBGM();this.audio.stopJetski?.();this.input.reset();this.juice.reset();
     const result=this.duel.settle(arrivalTime),success=result.outcome==='victory';
     this.raceScore=Math.round(this.score);this.deliveryBonus=result.beerBonus;this.score=this.raceScore+this.deliveryBonus;
@@ -1048,7 +1038,7 @@ class PaperSurfGame {
       if(this.hudRouteTicket){
         const curZ=Math.min(this.distance,Math.round(this.p.z));
         this.hudRouteTicket.setAttribute('aria-valuenow',curZ);
-        this.hudRouteTicket.setAttribute('aria-valuetext','До бара '+Math.max(0,Math.ceil(this.distance-this.p.z))+' метров');
+        this.hudRouteTicket.setAttribute('aria-valuetext',(this.isAviasales?'До пирса ':'До бара ')+Math.max(0,Math.ceil(this.distance-this.p.z))+' метров');
       }
     }
     const earned=Math.min(3,this.waveRide.totalCaught);
@@ -1175,7 +1165,7 @@ class PaperSurfGame {
     requestAnimationFrame(this.animate);
     const realDt=this.lastTime?Math.min((now-this.lastTime)/1000,.25):1/60,dt=Math.min(realDt,.05);this.lastTime=now;
     const countdownFrame=this.state==='countdown';
-    if(this.state!=='playing'&&!countdownFrame&&!this.renderDirty&&!this.courseShow.deliveryActive)return;
+    if(this.state!=='playing'&&!countdownFrame&&!this.renderDirty&&!this.courseShow.deliveryAnimating)return;
     this.renderDirty=false;
     if(countdownFrame)this.advanceStartCountdown(realDt);
     else if(this.state==='playing'){
@@ -1221,7 +1211,7 @@ function initPaperSurf() {
       if (mode === 'quick' || window.FLOW_TEST_MODE) {
         window.game.start(true);
       } else if (window.game.journey) {
-        window.game.journey.open('setup');
+        window.game.journey.openIntro();
       } else {
         window.game.start(false);
       }

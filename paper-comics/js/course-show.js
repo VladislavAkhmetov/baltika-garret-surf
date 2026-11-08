@@ -115,30 +115,32 @@ class CourseShow {
   }
   makeBar(){
     const g=this.group(1372,40);this.bar=g;
-    this.box(g,-13,.8,0,13,1.4,23,0xa97851);
-    for(let i=0;i<12;i++)this.box(g,-13,1.53,-10.5+i*1.9,13,.05,.07,0xf0d9ac);
-    for(const x of [-19,-7])for(const z of [-10,0,10])this.box(g,x,-1,z,.5,5,.5,0x65513d);
-    this.cutout('bar-delivery-v14.png',g,-13,1.5,4,16,10.67);
-    this.pennants(g,-20,8,9.5,-7,24);
-    // A physical glass on the counter uses the actual delivered fraction.
-    this.glass=new THREE.Group();this.glass.position.set(-13,6.6,2);this.glass.scale.setScalar(2);g.add(this.glass);
-    this.box(this.glass,0,.36,0,.45,.72,.45,0xffe7bb);
-    this.drink=this.box(this.glass,0,.34,-.24,.32,.57,.035,0xe7a526);
-    this.foam=this.box(this.glass,0,.66,-.25,.34,.10,.045,0xfff5d9);
-    this.borisGlass=this.glass.clone(true);this.borisGlass.position.x=-10.5;g.add(this.borisGlass);
-    this.borisDrink=this.borisGlass.children[1];this.borisFoam=this.borisGlass.children[2];
-    // The counter shows the same paper glass and liquid as each rider's hand.
-    this.maxCup=new THREE.Sprite(new THREE.SpriteMaterial({map:this.game.handBeer.texture,transparent:true,depthWrite:false,depthTest:false}));
-    this.borisCup=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,depthWrite:false,depthTest:false}));
-    for(const [cup,holder] of [[this.maxCup,this.glass],[this.borisCup,this.borisGlass]]){cup.center.set(.5,0);cup.scale.set(.78,1,1);cup.renderOrder=6;holder.add(cup);}
+    const dockX=this.game.isAviasales?9:-13;
+    this.box(g,dockX,.8,0,13,1.4,23,0xa97851);
+    for(let i=0;i<12;i++)this.box(g,dockX,1.53,-10.5+i*1.9,13,.05,.07,0xf0d9ac);
+    for(const x of [dockX-6,dockX+6])for(const z of [-10,0,10])this.box(g,x,-1,z,.5,5,.5,0x65513d);
     if(this.game.isAviasales){
-      this.borisGlass.visible=false;
-      this.sign(g,'ТРАП',-13,6.3,1.5,1.8,'#27596b');
-    } else {
+      this.shuttle=this.cutout('airport-shuttle-aviasales.png',g,-3.5,-.8,0,13.2,8.8);
+      this.sign(g,'АЭРОПОРТ-ЭКСПРЕСС',dockX-2,3.5,-8,7.5,'#0c73fe');
+      this.sign(g,'ТРАП',dockX-4.8,2.3,-6,2,'#0c73fe');
+    }else{
+      this.cutout('bar-delivery-v14.png',g,-13,1.5,4,16,10.67);
+      this.pennants(g,-20,8,9.5,-7,24);
+      // A physical glass on the counter uses the actual delivered fraction.
+      this.glass=new THREE.Group();this.glass.position.set(-13,6.6,2);this.glass.scale.setScalar(2);g.add(this.glass);
+      this.box(this.glass,0,.36,0,.45,.72,.45,0xffe7bb);
+      this.drink=this.box(this.glass,0,.34,-.24,.32,.57,.035,0xe7a526);
+      this.foam=this.box(this.glass,0,.66,-.25,.34,.10,.045,0xfff5d9);
+      this.borisGlass=this.glass.clone(true);this.borisGlass.position.x=-10.5;g.add(this.borisGlass);
+      this.borisDrink=this.borisGlass.children[1];this.borisFoam=this.borisGlass.children[2];
+      // The counter shows the same paper glass and liquid as each rider's hand.
+      this.maxCup=new THREE.Sprite(new THREE.SpriteMaterial({map:this.game.handBeer.texture,transparent:true,depthWrite:false,depthTest:false}));
+      this.borisCup=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,depthWrite:false,depthTest:false}));
+      for(const [cup,holder] of [[this.maxCup,this.glass],[this.borisCup,this.borisGlass]]){cup.center.set(.5,0);cup.scale.set(.78,1,1);cup.renderOrder=6;holder.add(cup);}
       this.sign(g,'МАКС',-13,6.3,1.5,1.8,'#27596b');this.sign(g,'БОРИС',-10.5,6.3,1.5,1.8,'#b7633d');
     }
     this.finishBanner=this.sign(g,this.game.isAviasales?'ПОСАДКА':'ФИНИШ',1,8,-10,10,'#b7633d');
-    for(const x of [-6,8])this.box(g,x,3.8,-10,.20,8,.20,0xf4dbb0);
+    this.finishBannerPosts=[-6,8].map(x=>this.box(g,x,3.8,-10,.20,8,.20,0xf4dbb0));
     this.confetti=[];
     for(let i=0;i<28;i++){
       const m=new THREE.Mesh(new THREE.PlaneGeometry(.13,.3),this.ink([0xefc44b,0xe98563,0xf7e6ba][i%3]));m.visible=false;g.add(m);this.confetti.push(m);
@@ -147,14 +149,39 @@ class CourseShow {
   mount(){
     const g=this.game;
     this.delivery=document.createElement('div');this.delivery.id='delivery-scene';this.delivery.className='hidden';
-    const line=document.createElement('p');line.id='delivery-line';this.delivery.append(line);
-    const button=document.createElement('button');button.className='yellow-button';button.textContent='К РЕЗУЛЬТАТАМ';button.addEventListener('click',()=>this.endDelivery());this.delivery.append(button);g.container.append(this.delivery);
+    this.deliveryLine=document.createElement('p');this.deliveryLine.id='delivery-line';this.delivery.append(this.deliveryLine);
+    if(g.isAviasales){
+      this.boardingCard=document.createElement('section');this.boardingCard.className='boarding-card hidden';
+      this.boardingCard.setAttribute('aria-labelledby','boarding-title');
+      this.boardingCard.innerHTML=`<img class="boarding-art" width="1024" height="1280" decoding="async" fetchpriority="low" alt="Макс с чемоданом и загранпаспортом поднимается на катер у пирса">
+        <div class="boarding-copy"><h2 id="boarding-title">УСПЕЛ!</h2><p class="boarding-metrics"><span id="boarding-passport"></span><span id="boarding-bonus"></span></p></div>`;
+      const art=this.boardingCard.querySelector('img');
+      art.addEventListener('error',()=>{art.hidden=true;});
+      art.src='assets/comics/comic-boarding-aviasales.webp';
+      this.boardingPassport=this.boardingCard.querySelector('#boarding-passport');
+      this.boardingBonus=this.boardingCard.querySelector('#boarding-bonus');
+      this.delivery.append(this.boardingCard);
+    }
+    this.deliveryButton=document.createElement('button');this.deliveryButton.type='button';this.deliveryButton.className='yellow-button';this.deliveryButton.textContent='К РЕЗУЛЬТАТАМ';
+    this.deliveryButton.addEventListener('click',()=>this.endDelivery());this.delivery.append(this.deliveryButton);g.container.append(this.delivery);
+  }
+  get deliveryAnimating(){return this.deliveryActive&&!this.boardingShown;}
+  hideDelivery(){
+    this.deliveryActive=false;this.boardingShown=false;
+    this.delivery.classList.add('hidden');this.delivery.classList.remove('boarding-open');
+    this.boardingCard?.classList.add('hidden');this.deliveryLine.hidden=false;
+    this.game.container.classList.remove('delivery-active');
+    this.confetti.forEach(m=>m.visible=false);
   }
   reset(){
     this.enabled=!this.game.flowTest;this.index=-1;this.events=[];this.wakeWins=new Set();this.wakeSeconds=0;this.wakeSource=null;this.wakeUntil=0;
-    this.deliveryActive=false;this.deliveryTime=0;this.delivery.classList.add('hidden');this.game.container.classList.remove('delivery-active');
-    this.confetti.forEach(m=>m.visible=false);this.finishBanner.visible=true;
-    this.applyPalette(0);this.glass.visible=this.borisGlass.visible=false;
+    this.deliveryTime=0;this.hideDelivery();this.finishBanner.visible=true;
+    this.applyPalette(0);
+    if(this.shuttle){
+      this.shuttle.position.set(-3.5,-.8,0);
+      this.finishBannerPosts.forEach(post=>post.visible=true);
+    }
+    else this.glass.visible=this.borisGlass.visible=false;
   }
   sectionAt(z){const index=this.sections.findIndex(s=>z<s.to);return index<0?this.sections.length-1:index;}
   step(dt){
@@ -208,6 +235,10 @@ class CourseShow {
   update(dt){
     const g=this.game,z=g.p.z;this.applyPalette(z);
     for(const p of this.props){p.mesh.visible=this.enabled&&p.z-z+p.extent> -22&&p.z-z-p.extent<165;if(p.mesh.userData.bob&&p.mesh.visible)p.mesh.position.y=g.wave.height(-p.mesh.position.x,p.z)*.45;}
+    if(this.shuttle&&this.bar.visible){
+      const p=this.shuttle.position;
+      p.y=-.8+g.wave.height(-p.x,this.bar.position.z+p.z)*.45;
+    }
     for(let i=0;i<this.flags.length;i++)this.flags[i].rotation.y=g.reducedMotion?0:Math.sin(g.time*2+i)*.18;
     // The skyline yields to nearby architecture and vanishes on open water.
     g.town.material.opacity=this.enabled&&z>875&&z<1080?.15:1;
@@ -217,34 +248,72 @@ class CourseShow {
     // Concentrate existing collage cliffs around the gate and swell, leaving the
     // waterfront, breathing bay and finish distinct rather than repeating rocks.
     if(this.enabled)for(const p of g.rush.scenery)if(p.mesh.isSprite&&(p.z<250||p.z>360&&p.z<610||p.z>800&&p.z<880||p.z>1160))p.mesh.visible=false;
-    if(this.deliveryActive)this.updateDelivery(dt);
+    if(this.deliveryAnimating)this.updateDelivery(dt);
   }
   beginDelivery(success){
     if(!this.enabled)return;
-    const g=this.game;this.success=success;this.deliveryActive=true;this.deliveryTime=0;this.glass.visible=true;this.borisGlass.visible=g.duel.arrived;this.finishBanner.visible=false;
-    for(const [drink,foam,level] of [[this.drink,this.foam,g.mug.level],[this.borisDrink,this.borisFoam,g.duel.deliveredBeer??0]]){
-      drink.visible=foam.visible=false;drink.scale.y=.57*level;drink.position.y=.055+.285*level;foam.position.y=.075+.57*level;
+    const g=this.game;this.success=success;this.deliveryActive=true;this.deliveryTime=0;this.finishBanner.visible=false;
+    if(this.shuttle)this.finishBannerPosts.forEach(post=>post.visible=false);
+    if(!this.shuttle){
+      this.glass.visible=true;this.borisGlass.visible=g.duel.arrived;
+      for(const [drink,foam,level] of [[this.drink,this.foam,g.mug.level],[this.borisDrink,this.borisFoam,g.duel.deliveredBeer??0]]){
+        drink.visible=foam.visible=false;drink.scale.y=.57*level;drink.position.y=.055+.285*level;foam.position.y=.075+.57*level;
+      }
+      this.glass.children[0].visible=this.borisGlass.children[0].visible=false;
+      g.handBeer.draw();g.handBeer.texture.needsUpdate=true;g.duel.printFrame=-1;g.duel.update();
+      this.borisCup.material.map=g.duel.glassTexture;this.borisCup.material.needsUpdate=true;
     }
-    this.glass.children[0].visible=this.borisGlass.children[0].visible=false;
-    g.handBeer.draw();g.handBeer.texture.needsUpdate=true;g.duel.printFrame=-1;g.duel.update();
-    this.borisCup.material.map=g.duel.glassTexture;this.borisCup.material.needsUpdate=true;
     this.cameraFrom=g.camera.position.clone();this.lookFrom=new THREE.Vector3(0,0,-1).applyQuaternion(g.camera.quaternion).multiplyScalar(22).add(g.camera.position);
-    this.delivery.classList.remove('hidden');g.container.classList.add('delivery-active');
+    g.container.classList.add('delivery-active');
     const result=g.duel.result;
-    if(g.isAviasales){
-      document.getElementById('delivery-line').textContent=(success?'КАПИТАН: «УСПЕЛ! ЗАПРЫГИВАЙ НА БОРТ!»':'КАПИТАН: «КАТЕР УШЁЛ...»')+'\nПАСПОРТ '+result.max+'% СУХОЙ · БОНУС +'+result.beerBonus.toLocaleString('ru-RU');
-    } else {
-      document.getElementById('delivery-line').textContent=(success?'ТОНИ: «МАКС ПЕРВЫЙ! КУБОК ТВОЙ!»':result.outcome==='tie'?'ТОНИ: «ФОТОФИНИШ! ОБЪЯВЛЯЮ НИЧЬЮ.»':'ТОНИ: «БОРИС ПЕРВЫЙ. РЕВАНШ?»')+'\nПИВО '+result.max+'% · БОНУС +'+result.beerBonus.toLocaleString('ru-RU');
+    if(success&&this.boardingCard){
+      this.boardingPassport.textContent='Паспорт сухой на '+result.max+'%';
+      this.boardingBonus.textContent='Бонус +'+result.beerBonus.toLocaleString('ru-RU');
+      const {x,y,z,heading,lean}=g.p;
+      this.boardingFrom={x,y,z,heading,lean};
+      this.boardingZ=Math.max(z,this.bar.position.z-5);
+      if(g.reducedMotion)this.showBoarding();
+      else g.container.focus({preventScroll:true});
+      g.renderDirty=true;return;
     }
-    this.delivery.querySelector('button').focus({preventScroll:true});g.renderDirty=true;
+    this.delivery.classList.remove('hidden');
+    if(g.isAviasales){
+      this.deliveryLine.textContent='КАПИТАН: «КАТЕР УШЁЛ...»\nПАСПОРТ '+result.max+'% СУХОЙ · БОНУС +'+result.beerBonus.toLocaleString('ru-RU');
+    } else {
+      this.deliveryLine.textContent=(success?'ТОНИ: «МАКС ПЕРВЫЙ! КУБОК ТВОЙ!»':result.outcome==='tie'?'ТОНИ: «ФОТОФИНИШ! ОБЪЯВЛЯЮ НИЧЬЮ.»':'ТОНИ: «БОРИС ПЕРВЫЙ. РЕВАНШ?»')+'\nПИВО '+result.max+'% · БОНУС +'+result.beerBonus.toLocaleString('ru-RU');
+    }
+    this.deliveryButton.focus({preventScroll:true});g.renderDirty=true;
+  }
+  showBoarding(){
+    this.boardingShown=true;this.deliveryLine.hidden=true;
+    this.boardingCard.classList.remove('hidden');
+    this.delivery.classList.add('boarding-open');this.delivery.classList.remove('hidden');
+    this.deliveryButton.focus({preventScroll:true});
+  }
+  updateBoardingApproach(){
+    const g=this.game,p=g.p,from=this.boardingFrom,lerp=THREE.MathUtils.lerp;
+    const t=Math.min(1,this.deliveryTime/1.05),glide=1-(1-t)**2;
+    p.x=lerp(from.x,-.8,glide);p.z=lerp(from.z,this.boardingZ,glide);
+    p.y=lerp(from.y,g.wave.height(p.x,p.z),glide);
+    p.heading=lerp(from.heading,0,glide);p.lean=lerp(from.lean,0,glide);
+    p.airborne=false;p.fallen=false;
+    g.camera.position.copy(this.cameraFrom).lerp(new THREE.Vector3(.8,4.7,this.boardingZ-15),glide);
+    g.camera.lookAt(this.lookFrom.clone().lerp(new THREE.Vector3(-.7,2.8,this.bar.position.z),glide));
+    if(t===1)this.showBoarding();
   }
   updateDelivery(dt){
-    const g=this.game;if(!this.deliveryActive||document.hidden)return;
-    this.deliveryTime+=Math.min(dt,.05);const t=g.wave.smooth(this.deliveryTime/2.4);
+    const g=this.game;if(!this.deliveryAnimating||document.hidden)return;
+    this.deliveryTime+=Math.min(dt,.05);
+    if(this.success&&this.boardingCard){this.updateBoardingApproach();return;}
+    const t=g.wave.smooth(this.deliveryTime/2.4);
+    if(this.shuttle&&!this.success){
+      this.shuttle.position.x=-3.5-9*t;
+      this.shuttle.position.z=25*t;
+    }
     if(!g.reducedMotion){
       const pullback=g.camera.aspect<.7?43:32;
       g.camera.position.copy(this.cameraFrom).lerp(new THREE.Vector3(2,8,1372-pullback),t);
-      g.camera.lookAt(this.lookFrom.clone().lerp(new THREE.Vector3(-8,4.8,1372),t));
+      g.camera.lookAt(this.lookFrom.clone().lerp(new THREE.Vector3(this.shuttle?0:-8,4.8,1372),t));
     }
     this.confetti.forEach((m,i)=>{
       m.visible=this.success&&!g.reducedMotion;
@@ -254,7 +323,7 @@ class CourseShow {
   }
   endDelivery(){
     if(!this.deliveryActive)return;
-    this.deliveryActive=false;this.delivery.classList.add('hidden');this.game.container.classList.remove('delivery-active');this.confetti.forEach(m=>m.visible=false);
+    this.hideDelivery();
     this.game.renderDirty=true;document.getElementById('replay-button').focus({preventScroll:true});
   }
 }

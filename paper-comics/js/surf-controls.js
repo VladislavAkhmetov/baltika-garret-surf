@@ -160,6 +160,7 @@ class SurfControlSettings {
     game.container.append(this.screen);
     const pad=document.createElement('div');pad.id='steer-pad';pad.setAttribute('aria-hidden','true');pad.innerHTML='<i></i>';game.container.append(pad);
     for(const [parent,label] of [['start-screen','Управление'],['selection-footer','Управление'],['pause-settings','Управление']]) {
+      if(game.isAviasales&&parent==='start-screen')continue;
       const button=document.createElement('button');button.type='button';button.className='text-button controls-open';button.textContent=label;
       button.addEventListener('click',e=>{if(performance.now()-(window.__lastTouchTime||0)<350)return;this.open(button);});
       (document.getElementById(parent)||document.querySelector('.'+parent)).append(button);

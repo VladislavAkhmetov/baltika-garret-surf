@@ -94,7 +94,7 @@ class RunComic {
     c.fillStyle=ink;c.font='400 30px "Russo One"';c.fillText('СЧЁТ',60,1236);
     c.font='400 92px "Russo One"';c.fillText(Math.round(g.score).toLocaleString('ru-RU'),56,1320);
     const duel=g.duel.result;
-    c.fillStyle=duel?.outcome==='victory'?'#125577':coral;c.font='400 38px "Russo One"';c.textAlign='right';
+    c.fillStyle=duel?.outcome==='victory'?(g.isAviasales?'#0c73fe':'#125577'):coral;c.font='400 38px "Russo One"';c.textAlign='right';
     if(g.isAviasales){
       c.fillText('РЕЙС СПАСЁН! · ПАСПОРТ '+(duel?.max??Math.round(g.mug.level*100))+'% СУХОЙ',W-60,1262);
       c.fillStyle=ink;c.font='700 34px Caveat';c.fillText('Бонус за сухой паспорт +'+(duel?.beerBonus??g.deliveryBonus).toLocaleString('ru-RU'),W-60,1302);

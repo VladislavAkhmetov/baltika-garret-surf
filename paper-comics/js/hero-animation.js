@@ -9,7 +9,15 @@ class HeroAnimator {
     // used by the deck fit, finger overlay and animated grip attachment.
     this.sourceGrip=[916/1133*384,210/1388*512];
     this.sourceSoles=[[540/1133*384,1129/1388*512],[840/1133*384,1318/1388*512]];
-    this.poseDefinitions={
+    this.poseDefinitions=game.isAviasales?{
+      base:{src:'assets/comics/hero-rear-aviasales.png',grip:[242,192],feet:[[427,1114],[672,1313]]},
+      left:{src:'assets/comics/hero-aviasales/carve-left.webp',grip:[140,243],feet:[[361,1071],[679,1323]]},
+      right:{src:'assets/comics/hero-aviasales/carve-right.webp',grip:[222,164],feet:[[298,1090],[590,1323]]},
+      compress:{src:'assets/comics/hero-aviasales/compress.webp',grip:[116,360],feet:[[277,1141],[590,1306]]},
+      air:{src:'assets/comics/hero-aviasales/air.webp',grip:[63,167],feet:[[362,1096],[641,1340]]},
+      trick:{src:'assets/comics/hero-aviasales/trick.webp',grip:[147,283],feet:[[245,1076],[560,1286]],scale:.82},
+      landing:{src:'assets/comics/hero-aviasales/landing.webp',grip:[154,251],feet:[[265,1159],[610,1332]]}
+    }:{
       base:{src:'assets/comics/hero-rear-grip-v6.png',grip:[916,210],feet:[[540,1129],[840,1318]]},
       left:{src:'assets/comics/hero-v7/carve-left.png',grip:[948,205],feet:[[610,1082],[955,1296]]},
       right:{src:'assets/comics/hero-v7/carve-right.png',grip:[936,197],feet:[[585,1132],[870,1328]]},
@@ -32,10 +40,11 @@ class HeroAnimator {
   load() {
     if (this._readyPromise) return this._readyPromise;
     this._readyPromise = Promise.all(Object.entries(this.poseDefinitions).map(([key,definition])=>new Promise((resolve,reject)=>{
-      const image=new Image();let fallbackTried=false;
+      const image=new Image(),preferred=definition.src.replace(/\.png$/,'.webp');
+      let fallbackTried=preferred===definition.src;
       image.onload=()=>resolve([key,image]);
       image.onerror=()=>{if(!fallbackTried){fallbackTried=true;image.src=definition.src;}else reject(new Error('Не удалось загрузить позу персонажа: '+key));};
-      image.src=definition.src.replace(/\.png$/,'.webp');
+      image.src=preferred;
     }))).then(entries=>this.buildAtlases(Object.fromEntries(entries)));
     this._readyPromise.then(()=>{
       for(const [key,t] of Object.entries(this.atlases)){
