@@ -11,10 +11,24 @@ class SurfJourney {
   constructor(game) {
     this.game=game;this.page=0;this.screen='start';this.heroIndex=this.locationIndex=0;
     this.screens=['start','setup','story','loader'];
+    this.isAviasales = Boolean(window.IS_AVIASALES || new URLSearchParams(window.location.search).has('aviasales'));
     this.heroes=[{name:'МАКС',available:true},{name:'ВИТЯ',available:false},{name:'СТАС',available:false}];
-    this.locations=[{name:'БУХТА GARRET',available:true},{name:'СЕВЕРНЫЙ РИФ',available:false},{name:'НОЧНОЙ ПОРТ',available:false}];
-    this.storyVersion=new URLSearchParams(window.location.search).get('story')||'v6';
+    this.locations=[{name:this.isAviasales?'БУХТА ПХУКЕТ':'БУХТА GARRET',available:true},{name:'СЕВЕРНЫЙ РИФ',available:false},{name:'НОЧНОЙ ПОРТ',available:false}];
+    this.storyVersion=new URLSearchParams(window.location.search).get('story')||(this.isAviasales?'aviasales':'v6');
     this.stories={
+      aviasales:[
+        {label:'Проспал! Катер в аэропорт уходит',panels:[
+          {id:'overslept',alt:'Макс в шоке подпрыгивает в кровати, глядя на будильник в телефоне',lines:[
+            {speaker:'Макс',line:'11:45?! БУДИЛЬНИК?!\nРЕГИСТРАЦИЯ ЗАКРЫВАЕТСЯ!',tail:'left'}
+          ]},
+          {id:'boat-departing',alt:'Катер-шаттл в аэропорт уже отчалил от пирса и уходит по бухте',lines:[
+            {speaker:'Капитан',line:'Отдать швартовы!\nСамолёт ждать не будет!',tail:'left-down'}
+          ]},
+          {id:'surf-dash',alt:'Макс бежит в прибой с синей доской и держит паспорт высоко над водой',lines:[
+            {speaker:'Макс',line:'На волну! Главное\u00A0—\nНЕ НАМОЧИТЬ ПАСПОРТ!',tail:'left-high'}
+          ],sound:'ПОГНАЛИ!'}
+        ]}
+      ],
       v6:[
         {label:'Есть работа: смена в дальнем баре',panels:[
           {id:'cards',alt:'Макс и Борис скучают за картами на стойке бара Tony’s Garret'},
@@ -98,6 +112,10 @@ class SurfJourney {
   }
   get story(){return this.stories[this.storyVersion]||this.stories.v6;}
   toggleStoryVersion(){
+    if(this.isAviasales){
+      this.storyVersion='aviasales';
+      return;
+    }
     this.storyVersion=this.storyVersion==='v6'?'v4':'v6';
     this.comicImages.clear();
     this.updateStoryToggleUI();
@@ -132,7 +150,8 @@ class SurfJourney {
     if(percentEl)percentEl.textContent=clamped+'%';
   }
   getShuffledPhrases(){
-    const list=[...(SurfJourney.funnyPhrases||[])];
+    const pool = this.isAviasales ? (SurfJourney.funnyPhrasesAviasales || SurfJourney.funnyPhrases) : SurfJourney.funnyPhrases;
+    const list=[...(pool||[])];
     for(let i=list.length-1;i>0;i--){
       const j=Math.floor(Math.random()*(i+1));
       [list[i],list[j]]=[list[j],list[i]];
@@ -301,5 +320,14 @@ SurfJourney.funnyPhrases=[
   'ОТГОНЯЕМ АКУЛ…',
   'НАТИРАЕМ ДОСКУ…',
   'ПРОВЕРЯЕМ ПЕНУ…'
+];
+SurfJourney.funnyPhrasesAviasales=[
+  'ПРОВЕРЯЕМ БИЛЕТЫ…',
+  'РИСУЕМ ВОЛНУ НА ПХУКЕТЕ…',
+  'БУДИМ КРАБА…',
+  'ЗАВОДИМ МОТОР КАТЕРА…',
+  'ПРЯЧЕМ ПАСПОРТ ОТ ВОДЫ…',
+  'ОТГОНЯЕМ АКУЛ ОТ ПОСАДКИ…',
+  'АВИАСЕЙЛС ВЫПУСКАЕТ ШАССИ…'
 ];
 window.SurfJourney=SurfJourney;

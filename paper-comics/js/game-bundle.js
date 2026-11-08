@@ -3269,7 +3269,15 @@ class CrabCompanion {
       victory:{rect:[120,493,577,527]},
       defeat:{rect:[826,608,652,400]}
     };
-    this.lines={
+    this.lines=this.game.isAviasales ? {
+      spill:['Паспорт намок! Выше держи!','Береги документы, не улетим!'],
+      shark:['Акула! Она тоже на посадку спешит!'],
+      escape:['Ха! Акулы без билета не летают!'],
+      dodge:['Все страницы целы!'],
+      trick:['Высший пилотаж!'],
+      wake:['Лови гребень! Ускоряемся!'],
+      home:['Вижу катер! Трап подан, залетай!']
+    } : {
       spill:['Эй! Панцирь в пене!','Полегче с виражами!'],
       shark:['Зубы сзади!'],
       escape:['Не догонишь!'],
@@ -3384,12 +3392,12 @@ class CrabCompanion {
   showResult(outcome){
     const success=outcome===true||outcome==='victory',tie=outcome==='tie';
     this.draw(document.getElementById('result-crab'),success?'victory':'defeat');
-    document.getElementById('result-crab').setAttribute('aria-label',success?'Клешня на финише с кубком':'Клешня на финише');
-    document.getElementById('result-crab-line').textContent=success?'«Мы легенды!»':tie?'«Ноздря в ноздрю!»':'«В следующий раз рулю я!»';
+    document.getElementById('result-crab').setAttribute('aria-label',this.game.isAviasales?'Клешня на катере':(success?'Клешня на финише с кубком':'Клешня на финише'));
+    document.getElementById('result-crab-line').textContent=this.game.isAviasales?(success?'«Мы на катере! Заводи мотор!»':'«Эх, катер ушёл...»'):(success?'«Мы легенды!»':tie?'«Ноздря в ноздрю!»':'«В следующий раз рулю я!»');
     const screen=document.getElementById('result-screen'),art=document.getElementById('result-art');
     screen.dataset.outcome=tie?'tie':success?'victory':'defeat';
-    document.getElementById('result-trophy').classList.toggle('hidden',!success);
-    art.setAttribute('aria-label',success?'Клешня мчится на доске и поднимает кубок':tie?'Клешня поймала волну у самого финиша':'Клешня несётся к финишу на доске');
+    document.getElementById('result-trophy').classList.toggle('hidden',!success||this.game.isAviasales);
+    art.setAttribute('aria-label',this.game.isAviasales?'Клешня мчится на доске к катеру':(success?'Клешня мчится на доске и поднимает кубок':tie?'Клешня поймала волну у самого финиша':'Клешня несётся к финишу на доске'));
     document.getElementById('crab-callout')?.classList.remove('visible');
   }
 }
@@ -3483,7 +3491,9 @@ class HandBeer {
   }
   inside(c){c.beginPath();c.moveTo(121,91);c.lineTo(264,91);c.lineTo(251,385);c.quadraticCurveTo(191,403,133,382);c.closePath();}
   draw(){
-    const c=this.ctx,l=this.liquid,t=this.game.time||0,paper=this.frame.complete&&this.frame.naturalWidth>0;c.clearRect(0,0,384,480);
+    const c=this.ctx,l=this.liquid,t=this.game.time||0;c.clearRect(0,0,384,480);
+    if(this.game.isAviasales){this.drawPassport(c,l,t);return;}
+    const paper=this.frame.complete&&this.frame.naturalWidth>0;
     // Cream paper silhouette and a thick, translucent glass handle.
     c.lineCap='round';c.lineJoin='round';c.strokeStyle='#f6ebd3';c.lineWidth=25;
     if(!paper){
@@ -3512,6 +3522,119 @@ class HandBeer {
     c.fillStyle='rgba(31,84,93,.20)';c.beginPath();c.ellipse(193,88,81,12,0,Math.PI,Math.PI*2);c.fill();c.strokeStyle='#244650';c.lineWidth=3;c.beginPath();c.ellipse(193,88,82,12,0,0,Math.PI*2);c.stroke();c.strokeStyle='#fff7dc';c.lineWidth=5;c.beginPath();c.ellipse(193,89,79,10,0,0,Math.PI);c.stroke();
     }
     for(const d of this.drops){c.globalAlpha=Math.min(1,d.life*3);c.fillStyle='#f8b52b';c.strokeStyle='#fff3cb';c.lineWidth=2;c.beginPath();c.ellipse(d.x,d.y,d.r,d.r*1.35,-.35,0,Math.PI*2);c.fill();c.stroke();}c.globalAlpha=1;
+  }
+  drawPassport(c,l,t){
+    // Boarding pass sticking out from top of passport
+    c.save();
+    c.translate(170, 72);
+    c.rotate(-0.06);
+    c.fillStyle = '#f8f4e6';
+    c.strokeStyle = '#1b333c';
+    c.lineWidth = 3;
+    c.beginPath();
+    c.roundRect ? c.roundRect(0, 0, 95, 90, [6, 6, 0, 0]) : c.rect(0, 0, 95, 90);
+    c.fill(); c.stroke();
+    // Cyan flight header
+    c.fillStyle = '#0c73fe';
+    c.fillRect(6, 6, 83, 14);
+    // Airplane symbol on ticket
+    c.fillStyle = '#ffffff';
+    c.font = '700 9px sans-serif';
+    c.fillText('✈ AVIA', 12, 17);
+    // Barcode lines
+    c.fillStyle = '#17282c';
+    for (let x = 12; x < 84; x += (x % 5 === 0 ? 5 : 3)) {
+      c.fillRect(x, 26, 1.8, 22);
+    }
+    c.restore();
+
+    // Dark Navy Passport Booklet
+    const px = 120, py = 120, pw = 175, ph = 265, r = 12;
+    c.save();
+    // Drop shadow
+    c.shadowColor = 'rgba(16, 63, 88, 0.25)';
+    c.shadowBlur = 14;
+    c.shadowOffsetY = 6;
+    c.fillStyle = '#0f2942';
+    c.strokeStyle = '#17282c';
+    c.lineWidth = 4;
+    c.beginPath();
+    if (c.roundRect) c.roundRect(px, py, pw, ph, r);
+    else c.rect(px, py, pw, ph);
+    c.fill();
+    c.shadowColor = 'transparent';
+    c.stroke();
+
+    // Gold foil embossed border
+    c.strokeStyle = 'rgba(235, 192, 85, 0.85)';
+    c.lineWidth = 2.5;
+    c.strokeRect(px + 10, py + 10, pw - 20, ph - 20);
+
+    // Gold text: ПАСПОРТ
+    c.fillStyle = '#f2c94c';
+    c.font = '700 16px "Russo One", Impact, sans-serif';
+    c.textAlign = 'center';
+    c.letterSpacing = '3px';
+    c.fillText('ПАСПОРТ', px + pw / 2, py + 46);
+
+    // Gold embossed travel crest (airplane surrounded by stars)
+    const cx = px + pw / 2, cy = py + 120;
+    c.beginPath();
+    c.arc(cx, cy, 32, 0, Math.PI * 2);
+    c.strokeStyle = 'rgba(235, 192, 85, 0.7)';
+    c.lineWidth = 2;
+    c.stroke();
+    // Airplane glyph in center
+    c.font = '28px sans-serif';
+    c.fillStyle = '#f2c94c';
+    c.fillText('✈', cx, cy + 9);
+
+    c.font = '600 10px Rubik, sans-serif';
+    c.fillStyle = 'rgba(242, 201, 76, 0.75)';
+    c.fillText('PASSPORT', cx, py + ph - 28);
+
+    // Water soak effect based on l.level (1.0 = completely dry, 0 = soaked)
+    const wetLevel = Math.max(0, Math.min(1, 1 - l.level));
+    if (wetLevel > 0.01) {
+      c.save();
+      c.beginPath();
+      if (c.roundRect) c.roundRect(px, py, pw, ph, r);
+      else c.rect(px, py, pw, ph);
+      c.clip();
+
+      const soakTop = py + ph - wetLevel * ph;
+      const wetGrad = c.createLinearGradient(0, soakTop, 0, py + ph);
+      wetGrad.addColorStop(0, 'rgba(5, 18, 32, 0.45)');
+      wetGrad.addColorStop(0.3, 'rgba(5, 14, 25, 0.75)');
+      wetGrad.addColorStop(1, 'rgba(2, 8, 16, 0.92)');
+      c.fillStyle = wetGrad;
+
+      c.beginPath();
+      c.moveTo(px, soakTop);
+      for (let x = px; x <= px + pw; x += 10) {
+        const wave = Math.sin((x + t * 40) * 0.1) * 3;
+        c.lineTo(x, soakTop + wave);
+      }
+      c.lineTo(px + pw, py + ph);
+      c.lineTo(px, py + ph);
+      c.closePath();
+      c.fill();
+      c.restore();
+    }
+    c.restore();
+
+    // Splashing water drops
+    for (const d of this.drops) {
+      c.globalAlpha = Math.min(1, d.life * 3);
+      c.fillStyle = 'rgba(180, 235, 255, 0.85)';
+      c.strokeStyle = '#ffffff';
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.ellipse(d.x, d.y, d.r, d.r * 1.3, -0.35, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+    }
+    c.globalAlpha = 1;
   }
 }
 window.HandBeer=HandBeer;window.ComicBeerLiquid=ComicBeerLiquid;
@@ -4303,10 +4426,24 @@ class SurfJourney {
   constructor(game) {
     this.game=game;this.page=0;this.screen='start';this.heroIndex=this.locationIndex=0;
     this.screens=['start','setup','story','loader'];
+    this.isAviasales = Boolean(window.IS_AVIASALES || new URLSearchParams(window.location.search).has('aviasales'));
     this.heroes=[{name:'МАКС',available:true},{name:'ВИТЯ',available:false},{name:'СТАС',available:false}];
-    this.locations=[{name:'БУХТА GARRET',available:true},{name:'СЕВЕРНЫЙ РИФ',available:false},{name:'НОЧНОЙ ПОРТ',available:false}];
-    this.storyVersion=new URLSearchParams(window.location.search).get('story')||'v6';
+    this.locations=[{name:this.isAviasales?'БУХТА ПХУКЕТ':'БУХТА GARRET',available:true},{name:'СЕВЕРНЫЙ РИФ',available:false},{name:'НОЧНОЙ ПОРТ',available:false}];
+    this.storyVersion=new URLSearchParams(window.location.search).get('story')||(this.isAviasales?'aviasales':'v6');
     this.stories={
+      aviasales:[
+        {label:'Проспал! Катер в аэропорт уходит',panels:[
+          {id:'overslept',alt:'Макс в шоке подпрыгивает в кровати, глядя на будильник в телефоне',lines:[
+            {speaker:'Макс',line:'11:45?! БУДИЛЬНИК?!\nРЕГИСТРАЦИЯ ЗАКРЫВАЕТСЯ!',tail:'left'}
+          ]},
+          {id:'boat-departing',alt:'Катер-шаттл в аэропорт уже отчалил от пирса и уходит по бухте',lines:[
+            {speaker:'Капитан',line:'Отдать швартовы!\nСамолёт ждать не будет!',tail:'left-down'}
+          ]},
+          {id:'surf-dash',alt:'Макс бежит в прибой с синей доской и держит паспорт высоко над водой',lines:[
+            {speaker:'Макс',line:'На волну! Главное\u00A0—\nНЕ НАМОЧИТЬ ПАСПОРТ!',tail:'left-high'}
+          ],sound:'ПОГНАЛИ!'}
+        ]}
+      ],
       v6:[
         {label:'Есть работа: смена в дальнем баре',panels:[
           {id:'cards',alt:'Макс и Борис скучают за картами на стойке бара Tony’s Garret'},
@@ -4390,6 +4527,10 @@ class SurfJourney {
   }
   get story(){return this.stories[this.storyVersion]||this.stories.v6;}
   toggleStoryVersion(){
+    if(this.isAviasales){
+      this.storyVersion='aviasales';
+      return;
+    }
     this.storyVersion=this.storyVersion==='v6'?'v4':'v6';
     this.comicImages.clear();
     this.updateStoryToggleUI();
@@ -4424,7 +4565,8 @@ class SurfJourney {
     if(percentEl)percentEl.textContent=clamped+'%';
   }
   getShuffledPhrases(){
-    const list=[...(SurfJourney.funnyPhrases||[])];
+    const pool = this.isAviasales ? (SurfJourney.funnyPhrasesAviasales || SurfJourney.funnyPhrases) : SurfJourney.funnyPhrases;
+    const list=[...(pool||[])];
     for(let i=list.length-1;i>0;i--){
       const j=Math.floor(Math.random()*(i+1));
       [list[i],list[j]]=[list[j],list[i]];
@@ -4593,6 +4735,15 @@ SurfJourney.funnyPhrases=[
   'ОТГОНЯЕМ АКУЛ…',
   'НАТИРАЕМ ДОСКУ…',
   'ПРОВЕРЯЕМ ПЕНУ…'
+];
+SurfJourney.funnyPhrasesAviasales=[
+  'ПРОВЕРЯЕМ БИЛЕТЫ…',
+  'РИСУЕМ ВОЛНУ НА ПХУКЕТЕ…',
+  'БУДИМ КРАБА…',
+  'ЗАВОДИМ МОТОР КАТЕРА…',
+  'ПРЯЧЕМ ПАСПОРТ ОТ ВОДЫ…',
+  'ОТГОНЯЕМ АКУЛ ОТ ПОСАДКИ…',
+  'АВИАСЕЙЛС ВЫПУСКАЕТ ШАССИ…'
 ];
 window.SurfJourney=SurfJourney;
 
@@ -5054,20 +5205,20 @@ const ARCADE_STORE='garret_comics_arcade_v1';
 const ARCADE_MISSIONS=[
   {id:'spin',text:'Чисто приземли 360°',test:s=>s.tricks>=1},
   {id:'pocket5',text:'5 секунд в кармане ×2',test:s=>s.pocket2>=5},
-  {id:'beer70',text:'Довези 70% пива',test:s=>s.finished&&s.beer>=.7},
+  {id:'beer70',text:'Довези 70% пива',textAviasales:'Сохрани 70% сухости паспорта',test:s=>s.finished&&s.beer>=.7},
   {id:'near3',text:'3 раза «впритык»',test:s=>s.near>=3},
   {id:'chain5',text:'Цепочка из 5 трюков',test:s=>s.longest>=5},
   {id:'bank3000',text:'Зачти цепочку на 3 000',test:s=>s.bestBank>=3000},
-  {id:'wake',text:'Прокатись на следе аквабайка',test:s=>s.wake>=1},
+  {id:'wake',text:'Прокатись на следе аквабайка',textAviasales:'Поймай гребень волны',test:s=>s.wake>=1},
   {id:'flip',text:'Сделай переворот ✦',test:s=>s.special>=1},
   {id:'sharkAir',text:'Перелети акулу',test:s=>s.sharkAir>=1},
   {id:'clean',text:'Ни падений, ни пены',test:s=>s.finished&&s.falls===0&&s.wipes===0},
   {id:'score20k',text:'Набери 20 000 очков',test:s=>s.score>=20000},
-  {id:'beer90',text:'Довези 90% пива',test:s=>s.finished&&s.beer>=.9}
+  {id:'beer90',text:'Довези 90% пива',textAviasales:'Сохрани 90% сухости паспорта',test:s=>s.finished&&s.beer>=.9}
 ];
 class RunMeta {
   constructor(game){
-    this.game=game;this.data=this.load();
+    this.game=game;this.storeKey=game.isAviasales?'aviasales_comics_arcade_v1':ARCADE_STORE;this.data=this.load();
     const params=new URLSearchParams(location.search);
     this.today=RunMeta.dayKey(new Date());
     this.seed=params.has('seed')&&Number.isFinite(Number(params.get('seed')))?Number(params.get('seed')):RunMeta.seedFor(this.today);
@@ -5077,8 +5228,8 @@ class RunMeta {
   static dayKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
   static seedFor(key){let h=2166136261;for(const c of key){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return (h>>>0)%100000;}
   get dayLabel(){const [,m,d]=this.today.split('-');return d+'.'+m;}
-  load(){if(window.FLOW_TEST_MODE)return {};try{return JSON.parse(localStorage.getItem(ARCADE_STORE))||{};}catch(_){return {};}}
-  save(){if(window.FLOW_TEST_MODE)return;try{localStorage.setItem(ARCADE_STORE,JSON.stringify(this.data));}catch(_){}}
+  load(){if(window.FLOW_TEST_MODE)return {};try{return JSON.parse(localStorage.getItem(this.storeKey||ARCADE_STORE))||{};}catch(_){return {};}}
+  save(){if(window.FLOW_TEST_MODE)return;try{localStorage.setItem(this.storeKey||ARCADE_STORE,JSON.stringify(this.data));}catch(_){}}
   get storySeen(){return !!this.data.storySeen;}
   markStorySeen(){if(!this.data.storySeen){this.data.storySeen=true;this.save();}}
   get daily(){return this.data.daily?.day===this.today&&this.data.daily?.seed===this.seed?this.data.daily:null;}
@@ -5088,7 +5239,14 @@ class RunMeta {
     if(ARCADE_MISSIONS.every(m=>done.includes(m.id)||active.includes(m.id))&&active.length<3)done.length=0;
     for(const m of ARCADE_MISSIONS){if(active.length>=3)break;if(!active.includes(m.id)&&!done.includes(m.id))active.push(m.id);}
   }
-  get missions(){return this.data.missions.active.map(id=>ARCADE_MISSIONS.find(m=>m.id===id)).filter(Boolean);}
+  get missions(){
+    return this.data.missions.active.map(id=>{
+      const m=ARCADE_MISSIONS.find(item=>item.id===id);
+      if(!m)return null;
+      if(this.game.isAviasales&&m.textAviasales)return Object.assign({},m,{text:m.textAviasales});
+      return m;
+    }).filter(Boolean);
+  }
   makeGhost(){
     const g=this.game,rig=g.makeSurfer(1,0xf6ebd0);
     rig.group.scale.setScalar(1.2);
@@ -5224,8 +5382,15 @@ class RunComic {
     const c=canvas.getContext('2d'),ink='#17282c',cream='#f4e9cd',yellow='#ffc43d',coral='#eb643c';
     c.fillStyle=cream;c.fillRect(0,0,W,H);
     for(let i=0;i<5200;i++){c.fillStyle=i%2?'#00000010':'#ffffff22';c.fillRect(Math.random()*W,Math.random()*H,2,2);}
-    c.save();c.translate(60,58);c.rotate(-.025);c.fillStyle=yellow;c.fillRect(-14,-4,520,104);c.fillStyle=ink;c.font='400 86px "Russo One"';c.textBaseline='top';c.fillText('НИ КАПЛИ!',0,4);c.restore();
-    c.fillStyle=ink;c.font='700 40px Caveat';c.textAlign='right';c.fillText('Волна дня · '+meta.dayLabel,W-60,62);c.fillText('бухта Garret',W-60,104);c.textAlign='left';
+    c.save();c.translate(60,58);c.rotate(-.025);
+    if(g.isAviasales){
+      c.fillStyle='#0c73fe';c.fillRect(-14,-4,660,104);c.fillStyle='#ffffff';c.font='400 78px "Russo One"';c.textBaseline='top';c.fillText('✈ РЕЙС СПАСЁН!',0,10);
+    } else {
+      c.fillStyle=yellow;c.fillRect(-14,-4,520,104);c.fillStyle=ink;c.font='400 86px "Russo One"';c.textBaseline='top';c.fillText('НИ КАПЛИ!',0,4);
+    }
+    c.restore();
+    c.fillStyle=ink;c.font='700 40px Caveat';c.textAlign='right';c.fillText('Волна дня · '+meta.dayLabel,W-60,62);
+    c.fillText(g.isAviasales?'Авиасейлс · бухта Пхукет':'бухта Garret',W-60,104);c.textAlign='left';
     const shots=this.pick(),slots=[[40,178,1000,560,-.012],[40,770,490,400,.018],[550,770,490,400,-.02]];
     slots.forEach(([x,y,w,h,tilt],i)=>{
       const shot=shots[i];
@@ -5245,9 +5410,17 @@ class RunComic {
     c.fillStyle=ink;c.font='400 30px "Russo One"';c.fillText('СЧЁТ',60,1236);
     c.font='400 92px "Russo One"';c.fillText(Math.round(g.score).toLocaleString('ru-RU'),56,1320);
     const duel=g.duel.result;
-    c.fillStyle=duel?.outcome==='victory'?'#125577':coral;c.font='400 38px "Russo One"';c.textAlign='right';c.fillText((duel?.outcome==='tie'?'ФОТОФИНИШ':(duel?.place??1)+'-е МЕСТО')+' · ПИВО '+(duel?.max??Math.round(g.mug.level*100))+'%',W-60,1262);
-    c.fillStyle=ink;c.font='700 34px Caveat';c.fillText('Бонус за пиво +'+(duel?.beerBonus??g.deliveryBonus).toLocaleString('ru-RU'),W-60,1302);
-    c.font='700 30px Caveat';c.fillText(summary.record?'НОВЫЙ РЕКОРД!':'Побей меня — ссылка в описании',W-60,1336);c.textAlign='left';
+    c.fillStyle=duel?.outcome==='victory'?'#125577':coral;c.font='400 38px "Russo One"';c.textAlign='right';
+    if(g.isAviasales){
+      c.fillText('РЕЙС СПАСЁН! · ПАСПОРТ '+(duel?.max??Math.round(g.mug.level*100))+'% СУХОЙ',W-60,1262);
+      c.fillStyle=ink;c.font='700 34px Caveat';c.fillText('Бонус за сухой паспорт +'+(duel?.beerBonus??g.deliveryBonus).toLocaleString('ru-RU'),W-60,1302);
+      c.font='700 30px Caveat';c.fillText(summary.record?'НОВЫЙ РЕКОРД!':'Авиасейлс — поиск дешёвых авиабилетов',W-60,1336);
+    } else {
+      c.fillText((duel?.outcome==='tie'?'ФОТОФИНИШ':(duel?.place??1)+'-е МЕСТО')+' · ПИВО '+(duel?.max??Math.round(g.mug.level*100))+'%',W-60,1262);
+      c.fillStyle=ink;c.font='700 34px Caveat';c.fillText('Бонус за пиво +'+(duel?.beerBonus??g.deliveryBonus).toLocaleString('ru-RU'),W-60,1302);
+      c.font='700 30px Caveat';c.fillText(summary.record?'НОВЫЙ РЕКОРД!':'Побей меня — ссылка в описании',W-60,1336);
+    }
+    c.textAlign='left';
     this.card=canvas;
     this.blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
     if(this.url)URL.revokeObjectURL(this.url);this.url=this.blob?URL.createObjectURL(this.blob):canvas.toDataURL('image/png');
@@ -5280,7 +5453,13 @@ class RunComic {
     const url=new URL(location.href);url.search='';url.hash='';
     url.searchParams.set('vs',Math.round(this.game.score));url.searchParams.set('seed',this.game.meta.seed);return url.toString();
   }
-  shareText(){const r=this.game.duel.result;return (r?.outcome==='tie'?'Финишировал одновременно с Борисом':r?.place===1?'Обогнал Бориса':'Занял 2-е место')+', сохранил '+(r?.max??Math.round(this.game.mug.level*100))+'% пива и набрал '+Math.round(this.game.score).toLocaleString('ru-RU')+' в «Ни капли!». Побьёшь?';}
+  shareText(){
+    const r=this.game.duel.result;
+    if(this.game.isAviasales){
+      return 'Успел на рейс Авиасейлс! Сохранил '+(r?.max??Math.round(this.game.mug.level*100))+'% сухости паспорта и набрал '+Math.round(this.game.score).toLocaleString('ru-RU')+' очков в «Успеть на рейс!». Побьёшь?';
+    }
+    return (r?.outcome==='tie'?'Финишировал одновременно с Борисом':r?.place===1?'Обогнал Бориса':'Занял 2-е место')+', сохранил '+(r?.max??Math.round(this.game.mug.level*100))+'% пива и набрал '+Math.round(this.game.score).toLocaleString('ru-RU')+' в «Ни капли!». Побьёшь?';
+  }
   async share(){
     await this.compose();
     const file=this.blob&&typeof File==='function'?new File([this.blob],this.fileName,{type:'image/png'}):null;
@@ -6499,7 +6678,7 @@ class SurfSetpiece {
     const p=this.game.p;
     if(p.z>258&&p.z<294)return {id:'route',title:'← СРЕЗКА · ШИРОКИЙ ПУТЬ →',line:'Узкий проход сохраняет Кураж.'};
     if(p.z>294&&p.z<331&&Math.abs(p.x+1.5)<3.7)return {id:'danger',title:'СКАЛА · ВЫБЕРИ СТОРОНУ',line:''};
-    if(p.z>1060&&p.z<1098)return {id:'ramp',title:'ПОСЛЕДНИЙ ВЫЛЕТ',line:'Обгони Бориса! Пиво на финише — бонус к очкам.'};
+    if(p.z>1060&&p.z<1098)return {id:'ramp',title:'ПОСЛЕДНИЙ ВЫЛЕТ',line:this.game.isAviasales?'Пирс близко! Сухой паспорт — бонус к очкам.':'Обгони Бориса! Пиво на финише — бонус к очкам.'};
     return null;
   }
   update(){
@@ -7045,10 +7224,10 @@ class CourseShow {
   }
   makeHarbor(){
     this.boat(14,382,0xd87b5c);this.boat(-16,570,0x367f8e);this.boat(16,834,0xe1aa50);
-    const g=this.group(710,52);this.sign(g,'БОРИС · ДАЙ ВОЛНУ!',-15,7,-28,8,'#ab5938');
+    const g=this.group(710,52);this.sign(g,this.game.isAviasales?'АЭРОПОРТ-ЭКСПРЕСС ↗':'БОРИС · ДАЙ ВОЛНУ!',-15,7,-28,8,'#ab5938');
     for(let i=0;i<6;i++)this.person(g,-14+(i%2)*2,3.8,-26+i*10,[0xe77656,0xdeb84f,0x539791][i%3]);
     this.pennants(g,-18,-12,8,-5,6);
-    const rest=this.group(843,16);this.sign(rest,'ВЫДОХНИ',-16,4,0,5,'#357e73');
+    const rest=this.group(843,16);this.sign(rest,this.game.isAviasales?'РЕЙС БЛИЗКО!':'ВЫДОХНИ',-16,4,0,5,'#357e73');
   }
   makeBar(){
     const g=this.group(1372,40);this.bar=g;
@@ -7068,8 +7247,13 @@ class CourseShow {
     this.maxCup=new THREE.Sprite(new THREE.SpriteMaterial({map:this.game.handBeer.texture,transparent:true,depthWrite:false,depthTest:false}));
     this.borisCup=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,depthWrite:false,depthTest:false}));
     for(const [cup,holder] of [[this.maxCup,this.glass],[this.borisCup,this.borisGlass]]){cup.center.set(.5,0);cup.scale.set(.78,1,1);cup.renderOrder=6;holder.add(cup);}
-    this.sign(g,'МАКС',-13,6.3,1.5,1.8,'#27596b');this.sign(g,'БОРИС',-10.5,6.3,1.5,1.8,'#b7633d');
-    this.finishBanner=this.sign(g,'ФИНИШ',1,8,-10,10,'#b7633d');
+    if(this.game.isAviasales){
+      this.borisGlass.visible=false;
+      this.sign(g,'ТРАП',-13,6.3,1.5,1.8,'#27596b');
+    } else {
+      this.sign(g,'МАКС',-13,6.3,1.5,1.8,'#27596b');this.sign(g,'БОРИС',-10.5,6.3,1.5,1.8,'#b7633d');
+    }
+    this.finishBanner=this.sign(g,this.game.isAviasales?'ПОСАДКА':'ФИНИШ',1,8,-10,10,'#b7633d');
     for(const x of [-6,8])this.box(g,x,3.8,-10,.20,8,.20,0xf4dbb0);
     this.confetti=[];
     for(let i=0;i<28;i++){
@@ -7163,7 +7347,11 @@ class CourseShow {
     this.cameraFrom=g.camera.position.clone();this.lookFrom=new THREE.Vector3(0,0,-1).applyQuaternion(g.camera.quaternion).multiplyScalar(22).add(g.camera.position);
     this.delivery.classList.remove('hidden');g.container.classList.add('delivery-active');
     const result=g.duel.result;
-    document.getElementById('delivery-line').textContent=(success?'ТОНИ: «МАКС ПЕРВЫЙ! КУБОК ТВОЙ!»':result.outcome==='tie'?'ТОНИ: «ФОТОФИНИШ! ОБЪЯВЛЯЮ НИЧЬЮ.»':'ТОНИ: «БОРИС ПЕРВЫЙ. РЕВАНШ?»')+'\nПИВО '+result.max+'% · БОНУС +'+result.beerBonus.toLocaleString('ru-RU');
+    if(g.isAviasales){
+      document.getElementById('delivery-line').textContent=(success?'КАПИТАН: «УСПЕЛ! ЗАПРЫГИВАЙ НА БОРТ!»':'КАПИТАН: «КАТЕР УШЁЛ...»')+'\nПАСПОРТ '+result.max+'% СУХОЙ · БОНУС +'+result.beerBonus.toLocaleString('ru-RU');
+    } else {
+      document.getElementById('delivery-line').textContent=(success?'ТОНИ: «МАКС ПЕРВЫЙ! КУБОК ТВОЙ!»':result.outcome==='tie'?'ТОНИ: «ФОТОФИНИШ! ОБЪЯВЛЯЮ НИЧЬЮ.»':'ТОНИ: «БОРИС ПЕРВЫЙ. РЕВАНШ?»')+'\nПИВО '+result.max+'% · БОНУС +'+result.beerBonus.toLocaleString('ru-RU');
+    }
     this.delivery.querySelector('button').focus({preventScroll:true});g.renderDirty=true;
   }
   updateDelivery(dt){
@@ -7575,7 +7763,7 @@ class BeerDuel {
   }
   mount(){
     this.ticket=document.createElement('div');this.ticket.className='duel-ticket paper';
-    this.ticket.innerHTML='<span>МЕСТО</span><strong id="race-place-value">1<small> / 2</small></strong>';
+    this.ticket.innerHTML=this.game.isAviasales ? '<span>ДО ПИРСА</span><strong id="race-place-value">1200<small> М</small></strong>' : '<span>МЕСТО</span><strong id="race-place-value">1<small> / 2</small></strong>';
     document.getElementById('hud').insertBefore(this.ticket,document.getElementById('pause-button'));
     this.status=document.createElement('div');this.status.className='duel-status';this.status.setAttribute('role','status');this.status.setAttribute('aria-live','polite');this.game.container.append(this.status);
     this.glassCanvas=document.createElement('canvas');this.glassCanvas.width=128;this.glassCanvas.height=200;
@@ -7584,8 +7772,11 @@ class BeerDuel {
     this.glass.renderOrder=4;this.boris.jetCard.add(this.glass);
   }
   reset(){
-    this.enabled=!this.game.flowTest;this.game.container.classList.toggle('beer-duel',this.enabled);
-    document.querySelector('.beer-ticket .ticket-label').textContent=this.enabled?'ПИВО · БОНУС':'ДОВЕЗИ';
+    this.enabled=!this.game.flowTest && !this.game.isAviasales;
+    this.game.container.classList.toggle('beer-duel',this.enabled);
+    const label=document.querySelector('.beer-ticket .ticket-label');
+    if(label)label.textContent=this.game.isAviasales?'ПАСПОРТ':(this.enabled?'ПИВО · БОНУС':'ДОВЕЗИ');
+    if(this.ticket)this.ticket.querySelector('span').textContent=this.game.isAviasales?'ДО ПИРСА':'МЕСТО';
     this.liquid.reset();this.liquid.foam=.18;this.liquid.totalSpilled=0;
     this.clock=this.cooldown=this.previousVy=this.roll=0;this.arrived=false;this.arrivalTime=null;this.deliveredBeer=null;this.result=null;this.lastStatus='';
     this.contacts=new Set();this.laneTarget=undefined;this.events=[];this.recovery=0;this.nextHop=5;
@@ -7718,6 +7909,11 @@ class BeerDuel {
   }
   settle(maxTime=this.game.elapsed){
     if(this.result)return this.result;
+    if(this.game.isAviasales){
+      const max=Math.round(THREE.MathUtils.clamp(this.game.mug.level,0,1)*100);
+      this.result=Object.freeze({max,outcome:'victory',place:1,maxTime,beerBonus:Math.round(max*50)});
+      this.updateHUD();return this.result;
+    }
     // Compare interpolated crossings, including two arrivals in the same step.
     const max=Math.round(THREE.MathUtils.clamp(this.game.mug.level,0,1)*100);
     const boris=Math.round(THREE.MathUtils.clamp(this.deliveredBeer??this.liquid.level,0,1)*100);
@@ -7727,6 +7923,14 @@ class BeerDuel {
     this.updateHUD();return this.result;
   }
   updateHUD(){
+    if(this.game.isAviasales){
+      const dist=Math.max(0,Math.round(1200-(this.game.p?.z??0)));
+      const el=document.getElementById('race-place-value');
+      if(el){el.innerHTML=dist+'<small> М</small>';el.setAttribute('aria-label',dist+' метров до пирса');}
+      const line=dist<=0?'ПИРС ДОСТИГНУТ! ПОСАДКА':dist<300?'КАШЛЯЕТ МОТОР · УСПЕВАЕШЬ!':'ГАЗУЙ! КАТЕР ЖДЁТ · '+dist+' М';
+      if(line!==this.lastStatus){this.status.textContent=line;this.lastStatus=line;}
+      return;
+    }
     const gap=(this.game.p?.z??0)-this.boris.z,place=this.result?.place??(gap>=0?1:2),el=document.getElementById('race-place-value');
     if(el.dataset.value!==String(place)){el.innerHTML=place+'<small> / 2</small>';el.dataset.value=place;}
     el.setAttribute('aria-label',place+' место из 2');
@@ -7786,9 +7990,17 @@ class SkyAdvertiser {
           loader.load('assets/comics/seaplane-lime-v3.png',onLoaded,undefined,()=>reject(new Error('Не удалось загрузить дальний самолёт')));
         });
       }),
-      new Promise((resolve,reject)=>new THREE.ImageLoader().load('assets/comics/baltika-logo-reference.png',logo=>{
-        this.banner.material.map=this.makeBanner(logo);this.banner.material.needsUpdate=true;resolve();
-      },undefined,()=>reject(new Error('Не удалось загрузить логотип Балтики'))))
+      new Promise((resolve,reject)=>{
+        if (this.game.isAviasales) {
+          this.banner.material.map = this.makeBanner(null);
+          this.banner.material.needsUpdate = true;
+          resolve();
+          return;
+        }
+        new THREE.ImageLoader().load('assets/comics/baltika-logo-reference.png',logo=>{
+          this.banner.material.map=this.makeBanner(logo);this.banner.material.needsUpdate=true;resolve();
+        },undefined,()=>reject(new Error('Не удалось загрузить логотип Балтики')));
+      })
     ]).then(()=>{this.group.visible=true;this.update();this.game.renderDirty=true;});
     this._readyPromise.catch(()=>{});
     return this._readyPromise;
@@ -7814,6 +8026,20 @@ class SkyAdvertiser {
   makeBanner(logo){
     const canvas=document.createElement('canvas');canvas.width=1664;canvas.height=320;
     const c=canvas.getContext('2d');
+    if (this.game.isAviasales || !logo) {
+      c.fillStyle = '#0c73fe';
+      c.beginPath();c.moveTo(3,5);c.lineTo(1658,2);c.lineTo(1662,314);c.lineTo(5,318);c.closePath();c.fill();
+      c.strokeStyle = '#ffffff';c.lineWidth = 4;
+      c.strokeRect(18, 16, 1628, 288);
+      c.fillStyle = 'rgba(255,255,255,0.08)';
+      for (let i = 0; i < 350; i++) { c.fillRect(Math.random() * 1664, Math.random() * 320, 3, 3); }
+      c.fillStyle = '#ffffff';
+      c.font = '900 100px "Russo One", Impact, sans-serif';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText('✈  АВИАСЕЙЛС · РЕЙС НЕ ЖДЁТ!', 832, 160);
+      const texture=new THREE.CanvasTexture(canvas);texture.minFilter=THREE.LinearMipmapLinearFilter;return texture;
+    }
     // Match the supplied artwork's navy exactly; retain its original lettering
     // and gold arcs instead of approximating the brand with a font.
     c.drawImage(logo,0,0);const navy=c.getImageData(0,0,1,1).data;c.clearRect(0,0,canvas.width,canvas.height);
@@ -7926,6 +8152,7 @@ class PaperSurfGame {
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.Fog(0xc7d7c9, 100, 225);
     this.camera = new THREE.PerspectiveCamera(58, 1, .15, 1800);
+    this.isAviasales = Boolean(window.IS_AVIASALES || new URLSearchParams(window.location.search).has('aviasales'));
     this.renderer = new THREE.WebGLRenderer({canvas:document.getElementById('surf-canvas'), antialias:!this.input.mobile, alpha:true, powerPreference:'high-performance'});
     this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, this.input.mobile?1.25:1.75));
     this.renderer.setClearColor(0, 0);
@@ -8729,10 +8956,16 @@ class PaperSurfGame {
         this.audio.playSlam();
       }
     }
-    document.getElementById('result-title').textContent=success?'1-е МЕСТО!':result.outcome==='tie'?'НИЧЬЯ':'2-е МЕСТО';
-    document.getElementById('result-beer').textContent=result.max+'%';
-    document.getElementById('result-beer-bonus').textContent='+'+this.deliveryBonus.toLocaleString('ru-RU');
-    document.getElementById('result-comment').textContent=success?'Кубок наш!':result.outcome==='tie'?'Финиш вровень.':'Борис впереди. Реванш?';
+    if(this.isAviasales){
+      document.getElementById('result-title').textContent=success?'РЕЙС СПАСЁН!':'КАТЕР УШЁЛ...';
+      document.getElementById('result-comment').textContent=success?'Паспорт сухой, посадка открыта!':'Не успел к трапу. Следующий рейс завтра.';
+    } else {
+      document.getElementById('result-title').textContent=success?'1-е МЕСТО!':result.outcome==='tie'?'НИЧЬЯ':'2-е МЕСТО';
+      document.getElementById('result-comment').textContent=success?'Кубок наш!':result.outcome==='tie'?'Финиш вровень.':'Борис впереди. Реванш?';
+    }
+    const beerEl=document.getElementById('result-beer'),bonusEl=document.getElementById('result-beer-bonus');
+    if(beerEl)beerEl.textContent=result.max+'%';
+    if(bonusEl)bonusEl.textContent='+'+this.deliveryBonus.toLocaleString('ru-RU');
     this.companion.showResult(result.outcome);
     document.getElementById('result-score').textContent=Math.round(this.score).toLocaleString('ru-RU');
     this.renderResultMeta(this.meta.finish());
@@ -8903,7 +9136,12 @@ class PaperSurfGame {
   drawBeer() {
     const c=this.beerCtx,w=this.beerCanvas.width,h=this.beerCanvas.height;
     c.clearRect(0,0,w,h);c.save();c.translate(w*.5,h*.5);c.rotate(this.handBeer.roll*.5);c.translate(-w*.5,-h*.5);
-    c.drawImage(this.handBeer.canvas,74,55,285,370,0,0,w,h);c.restore();
+    if(this.isAviasales){
+      c.drawImage(this.handBeer.canvas,110,65,195,330,0,0,w,h);
+    }else{
+      c.drawImage(this.handBeer.canvas,74,55,285,370,0,0,w,h);
+    }
+    c.restore();
   }
   updateHUD() {
     this.duel.updateHUD();

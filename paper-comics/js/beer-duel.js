@@ -37,7 +37,7 @@ class BeerDuel {
   }
   mount(){
     this.ticket=document.createElement('div');this.ticket.className='duel-ticket paper';
-    this.ticket.innerHTML='<span>МЕСТО</span><strong id="race-place-value">1<small> / 2</small></strong>';
+    this.ticket.innerHTML=this.game.isAviasales ? '<span>ДО ПИРСА</span><strong id="race-place-value">1200<small> М</small></strong>' : '<span>МЕСТО</span><strong id="race-place-value">1<small> / 2</small></strong>';
     document.getElementById('hud').insertBefore(this.ticket,document.getElementById('pause-button'));
     this.status=document.createElement('div');this.status.className='duel-status';this.status.setAttribute('role','status');this.status.setAttribute('aria-live','polite');this.game.container.append(this.status);
     this.glassCanvas=document.createElement('canvas');this.glassCanvas.width=128;this.glassCanvas.height=200;
@@ -46,8 +46,11 @@ class BeerDuel {
     this.glass.renderOrder=4;this.boris.jetCard.add(this.glass);
   }
   reset(){
-    this.enabled=!this.game.flowTest;this.game.container.classList.toggle('beer-duel',this.enabled);
-    document.querySelector('.beer-ticket .ticket-label').textContent=this.enabled?'ПИВО · БОНУС':'ДОВЕЗИ';
+    this.enabled=!this.game.flowTest && !this.game.isAviasales;
+    this.game.container.classList.toggle('beer-duel',this.enabled);
+    const label=document.querySelector('.beer-ticket .ticket-label');
+    if(label)label.textContent=this.game.isAviasales?'ПАСПОРТ':(this.enabled?'ПИВО · БОНУС':'ДОВЕЗИ');
+    if(this.ticket)this.ticket.querySelector('span').textContent=this.game.isAviasales?'ДО ПИРСА':'МЕСТО';
     this.liquid.reset();this.liquid.foam=.18;this.liquid.totalSpilled=0;
     this.clock=this.cooldown=this.previousVy=this.roll=0;this.arrived=false;this.arrivalTime=null;this.deliveredBeer=null;this.result=null;this.lastStatus='';
     this.contacts=new Set();this.laneTarget=undefined;this.events=[];this.recovery=0;this.nextHop=5;
@@ -180,6 +183,11 @@ class BeerDuel {
   }
   settle(maxTime=this.game.elapsed){
     if(this.result)return this.result;
+    if(this.game.isAviasales){
+      const max=Math.round(THREE.MathUtils.clamp(this.game.mug.level,0,1)*100);
+      this.result=Object.freeze({max,outcome:'victory',place:1,maxTime,beerBonus:Math.round(max*50)});
+      this.updateHUD();return this.result;
+    }
     // Compare interpolated crossings, including two arrivals in the same step.
     const max=Math.round(THREE.MathUtils.clamp(this.game.mug.level,0,1)*100);
     const boris=Math.round(THREE.MathUtils.clamp(this.deliveredBeer??this.liquid.level,0,1)*100);
@@ -189,6 +197,14 @@ class BeerDuel {
     this.updateHUD();return this.result;
   }
   updateHUD(){
+    if(this.game.isAviasales){
+      const dist=Math.max(0,Math.round(1200-(this.game.p?.z??0)));
+      const el=document.getElementById('race-place-value');
+      if(el){el.innerHTML=dist+'<small> М</small>';el.setAttribute('aria-label',dist+' метров до пирса');}
+      const line=dist<=0?'ПИРС ДОСТИГНУТ! ПОСАДКА':dist<300?'КАШЛЯЕТ МОТОР · УСПЕВАЕШЬ!':'ГАЗУЙ! КАТЕР ЖДЁТ · '+dist+' М';
+      if(line!==this.lastStatus){this.status.textContent=line;this.lastStatus=line;}
+      return;
+    }
     const gap=(this.game.p?.z??0)-this.boris.z,place=this.result?.place??(gap>=0?1:2),el=document.getElementById('race-place-value');
     if(el.dataset.value!==String(place)){el.innerHTML=place+'<small> / 2</small>';el.dataset.value=place;}
     el.setAttribute('aria-label',place+' место из 2');

@@ -142,7 +142,7 @@ class SurfSetpiece {
     const p=this.game.p;
     if(p.z>258&&p.z<294)return {id:'route',title:'← СРЕЗКА · ШИРОКИЙ ПУТЬ →',line:'Узкий проход сохраняет Кураж.'};
     if(p.z>294&&p.z<331&&Math.abs(p.x+1.5)<3.7)return {id:'danger',title:'СКАЛА · ВЫБЕРИ СТОРОНУ',line:''};
-    if(p.z>1060&&p.z<1098)return {id:'ramp',title:'ПОСЛЕДНИЙ ВЫЛЕТ',line:'Обгони Бориса! Пиво на финише — бонус к очкам.'};
+    if(p.z>1060&&p.z<1098)return {id:'ramp',title:'ПОСЛЕДНИЙ ВЫЛЕТ',line:this.game.isAviasales?'Пирс близко! Сухой паспорт — бонус к очкам.':'Обгони Бориса! Пиво на финише — бонус к очкам.'};
     return null;
   }
   update(){

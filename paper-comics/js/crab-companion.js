@@ -8,7 +8,15 @@ class CrabCompanion {
       victory:{rect:[120,493,577,527]},
       defeat:{rect:[826,608,652,400]}
     };
-    this.lines={
+    this.lines=this.game.isAviasales ? {
+      spill:['Паспорт намок! Выше держи!','Береги документы, не улетим!'],
+      shark:['Акула! Она тоже на посадку спешит!'],
+      escape:['Ха! Акулы без билета не летают!'],
+      dodge:['Все страницы целы!'],
+      trick:['Высший пилотаж!'],
+      wake:['Лови гребень! Ускоряемся!'],
+      home:['Вижу катер! Трап подан, залетай!']
+    } : {
       spill:['Эй! Панцирь в пене!','Полегче с виражами!'],
       shark:['Зубы сзади!'],
       escape:['Не догонишь!'],
@@ -123,12 +131,12 @@ class CrabCompanion {
   showResult(outcome){
     const success=outcome===true||outcome==='victory',tie=outcome==='tie';
     this.draw(document.getElementById('result-crab'),success?'victory':'defeat');
-    document.getElementById('result-crab').setAttribute('aria-label',success?'Клешня на финише с кубком':'Клешня на финише');
-    document.getElementById('result-crab-line').textContent=success?'«Мы легенды!»':tie?'«Ноздря в ноздрю!»':'«В следующий раз рулю я!»';
+    document.getElementById('result-crab').setAttribute('aria-label',this.game.isAviasales?'Клешня на катере':(success?'Клешня на финише с кубком':'Клешня на финише'));
+    document.getElementById('result-crab-line').textContent=this.game.isAviasales?(success?'«Мы на катере! Заводи мотор!»':'«Эх, катер ушёл...»'):(success?'«Мы легенды!»':tie?'«Ноздря в ноздрю!»':'«В следующий раз рулю я!»');
     const screen=document.getElementById('result-screen'),art=document.getElementById('result-art');
     screen.dataset.outcome=tie?'tie':success?'victory':'defeat';
-    document.getElementById('result-trophy').classList.toggle('hidden',!success);
-    art.setAttribute('aria-label',success?'Клешня мчится на доске и поднимает кубок':tie?'Клешня поймала волну у самого финиша':'Клешня несётся к финишу на доске');
+    document.getElementById('result-trophy').classList.toggle('hidden',!success||this.game.isAviasales);
+    art.setAttribute('aria-label',this.game.isAviasales?'Клешня мчится на доске к катеру':(success?'Клешня мчится на доске и поднимает кубок':tie?'Клешня поймала волну у самого финиша':'Клешня несётся к финишу на доске'));
     document.getElementById('crab-callout')?.classList.remove('visible');
   }
 }

@@ -12,6 +12,10 @@ function createServer() {
     try {url = new URL(req.url, 'http://localhost');pathname = decodeURIComponent(url.pathname);}
     catch (_) {res.writeHead(400);res.end();return;}
     // Keep the document and its relative CSS, scripts and assets in the same directory.
+    if (pathname === '/aviasales' || pathname === '/paper-comics/aviasales') {
+      res.writeHead(302, {'Location':'/paper-comics/aviasales.html' + url.search, 'Cache-Control':'no-cache'});
+      res.end();return;
+    }
     if (pathname === '/' || pathname === '/index.html' ||
         pathname === '/prototype.html' || pathname === '/garret-surf.html' ||
         pathname === '/sandbox.html' || pathname === '/slice.html' ||
@@ -31,9 +35,20 @@ function createServer() {
 }
 
 if (require.main === module) {
-  const port = Number(process.argv[2] || process.env.PORT || 8080);
+  let port = Number(process.argv[2] || process.env.PORT || 8080);
   const server = createServer();
-  server.on('error', error => {console.error(error.message);process.exitCode=1;});
-  server.listen(port, '0.0.0.0', () => console.log(`Paper comics: http://127.0.0.1:${port}/ and http://192.168.0.102:${port}/`));
+  server.on('error', error => {
+    if (error.code === 'EADDRINUSE') {
+      console.log(`Port ${port} in use, trying ${port + 1}...`);
+      port++;
+      server.listen(port, '0.0.0.0');
+    } else {
+      console.error(error.message);
+      process.exitCode = 1;
+    }
+  });
+  server.listen(port, '0.0.0.0', () => {
+    console.log(`SERVER_READY: http://127.0.0.1:${port}/aviasales.html`);
+  });
 }
 module.exports = {createServer};

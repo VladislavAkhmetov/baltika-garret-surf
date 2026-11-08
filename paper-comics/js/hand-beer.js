@@ -83,7 +83,9 @@ class HandBeer {
   }
   inside(c){c.beginPath();c.moveTo(121,91);c.lineTo(264,91);c.lineTo(251,385);c.quadraticCurveTo(191,403,133,382);c.closePath();}
   draw(){
-    const c=this.ctx,l=this.liquid,t=this.game.time||0,paper=this.frame.complete&&this.frame.naturalWidth>0;c.clearRect(0,0,384,480);
+    const c=this.ctx,l=this.liquid,t=this.game.time||0;c.clearRect(0,0,384,480);
+    if(this.game.isAviasales){this.drawPassport(c,l,t);return;}
+    const paper=this.frame.complete&&this.frame.naturalWidth>0;
     // Cream paper silhouette and a thick, translucent glass handle.
     c.lineCap='round';c.lineJoin='round';c.strokeStyle='#f6ebd3';c.lineWidth=25;
     if(!paper){
@@ -112,6 +114,119 @@ class HandBeer {
     c.fillStyle='rgba(31,84,93,.20)';c.beginPath();c.ellipse(193,88,81,12,0,Math.PI,Math.PI*2);c.fill();c.strokeStyle='#244650';c.lineWidth=3;c.beginPath();c.ellipse(193,88,82,12,0,0,Math.PI*2);c.stroke();c.strokeStyle='#fff7dc';c.lineWidth=5;c.beginPath();c.ellipse(193,89,79,10,0,0,Math.PI);c.stroke();
     }
     for(const d of this.drops){c.globalAlpha=Math.min(1,d.life*3);c.fillStyle='#f8b52b';c.strokeStyle='#fff3cb';c.lineWidth=2;c.beginPath();c.ellipse(d.x,d.y,d.r,d.r*1.35,-.35,0,Math.PI*2);c.fill();c.stroke();}c.globalAlpha=1;
+  }
+  drawPassport(c,l,t){
+    // Boarding pass sticking out from top of passport
+    c.save();
+    c.translate(170, 72);
+    c.rotate(-0.06);
+    c.fillStyle = '#f8f4e6';
+    c.strokeStyle = '#1b333c';
+    c.lineWidth = 3;
+    c.beginPath();
+    c.roundRect ? c.roundRect(0, 0, 95, 90, [6, 6, 0, 0]) : c.rect(0, 0, 95, 90);
+    c.fill(); c.stroke();
+    // Cyan flight header
+    c.fillStyle = '#0c73fe';
+    c.fillRect(6, 6, 83, 14);
+    // Airplane symbol on ticket
+    c.fillStyle = '#ffffff';
+    c.font = '700 9px sans-serif';
+    c.fillText('✈ AVIA', 12, 17);
+    // Barcode lines
+    c.fillStyle = '#17282c';
+    for (let x = 12; x < 84; x += (x % 5 === 0 ? 5 : 3)) {
+      c.fillRect(x, 26, 1.8, 22);
+    }
+    c.restore();
+
+    // Dark Navy Passport Booklet
+    const px = 120, py = 120, pw = 175, ph = 265, r = 12;
+    c.save();
+    // Drop shadow
+    c.shadowColor = 'rgba(16, 63, 88, 0.25)';
+    c.shadowBlur = 14;
+    c.shadowOffsetY = 6;
+    c.fillStyle = '#0f2942';
+    c.strokeStyle = '#17282c';
+    c.lineWidth = 4;
+    c.beginPath();
+    if (c.roundRect) c.roundRect(px, py, pw, ph, r);
+    else c.rect(px, py, pw, ph);
+    c.fill();
+    c.shadowColor = 'transparent';
+    c.stroke();
+
+    // Gold foil embossed border
+    c.strokeStyle = 'rgba(235, 192, 85, 0.85)';
+    c.lineWidth = 2.5;
+    c.strokeRect(px + 10, py + 10, pw - 20, ph - 20);
+
+    // Gold text: ПАСПОРТ
+    c.fillStyle = '#f2c94c';
+    c.font = '700 16px "Russo One", Impact, sans-serif';
+    c.textAlign = 'center';
+    c.letterSpacing = '3px';
+    c.fillText('ПАСПОРТ', px + pw / 2, py + 46);
+
+    // Gold embossed travel crest (airplane surrounded by stars)
+    const cx = px + pw / 2, cy = py + 120;
+    c.beginPath();
+    c.arc(cx, cy, 32, 0, Math.PI * 2);
+    c.strokeStyle = 'rgba(235, 192, 85, 0.7)';
+    c.lineWidth = 2;
+    c.stroke();
+    // Airplane glyph in center
+    c.font = '28px sans-serif';
+    c.fillStyle = '#f2c94c';
+    c.fillText('✈', cx, cy + 9);
+
+    c.font = '600 10px Rubik, sans-serif';
+    c.fillStyle = 'rgba(242, 201, 76, 0.75)';
+    c.fillText('PASSPORT', cx, py + ph - 28);
+
+    // Water soak effect based on l.level (1.0 = completely dry, 0 = soaked)
+    const wetLevel = Math.max(0, Math.min(1, 1 - l.level));
+    if (wetLevel > 0.01) {
+      c.save();
+      c.beginPath();
+      if (c.roundRect) c.roundRect(px, py, pw, ph, r);
+      else c.rect(px, py, pw, ph);
+      c.clip();
+
+      const soakTop = py + ph - wetLevel * ph;
+      const wetGrad = c.createLinearGradient(0, soakTop, 0, py + ph);
+      wetGrad.addColorStop(0, 'rgba(5, 18, 32, 0.45)');
+      wetGrad.addColorStop(0.3, 'rgba(5, 14, 25, 0.75)');
+      wetGrad.addColorStop(1, 'rgba(2, 8, 16, 0.92)');
+      c.fillStyle = wetGrad;
+
+      c.beginPath();
+      c.moveTo(px, soakTop);
+      for (let x = px; x <= px + pw; x += 10) {
+        const wave = Math.sin((x + t * 40) * 0.1) * 3;
+        c.lineTo(x, soakTop + wave);
+      }
+      c.lineTo(px + pw, py + ph);
+      c.lineTo(px, py + ph);
+      c.closePath();
+      c.fill();
+      c.restore();
+    }
+    c.restore();
+
+    // Splashing water drops
+    for (const d of this.drops) {
+      c.globalAlpha = Math.min(1, d.life * 3);
+      c.fillStyle = 'rgba(180, 235, 255, 0.85)';
+      c.strokeStyle = '#ffffff';
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.ellipse(d.x, d.y, d.r, d.r * 1.3, -0.35, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+    }
+    c.globalAlpha = 1;
   }
 }
 window.HandBeer=HandBeer;window.ComicBeerLiquid=ComicBeerLiquid;

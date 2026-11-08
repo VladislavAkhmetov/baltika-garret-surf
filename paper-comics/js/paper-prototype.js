@@ -13,6 +13,7 @@ class PaperSurfGame {
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.Fog(0xc7d7c9, 100, 225);
     this.camera = new THREE.PerspectiveCamera(58, 1, .15, 1800);
+    this.isAviasales = Boolean(window.IS_AVIASALES || new URLSearchParams(window.location.search).has('aviasales'));
     this.renderer = new THREE.WebGLRenderer({canvas:document.getElementById('surf-canvas'), antialias:!this.input.mobile, alpha:true, powerPreference:'high-performance'});
     this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, this.input.mobile?1.25:1.75));
     this.renderer.setClearColor(0, 0);
@@ -816,10 +817,16 @@ class PaperSurfGame {
         this.audio.playSlam();
       }
     }
-    document.getElementById('result-title').textContent=success?'1-е МЕСТО!':result.outcome==='tie'?'НИЧЬЯ':'2-е МЕСТО';
-    document.getElementById('result-beer').textContent=result.max+'%';
-    document.getElementById('result-beer-bonus').textContent='+'+this.deliveryBonus.toLocaleString('ru-RU');
-    document.getElementById('result-comment').textContent=success?'Кубок наш!':result.outcome==='tie'?'Финиш вровень.':'Борис впереди. Реванш?';
+    if(this.isAviasales){
+      document.getElementById('result-title').textContent=success?'РЕЙС СПАСЁН!':'КАТЕР УШЁЛ...';
+      document.getElementById('result-comment').textContent=success?'Паспорт сухой, посадка открыта!':'Не успел к трапу. Следующий рейс завтра.';
+    } else {
+      document.getElementById('result-title').textContent=success?'1-е МЕСТО!':result.outcome==='tie'?'НИЧЬЯ':'2-е МЕСТО';
+      document.getElementById('result-comment').textContent=success?'Кубок наш!':result.outcome==='tie'?'Финиш вровень.':'Борис впереди. Реванш?';
+    }
+    const beerEl=document.getElementById('result-beer'),bonusEl=document.getElementById('result-beer-bonus');
+    if(beerEl)beerEl.textContent=result.max+'%';
+    if(bonusEl)bonusEl.textContent='+'+this.deliveryBonus.toLocaleString('ru-RU');
     this.companion.showResult(result.outcome);
     document.getElementById('result-score').textContent=Math.round(this.score).toLocaleString('ru-RU');
     this.renderResultMeta(this.meta.finish());
@@ -990,7 +997,12 @@ class PaperSurfGame {
   drawBeer() {
     const c=this.beerCtx,w=this.beerCanvas.width,h=this.beerCanvas.height;
     c.clearRect(0,0,w,h);c.save();c.translate(w*.5,h*.5);c.rotate(this.handBeer.roll*.5);c.translate(-w*.5,-h*.5);
-    c.drawImage(this.handBeer.canvas,74,55,285,370,0,0,w,h);c.restore();
+    if(this.isAviasales){
+      c.drawImage(this.handBeer.canvas,110,65,195,330,0,0,w,h);
+    }else{
+      c.drawImage(this.handBeer.canvas,74,55,285,370,0,0,w,h);
+    }
+    c.restore();
   }
   updateHUD() {
     this.duel.updateHUD();

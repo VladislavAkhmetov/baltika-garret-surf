@@ -25,9 +25,17 @@ class SkyAdvertiser {
           loader.load('assets/comics/seaplane-lime-v3.png',onLoaded,undefined,()=>reject(new Error('Не удалось загрузить дальний самолёт')));
         });
       }),
-      new Promise((resolve,reject)=>new THREE.ImageLoader().load('assets/comics/baltika-logo-reference.png',logo=>{
-        this.banner.material.map=this.makeBanner(logo);this.banner.material.needsUpdate=true;resolve();
-      },undefined,()=>reject(new Error('Не удалось загрузить логотип Балтики'))))
+      new Promise((resolve,reject)=>{
+        if (this.game.isAviasales) {
+          this.banner.material.map = this.makeBanner(null);
+          this.banner.material.needsUpdate = true;
+          resolve();
+          return;
+        }
+        new THREE.ImageLoader().load('assets/comics/baltika-logo-reference.png',logo=>{
+          this.banner.material.map=this.makeBanner(logo);this.banner.material.needsUpdate=true;resolve();
+        },undefined,()=>reject(new Error('Не удалось загрузить логотип Балтики')));
+      })
     ]).then(()=>{this.group.visible=true;this.update();this.game.renderDirty=true;});
     this._readyPromise.catch(()=>{});
     return this._readyPromise;
@@ -53,6 +61,20 @@ class SkyAdvertiser {
   makeBanner(logo){
     const canvas=document.createElement('canvas');canvas.width=1664;canvas.height=320;
     const c=canvas.getContext('2d');
+    if (this.game.isAviasales || !logo) {
+      c.fillStyle = '#0c73fe';
+      c.beginPath();c.moveTo(3,5);c.lineTo(1658,2);c.lineTo(1662,314);c.lineTo(5,318);c.closePath();c.fill();
+      c.strokeStyle = '#ffffff';c.lineWidth = 4;
+      c.strokeRect(18, 16, 1628, 288);
+      c.fillStyle = 'rgba(255,255,255,0.08)';
+      for (let i = 0; i < 350; i++) { c.fillRect(Math.random() * 1664, Math.random() * 320, 3, 3); }
+      c.fillStyle = '#ffffff';
+      c.font = '900 100px "Russo One", Impact, sans-serif';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText('✈  АВИАСЕЙЛС · РЕЙС НЕ ЖДЁТ!', 832, 160);
+      const texture=new THREE.CanvasTexture(canvas);texture.minFilter=THREE.LinearMipmapLinearFilter;return texture;
+    }
     // Match the supplied artwork's navy exactly; retain its original lettering
     // and gold arcs instead of approximating the brand with a font.
     c.drawImage(logo,0,0);const navy=c.getImageData(0,0,1,1).data;c.clearRect(0,0,canvas.width,canvas.height);

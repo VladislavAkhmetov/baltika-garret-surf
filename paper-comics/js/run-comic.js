@@ -66,8 +66,15 @@ class RunComic {
     const c=canvas.getContext('2d'),ink='#17282c',cream='#f4e9cd',yellow='#ffc43d',coral='#eb643c';
     c.fillStyle=cream;c.fillRect(0,0,W,H);
     for(let i=0;i<5200;i++){c.fillStyle=i%2?'#00000010':'#ffffff22';c.fillRect(Math.random()*W,Math.random()*H,2,2);}
-    c.save();c.translate(60,58);c.rotate(-.025);c.fillStyle=yellow;c.fillRect(-14,-4,520,104);c.fillStyle=ink;c.font='400 86px "Russo One"';c.textBaseline='top';c.fillText('НИ КАПЛИ!',0,4);c.restore();
-    c.fillStyle=ink;c.font='700 40px Caveat';c.textAlign='right';c.fillText('Волна дня · '+meta.dayLabel,W-60,62);c.fillText('бухта Garret',W-60,104);c.textAlign='left';
+    c.save();c.translate(60,58);c.rotate(-.025);
+    if(g.isAviasales){
+      c.fillStyle='#0c73fe';c.fillRect(-14,-4,660,104);c.fillStyle='#ffffff';c.font='400 78px "Russo One"';c.textBaseline='top';c.fillText('✈ РЕЙС СПАСЁН!',0,10);
+    } else {
+      c.fillStyle=yellow;c.fillRect(-14,-4,520,104);c.fillStyle=ink;c.font='400 86px "Russo One"';c.textBaseline='top';c.fillText('НИ КАПЛИ!',0,4);
+    }
+    c.restore();
+    c.fillStyle=ink;c.font='700 40px Caveat';c.textAlign='right';c.fillText('Волна дня · '+meta.dayLabel,W-60,62);
+    c.fillText(g.isAviasales?'Авиасейлс · бухта Пхукет':'бухта Garret',W-60,104);c.textAlign='left';
     const shots=this.pick(),slots=[[40,178,1000,560,-.012],[40,770,490,400,.018],[550,770,490,400,-.02]];
     slots.forEach(([x,y,w,h,tilt],i)=>{
       const shot=shots[i];
@@ -87,9 +94,17 @@ class RunComic {
     c.fillStyle=ink;c.font='400 30px "Russo One"';c.fillText('СЧЁТ',60,1236);
     c.font='400 92px "Russo One"';c.fillText(Math.round(g.score).toLocaleString('ru-RU'),56,1320);
     const duel=g.duel.result;
-    c.fillStyle=duel?.outcome==='victory'?'#125577':coral;c.font='400 38px "Russo One"';c.textAlign='right';c.fillText((duel?.outcome==='tie'?'ФОТОФИНИШ':(duel?.place??1)+'-е МЕСТО')+' · ПИВО '+(duel?.max??Math.round(g.mug.level*100))+'%',W-60,1262);
-    c.fillStyle=ink;c.font='700 34px Caveat';c.fillText('Бонус за пиво +'+(duel?.beerBonus??g.deliveryBonus).toLocaleString('ru-RU'),W-60,1302);
-    c.font='700 30px Caveat';c.fillText(summary.record?'НОВЫЙ РЕКОРД!':'Побей меня — ссылка в описании',W-60,1336);c.textAlign='left';
+    c.fillStyle=duel?.outcome==='victory'?'#125577':coral;c.font='400 38px "Russo One"';c.textAlign='right';
+    if(g.isAviasales){
+      c.fillText('РЕЙС СПАСЁН! · ПАСПОРТ '+(duel?.max??Math.round(g.mug.level*100))+'% СУХОЙ',W-60,1262);
+      c.fillStyle=ink;c.font='700 34px Caveat';c.fillText('Бонус за сухой паспорт +'+(duel?.beerBonus??g.deliveryBonus).toLocaleString('ru-RU'),W-60,1302);
+      c.font='700 30px Caveat';c.fillText(summary.record?'НОВЫЙ РЕКОРД!':'Авиасейлс — поиск дешёвых авиабилетов',W-60,1336);
+    } else {
+      c.fillText((duel?.outcome==='tie'?'ФОТОФИНИШ':(duel?.place??1)+'-е МЕСТО')+' · ПИВО '+(duel?.max??Math.round(g.mug.level*100))+'%',W-60,1262);
+      c.fillStyle=ink;c.font='700 34px Caveat';c.fillText('Бонус за пиво +'+(duel?.beerBonus??g.deliveryBonus).toLocaleString('ru-RU'),W-60,1302);
+      c.font='700 30px Caveat';c.fillText(summary.record?'НОВЫЙ РЕКОРД!':'Побей меня — ссылка в описании',W-60,1336);
+    }
+    c.textAlign='left';
     this.card=canvas;
     this.blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
     if(this.url)URL.revokeObjectURL(this.url);this.url=this.blob?URL.createObjectURL(this.blob):canvas.toDataURL('image/png');
@@ -122,7 +137,13 @@ class RunComic {
     const url=new URL(location.href);url.search='';url.hash='';
     url.searchParams.set('vs',Math.round(this.game.score));url.searchParams.set('seed',this.game.meta.seed);return url.toString();
   }
-  shareText(){const r=this.game.duel.result;return (r?.outcome==='tie'?'Финишировал одновременно с Борисом':r?.place===1?'Обогнал Бориса':'Занял 2-е место')+', сохранил '+(r?.max??Math.round(this.game.mug.level*100))+'% пива и набрал '+Math.round(this.game.score).toLocaleString('ru-RU')+' в «Ни капли!». Побьёшь?';}
+  shareText(){
+    const r=this.game.duel.result;
+    if(this.game.isAviasales){
+      return 'Успел на рейс Авиасейлс! Сохранил '+(r?.max??Math.round(this.game.mug.level*100))+'% сухости паспорта и набрал '+Math.round(this.game.score).toLocaleString('ru-RU')+' очков в «Успеть на рейс!». Побьёшь?';
+    }
+    return (r?.outcome==='tie'?'Финишировал одновременно с Борисом':r?.place===1?'Обогнал Бориса':'Занял 2-е место')+', сохранил '+(r?.max??Math.round(this.game.mug.level*100))+'% пива и набрал '+Math.round(this.game.score).toLocaleString('ru-RU')+' в «Ни капли!». Побьёшь?';
+  }
   async share(){
     await this.compose();
     const file=this.blob&&typeof File==='function'?new File([this.blob],this.fileName,{type:'image/png'}):null;

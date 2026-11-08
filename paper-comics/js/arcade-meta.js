@@ -3,20 +3,20 @@ const ARCADE_STORE='garret_comics_arcade_v1';
 const ARCADE_MISSIONS=[
   {id:'spin',text:'Чисто приземли 360°',test:s=>s.tricks>=1},
   {id:'pocket5',text:'5 секунд в кармане ×2',test:s=>s.pocket2>=5},
-  {id:'beer70',text:'Довези 70% пива',test:s=>s.finished&&s.beer>=.7},
+  {id:'beer70',text:'Довези 70% пива',textAviasales:'Сохрани 70% сухости паспорта',test:s=>s.finished&&s.beer>=.7},
   {id:'near3',text:'3 раза «впритык»',test:s=>s.near>=3},
   {id:'chain5',text:'Цепочка из 5 трюков',test:s=>s.longest>=5},
   {id:'bank3000',text:'Зачти цепочку на 3 000',test:s=>s.bestBank>=3000},
-  {id:'wake',text:'Прокатись на следе аквабайка',test:s=>s.wake>=1},
+  {id:'wake',text:'Прокатись на следе аквабайка',textAviasales:'Поймай гребень волны',test:s=>s.wake>=1},
   {id:'flip',text:'Сделай переворот ✦',test:s=>s.special>=1},
   {id:'sharkAir',text:'Перелети акулу',test:s=>s.sharkAir>=1},
   {id:'clean',text:'Ни падений, ни пены',test:s=>s.finished&&s.falls===0&&s.wipes===0},
   {id:'score20k',text:'Набери 20 000 очков',test:s=>s.score>=20000},
-  {id:'beer90',text:'Довези 90% пива',test:s=>s.finished&&s.beer>=.9}
+  {id:'beer90',text:'Довези 90% пива',textAviasales:'Сохрани 90% сухости паспорта',test:s=>s.finished&&s.beer>=.9}
 ];
 class RunMeta {
   constructor(game){
-    this.game=game;this.data=this.load();
+    this.game=game;this.storeKey=game.isAviasales?'aviasales_comics_arcade_v1':ARCADE_STORE;this.data=this.load();
     const params=new URLSearchParams(location.search);
     this.today=RunMeta.dayKey(new Date());
     this.seed=params.has('seed')&&Number.isFinite(Number(params.get('seed')))?Number(params.get('seed')):RunMeta.seedFor(this.today);
@@ -26,8 +26,8 @@ class RunMeta {
   static dayKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
   static seedFor(key){let h=2166136261;for(const c of key){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return (h>>>0)%100000;}
   get dayLabel(){const [,m,d]=this.today.split('-');return d+'.'+m;}
-  load(){if(window.FLOW_TEST_MODE)return {};try{return JSON.parse(localStorage.getItem(ARCADE_STORE))||{};}catch(_){return {};}}
-  save(){if(window.FLOW_TEST_MODE)return;try{localStorage.setItem(ARCADE_STORE,JSON.stringify(this.data));}catch(_){}}
+  load(){if(window.FLOW_TEST_MODE)return {};try{return JSON.parse(localStorage.getItem(this.storeKey||ARCADE_STORE))||{};}catch(_){return {};}}
+  save(){if(window.FLOW_TEST_MODE)return;try{localStorage.setItem(this.storeKey||ARCADE_STORE,JSON.stringify(this.data));}catch(_){}}
   get storySeen(){return !!this.data.storySeen;}
   markStorySeen(){if(!this.data.storySeen){this.data.storySeen=true;this.save();}}
   get daily(){return this.data.daily?.day===this.today&&this.data.daily?.seed===this.seed?this.data.daily:null;}
@@ -37,7 +37,14 @@ class RunMeta {
     if(ARCADE_MISSIONS.every(m=>done.includes(m.id)||active.includes(m.id))&&active.length<3)done.length=0;
     for(const m of ARCADE_MISSIONS){if(active.length>=3)break;if(!active.includes(m.id)&&!done.includes(m.id))active.push(m.id);}
   }
-  get missions(){return this.data.missions.active.map(id=>ARCADE_MISSIONS.find(m=>m.id===id)).filter(Boolean);}
+  get missions(){
+    return this.data.missions.active.map(id=>{
+      const m=ARCADE_MISSIONS.find(item=>item.id===id);
+      if(!m)return null;
+      if(this.game.isAviasales&&m.textAviasales)return Object.assign({},m,{text:m.textAviasales});
+      return m;
+    }).filter(Boolean);
+  }
   makeGhost(){
     const g=this.game,rig=g.makeSurfer(1,0xf6ebd0);
     rig.group.scale.setScalar(1.2);

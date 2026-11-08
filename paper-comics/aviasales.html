@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0c73fe">
+  <title>Авиасейлс — Успеть на рейс! / Бумажный сёрф</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="preload" as="image" href="assets/comics/start-poster.webp" type="image/webp" fetchpriority="high">
+  <link rel="stylesheet" href="assets/fonts/fonts.css">
+  <link rel="stylesheet" href="css/game-bundle.css">
+  <script>
+    window.IS_AVIASALES = true;
+    (function(){
+      function syncAppHeight(){
+        var h = window.innerHeight;
+        if (h) document.documentElement.style.setProperty('--app-height', h + 'px');
+      }
+      syncAppHeight();
+      window.addEventListener('resize', syncAppHeight);
+      window.addEventListener('orientationchange', syncAppHeight);
+    })();
+  </script>
+  <style>
+    .aviasales-badge {
+      position: absolute;
+      top: max(20px, env(safe-area-inset-top));
+      left: 12%;
+      z-index: 10;
+      background: #0c73fe;
+      color: #fff;
+      font: 700 13px/1 'Russo One', sans-serif;
+      padding: 6px 14px;
+      border: 2px solid #17282c;
+      box-shadow: 3px 3px 0 #17282c;
+      transform: rotate(-2deg);
+      letter-spacing: 1px;
+    }
+    .menu-title.aviasales-title {
+      color: #17282c;
+      text-shadow: 2px 2px 0 #f4e9cd, 4px 4px 0 #0c73fe33;
+    }
+    .menu-title.aviasales-title span:first-child {
+      color: #0c73fe;
+    }
+    .result-trophy {
+      display: none !important;
+    }
+    .result-stamp {
+      position: absolute;
+      top: 14%;
+      left: 8%;
+      z-index: 20;
+      border: 3.5px solid #0c73fe;
+      color: #0c73fe;
+      padding: 8px 14px;
+      border-radius: 6px;
+      transform: rotate(-10deg);
+      text-align: center;
+      font-family: 'Russo One', sans-serif;
+      background: #fbf7ec;
+      box-shadow: 3px 4px 0 #103f5822;
+      pointer-events: none;
+    }
+    .result-stamp strong {
+      display: block;
+      font-size: 14px;
+      line-height: 1.2;
+      letter-spacing: .5px;
+    }
+    .result-stamp small {
+      display: block;
+      font: 700 9px/1.2 'Rubik', sans-serif;
+      letter-spacing: 1.5px;
+      color: #17282c;
+      margin-top: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="mobile-viewport">
+  <main id="app-container" aria-label="Игра Успеть на рейс" tabindex="-1">
+    <div class="sky" aria-hidden="true"><div class="sun-halo"></div><div class="sun"></div><div class="cloud cloud-one"></div><div class="cloud cloud-two"></div></div>
+    <canvas id="surf-canvas" aria-label="Бумажная волна и сёрферы"></canvas>
+    <div class="print-grain" aria-hidden="true"></div>
+    <div id="speed-lines" class="speed-lines" aria-hidden="true"></div>
+    <div id="sfx-layer" class="sfx-layer" aria-hidden="true"></div>
+    <div id="start-countdown" class="start-countdown" role="status" aria-live="assertive" aria-atomic="true" aria-hidden="true"></div>
+    <header class="hud" id="hud">
+      <div class="beer-ticket passport-ticket paper"><canvas id="beer-canvas" width="104" height="144"></canvas><div><span class="ticket-label">ПАСПОРТ</span><strong id="beer-value">100<span>%</span></strong><div class="beer-track"><i id="beer-fill"></i></div></div><b id="beer-mult" class="beer-mult" data-level="3" title="Множитель очков за сухой паспорт">×3</b></div>
+      <div class="collection-ticket paper" hidden aria-hidden="true"><div class="wave-caps"><i class="wave-cap"></i><i class="wave-cap"></i><i class="wave-cap"></i></div><small id="collection-value">0 / 3</small></div><div class="score-ticket"><span>СЧЁТ</span><strong id="score-value">0</strong></div>
+      <button id="pause-button" class="small-button paper" aria-label="Пауза">Ⅱ</button>
+    </header>
+    <button id="sound-button" class="sound-button paper" type="button" aria-label="Отключить звук" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="sound-waves" d="M16 8c2 2 2 6 0 8m3-11c4 4 4 10 0 14"/><path class="sound-off" d="m17 9 5 6m0-6-5 6"/></svg></button>
+    <div id="ride-debug" class="hidden" aria-hidden="true">
+      <div class="caps-ticket paper" hidden aria-hidden="true"><img id="cap-icon" alt=""><span id="caps-value">0</span></div>
+      <span id="input-label" class="input-label paper">НАКЛОН ТЕЛЕФОНА</span>
+      <span id="combo-value" class="combo-value">×1</span>
+    <div class="wave-ticket paper"><div class="wave-heading"><span id="wave-label">НАЙДИ ПЕННУЮ ЛИНИЮ</span><b id="wave-number">1/7</b></div><div class="wave-contact"><i id="wave-fill"></i></div><div class="wave-readout"><span id="wave-status">СПОКОЙНЫЙ УЧАСТОК</span><span id="wave-remaining">ЧЕРЕЗ 35 М</span></div></div>
+    <div class="weight-ticket paper"><span id="weight-label">ВЕС ПО ЦЕНТРУ</span><div class="weight-axis"><span>ХВОСТ</span><i id="weight-dot"></i><span>НОС</span></div><div class="balance-readout"><span>РИСК СРЫВА</span><b id="balance-label">НИЗКИЙ</b></div><div class="balance-track"><i id="balance-fill"></i></div></div>
+    </div>
+
+    <div id="moment" class="moment" aria-live="polite" aria-atomic="true"><b class="moment-points"></b><strong></strong><span></span><em class="moment-mult"></em></div>
+    <div id="arcade-chain" class="arcade-chain" aria-hidden="true">
+      <div class="chase-row" data-level="0"><span class="chase-label">ПЕНА</span><div class="chase-track"><i class="chase-fill"></i><i class="chase-zone zone-mid"></i><i class="chase-zone zone-max"></i></div><b class="chase-distance"></b><b class="chase-mult">×1</b><small class="chase-status"></small></div>
+      <div class="chain-row"><span class="chain-items"></span><strong class="chain-value"><span class="chain-points">0</span> × <span class="chain-count">1</span></strong><div class="chain-timer"><i></i></div></div>
+    </div>
+    <div id="chain-toast" class="chain-toast" role="status"><strong></strong><span></span></div>
+    <aside id="crab-callout" class="crab-callout paper" aria-live="polite" aria-atomic="true"><span></span></aside>
+    <div id="comic-frame" class="comic-frame" aria-hidden="true">
+      <div class="comic-scene"><canvas id="comic-snapshot"></canvas></div>
+      <div class="comic-face-panel"><img id="comic-face-cutout" alt=""><i></i></div>
+      <div class="comic-eye-panel"><canvas id="comic-detail"></canvas><span>ПАСПОРТ СУХОЙ.</span></div>
+      <div class="comic-burst"><img id="comic-cutout" alt=""><strong id="comic-word">УАУ!</strong><span id="comic-caption"></span><i class="comic-lines"></i></div>
+    </div>
+    <div id="ride-coach" class="ride-coach paper" role="status"><strong id="coach-title"></strong><span id="coach-line"></span></div><div id="hint" class="hint paper invisible"></div>
+    <div id="spill-flash" aria-hidden="true"></div>
+    <div id="shark-threat" aria-hidden="true"><i class="fin-icon"></i><b></b></div>
+    <div id="balance-cue" class="balance-cue paper hidden" role="status"><strong>ДЕРЖИ ГРЕБЕНЬ</strong><div class="balance-rail"><i class="balance-safe"></i><i class="balance-needle"></i></div><small>ПО ЦЕНТРУ</small><div class="catch-track"><i class="catch-fill"></i></div></div>
+    <div id="wipeout-screen" class="wipeout-screen hidden" role="status"><span>БУЛЬК!</span><strong>ПАСПОРТ НАМОК!</strong><p>−18% сухости паспорта · комбо сброшено<br>Вставай на доску, катер не ждёт!</p></div>
+    <div class="steer-controls"><button id="steer-left" class="paper" aria-label="Повернуть влево">‹</button><button id="steer-right" class="paper" aria-label="Повернуть вправо">›</button></div><button id="jump-button" aria-label="Прыжок: нажать один раз" title="Прыжок · пробел"><svg class="jump-icon" viewBox="0 0 48 48" aria-hidden="true"><circle cx="20" cy="10" r="3"/><path d="m19 16-6 10 8 3-5 9m5-9 8 7m-10-20 9 5 5-5M9 39c10 3 23-1 27-10m-2 1 3-8 4 6"/></svg><b id="jump-glyph">↑</b><small class="jump-action"></small></button>
+    <div id="bottom-hud" class="bottom-hud">
+      <div class="speed-ticket"><strong id="speed-value">26</strong><span>М/С</span><div id="speed-meter"></div></div>
+      <div class="route-ticket" aria-label="Путь до пирса" role="progressbar" aria-valuemin="0" aria-valuemax="1200" aria-valuenow="0"><div class="route-track"><i id="route-fill"></i></div></div>
+    </div>
+    <div class="touch-guide" id="touch-guide"><span>↔ КУРС · НАЖМИ ДЛЯ ПРЫЖКА</span></div>
+
+    <section id="start-screen" class="screen journey menu-screen title-screen" aria-label="Главное меню">
+      <div class="title-poster-stage" aria-hidden="true">
+        <img class="title-poster-img" src="assets/comics/start-poster.webp" alt="Успеть на рейс! Главное меню" fetchpriority="high" decoding="sync">
+      </div>
+      <div class="aviasales-badge">✈ АВИАСЕЙЛС СПЕЦПРОЕКТ</div>
+      <div class="title-menu-actions">
+        <button id="quick-button" class="text-button menu-quick poster-quick" aria-label="Быстрый заезд" title="Быстрый заезд"></button>
+        <button id="start-button" class="yellow-button menu-play poster-play" data-primary aria-label="Погнали!">ПОГНАЛИ!</button>
+      </div>
+      <h2 class="menu-title aviasales-title sr-overlay" aria-hidden="true"><span>УСПЕТЬ</span> <span>НА РЕЙС!</span></h2>
+      <p class="menu-wager sr-overlay" aria-hidden="true">Катер в аэропорт вот-вот отчалит.<br>Сохрани паспорт сухим — успей на самолёт!</p>
+      <img class="menu-hero sr-overlay" src="assets/comics/hero-crest-close.webp" onerror="this.onerror=null;this.src='assets/comics/hero-crest-close.png'" alt="" aria-hidden="true" loading="lazy" decoding="async">
+      <p id="daily-label" class="menu-daily sr-overlay" aria-hidden="true"></p>
+      <p id="boot-status" class="boot-status" role="status" hidden></p>
+      <script>
+        (function(){
+          var failed=false,timer=null;
+          var status=document.getElementById('boot-status');
+          var s=document.getElementById('start-button'),q=document.getElementById('quick-button');
+          function syncButtonLabel(){
+            if(!s)return;
+            var txt=(s.textContent||'').trim();
+            if(txt&&txt!=='ПОГНАЛИ!'){
+              s.classList.add('has-status');
+            }else{
+              s.classList.remove('has-status');
+            }
+          }
+          function restore(){
+            s.disabled=false;s.textContent='ПОГНАЛИ!';delete s.dataset.pending;syncButtonLabel();
+            q.disabled=false;q.textContent='БЫСТРЫЙ СТАРТ ↗';delete q.dataset.pending;
+          }
+          window.__surfBootFailed=function(reason){
+            if(window.game)return;
+            clearTimeout(timer);failed=true;window.__queuedStart=null;restore();
+            s.textContent='ПОВТОРИТЬ ЗАГРУЗКУ';syncButtonLabel();status.hidden=false;
+            status.textContent=reason==='init'?'Не удалось запустить игру. Нажми, чтобы попробовать снова.':'Игра не загрузилась. Проверь соединение и повтори загрузку.';
+          };
+          window.__surfBootReady=function(){clearTimeout(timer);failed=false;status.hidden=true;restore();};
+          function watch(){
+            if(timer!==null)return;
+            timer=setTimeout(function(){window.__surfBootFailed('timeout');},30000);
+          }
+          function act(quick){
+            if(window.game){
+              return;
+            }else if(failed){
+              location.reload();
+            }else{
+              window.__queuedStart=quick?'quick':'play';
+              var b=document.getElementById(quick?'quick-button':'start-button');
+              if(b&&!b.dataset.pending){b.dataset.pending='1';b.textContent='ЗАГРУЗКА…';syncButtonLabel();}
+              status.hidden=false;status.textContent='Загружаем игру…';watch();
+            }
+          }
+          if(s){
+            s.addEventListener('pointerup',function(e){if(e.pointerType!=='mouse')act(false);});
+            s.addEventListener('click',function(){act(false);});
+            try {
+              var obs=new MutationObserver(syncButtonLabel);
+              obs.observe(s,{childList:true,characterData:true,subtree:true});
+            } catch(e){}
+            syncButtonLabel();
+          }
+          if(q){
+            q.addEventListener('pointerup',function(e){if(e.pointerType!=='mouse')act(true);});
+            q.addEventListener('click',function(){act(true);});
+          }
+          window.addEventListener('error',function(e){
+            if(e.filename&&e.filename.indexOf('game-bundle.js')!==-1)window.__surfBootFailed('init');
+          });
+        })();
+      </script>
+    </section>
+
+    <section id="setup-screen" class="screen journey menu-screen selection-screen hidden" aria-label="Выбор персонажа и локации">
+      <button class="menu-back" data-journey-back="start" aria-label="Вернуться в меню">←</button>
+      <div class="selection-choices">
+        <article class="selection-choice" data-choice="hero">
+          <div class="selection-art selection-hero">
+            <img src="assets/comics/hero-crest-close.webp" onerror="this.onerror=null;this.src='assets/comics/hero-crest-close.png'" alt="Макс, сёрфер с паспортом наготове" loading="lazy" decoding="async">
+            <span class="selection-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5z"/><path d="M12 14v3"/></svg>СКОРО</span>
+          </div>
+          <div class="selection-arrows"><button data-cycle="hero" data-direction="-1" aria-label="Предыдущий персонаж">‹</button><h3 id="hero-name" aria-live="polite">МАКС</h3><button data-cycle="hero" data-direction="1" aria-label="Следующий персонаж">›</button></div>
+        </article>
+        <article class="selection-choice" data-choice="location">
+          <div class="selection-art selection-location">
+            <div class="location-picture" aria-hidden="true"></div>
+            <span class="selection-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5z"/><path d="M12 14v3"/></svg>СКОРО</span>
+          </div>
+          <div class="selection-arrows"><button data-cycle="location" data-direction="-1" aria-label="Предыдущая локация">‹</button><h3 id="location-name" aria-live="polite">БУХТА ПХУКЕТ</h3><button data-cycle="location" data-direction="1" aria-label="Следующая локация">›</button></div>
+        </article>
+      </div>
+      <footer class="selection-footer"><button id="setup-next" class="yellow-button" data-primary>ПРОДОЛЖИТЬ</button></footer>
+    </section>
+
+    <section id="story-screen" class="screen journey story-screen hidden" aria-label="Комикс: начало истории" data-page="0">
+      <header class="comic-toolbar"><button id="story-prev" aria-label="Вернуться к выбору">←</button><button id="story-skip">Пропустить</button></header>
+      <div class="comic-book">
+        <div id="comic-page" class="comic-page" data-comic-page="0" role="group" aria-label="Проспал! Катер в аэропорт уходит"></div>
+        <div id="comic-loading" class="comic-loading" role="status"><span>РИСУЕМ ВОЛНУ…</span><button id="comic-retry" class="yellow-button" hidden>ПОВТОРИТЬ</button></div>
+      </div>
+      <nav class="comic-nav" aria-label="Страницы комикса"><button id="story-next" class="yellow-button" data-primary>НА ВОЛНУ ↗</button></nav>
+      <p id="story-error" class="story-error paper hidden" role="alert"></p>
+    </section>
+
+    <section id="loader-screen" class="screen journey menu-screen level-loader-screen hidden" aria-label="Загрузка уровня" role="status">
+      <div class="loader-backdrop"></div>
+      <div class="loader-stage">
+        <div class="loader-art" aria-hidden="true">
+          <div class="loader-sun"></div>
+          <img class="loader-wave" src="assets/comics/level-wave-cutout.webp" onerror="this.onerror=null;this.src='assets/comics/wave-swell-cutout-v5.webp'" alt="">
+          <img class="loader-hero" src="assets/comics/hero-crest-close.webp" alt="">
+        </div>
+        <div class="loader-card paper">
+          <h2 class="loader-title" id="loader-title">РИСУЕМ ВОЛНУ…</h2>
+          <div class="loader-bar-wrap">
+            <div class="loader-bar-track">
+              <div class="loader-bar-fill" id="loader-progress-bar" style="width: 0%;"></div>
+            </div>
+            <div class="loader-percent-wrap">
+              <span class="loader-percent" id="loader-percent">0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="pause-screen" class="screen hidden" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+      <div class="pause-card">
+        <header class="pause-heading"><span class="eyebrow">Ⅱ ПАУЗА</span><h2 id="pause-title">ДЫШИ.</h2></header>
+        <div class="pause-art" aria-hidden="true">
+          <div class="pause-sun"></div>
+          <img class="pause-wave" src="assets/comics/wave-swell-cutout-v5.webp" onerror="this.onerror=null;this.src='assets/comics/wave-swell-cutout-v5.png'" alt="" loading="lazy" decoding="async">
+          <img class="pause-hero" src="assets/comics/hero-crest-close.webp" onerror="this.onerror=null;this.src='assets/comics/hero-crest-close.png'" alt="" loading="lazy" decoding="async">
+        </div>
+        <footer class="pause-actions">
+          <button id="resume-button" class="yellow-button" type="button">ПРОДОЛЖИТЬ <span aria-hidden="true">↗</span></button>
+          <nav class="pause-secondary" aria-label="Действия с заездом">
+            <button id="reset-button" class="text-button" type="button">Заново</button>
+            <button class="text-button menu-link" type="button" data-home>В меню</button>
+          </nav>
+          <details id="pause-options" class="pause-options">
+            <summary>Настройки <span aria-hidden="true">+</span></summary>
+            <div id="pause-settings" class="pause-settings">
+              <p id="pause-help" class="pause-help">Вбок — курс. Нажми — прыжок.</p>
+              <button id="pause-sound" class="text-button" type="button" aria-pressed="true">Звук: включён</button>
+              <button id="center-button" class="text-button" type="button" aria-label="Запомнить нейтральное положение телефона">◎ Запомнить нейтраль</button>
+              <button id="camera-toggle" class="text-button" type="button" aria-pressed="true">Камера: живая</button>
+              <button id="assist-toggle" class="text-button" type="button" aria-pressed="false">Сложность: обычная</button>
+            </div>
+          </details>
+        </footer>
+      </div>
+    </section>
+
+    <section id="result-screen" class="screen hidden" aria-labelledby="result-title">
+      <div class="result-card">
+        <header class="result-heading">
+          <span class="eyebrow">ФИНИШ</span>
+          <h2 id="result-title">РЕЙС СПАСЁН!</h2>
+          <p id="result-comment">Посадка подтверждена! Билеты Авиасейлс в кармане.</p>
+        </header>
+        <div id="result-art" class="result-art" role="img" aria-label="Клешня на доске среди волн">
+          <div id="result-stamp" class="result-stamp">
+            <strong>✈ ПОСАДКА РАЗРЕШЕНА</strong>
+            <small>PASSPORT CONTROL · APPROVED</small>
+          </div>
+          <img id="result-scene" src="assets/comics/comic-crab-v4.webp" alt="" loading="lazy" decoding="async">
+          <svg id="result-trophy" class="result-trophy hidden" viewBox="0 0 280 340" aria-hidden="true">
+            <defs>
+              <linearGradient id="trophy-gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff2a1"/><stop offset=".32" stop-color="#ffc43d"/><stop offset=".68" stop-color="#e78721"/><stop offset="1" stop-color="#ffe889"/></linearGradient>
+              <pattern id="trophy-grain" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="4" cy="6" r="1" fill="#fff4c8" opacity=".8"/><circle cx="13" cy="15" r=".8" fill="#9c481c" opacity=".35"/></pattern>
+            </defs>
+            <path class="trophy-rays" d="M140 9v26M30 37l19 21M250 35l-19 23M8 119l29 5M272 119l-29 5"/>
+            <g class="trophy-outline">
+              <path class="trophy-handles-back" d="M68 73H48c-33 0-43 48-13 75l36 30m141-105h20c33 0 43 48 13 75l-36 30"/>
+              <path class="trophy-handles" d="M68 73H48c-33 0-43 48-13 75l36 30m141-105h20c33 0 43 48 13 75l-36 30"/>
+              <path class="trophy-cup-back" d="M67 61h146l-13 78c-7 40-29 66-60 66s-53-26-60-66L67 61Z"/>
+              <path class="trophy-cup" d="M67 61h146l-13 78c-7 40-29 66-60 66s-53-26-60-66L67 61Z"/>
+              <path d="M67 61h146l-13 78c-7 40-29 66-60 66s-53-26-60-66L67 61Z" fill="url(#trophy-grain)"/>
+              <path class="trophy-stem" d="M117 195v45h46v-45"/>
+              <path class="trophy-base" d="M107 239h66l17 24H90l17-24Zm-24 26h114v31H83z"/>
+            </g>
+            <path class="trophy-shine" d="m94 78 8 50m-9 22 5 15"/>
+            <path class="trophy-star" d="m140 95 7 14 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2z"/>
+          </svg>
+          <canvas id="result-crab" aria-hidden="true"></canvas>
+        </div>
+        <footer class="result-details">
+          <div class="duel-results" aria-label="Паспорт на финише и бонус">
+            <div><span>ПАСПОРТ</span><strong class="result-beer" id="result-beer">100%</strong></div>
+            <div><span>БОНУС</span><strong class="result-beer" id="result-beer-bonus">+5 000</strong></div>
+          </div>
+          <div class="result-summary"><span>СЧЁТ</span><strong id="result-score">0</strong></div>
+          <p id="result-record" class="result-record"></p>
+          <div class="result-goals"><ul id="result-missions" class="mission-list" aria-label="Задания"></ul><b id="result-stars" class="result-stars">★ 0</b></div>
+          <button id="replay-button" class="yellow-button" type="button">ЕЩЁ РАЗ <span aria-hidden="true">↗</span></button>
+          <nav class="result-share" aria-label="Дополнительные действия">
+            <button id="comic-button" class="text-button" type="button">КОМИКС</button>
+            <button id="challenge-button" class="text-button" type="button">ВЫЗОВ</button>
+            <button class="text-button menu-link" type="button" data-setup>В МЕНЮ</button>
+          </nav>
+        </footer>
+        <div class="result-companion" hidden><span id="result-crab-line"></span></div>
+      </div>
+    </section>
+    <section id="share-screen" class="screen share-screen hidden" aria-label="Комикс заезда">
+      <div class="share-card paper"><img id="share-image" alt="Комикс твоего заезда: лучшие моменты и счёт"><p id="share-status" class="share-status" role="status"></p><div class="share-actions"><button id="share-button" class="yellow-button">ПОДЕЛИТЬСЯ</button><button id="share-download" class="text-button">Скачать</button><button id="share-close" class="text-button">Закрыть</button></div></div>
+    </section>
+    <div id="error-screen" class="error-screen hidden" role="alert">Для игры нужен браузер с WebGL. Попробуй открыть её в Chrome, Edge или Safari.</div>
+  </main>
+  </div>
+  <script defer src="js/game-bundle.js" onerror="window.__surfBootFailed('network')"></script>
+</body>
+</html>

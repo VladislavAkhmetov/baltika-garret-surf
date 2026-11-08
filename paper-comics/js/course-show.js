@@ -108,10 +108,10 @@ class CourseShow {
   }
   makeHarbor(){
     this.boat(14,382,0xd87b5c);this.boat(-16,570,0x367f8e);this.boat(16,834,0xe1aa50);
-    const g=this.group(710,52);this.sign(g,'БОРИС · ДАЙ ВОЛНУ!',-15,7,-28,8,'#ab5938');
+    const g=this.group(710,52);this.sign(g,this.game.isAviasales?'АЭРОПОРТ-ЭКСПРЕСС ↗':'БОРИС · ДАЙ ВОЛНУ!',-15,7,-28,8,'#ab5938');
     for(let i=0;i<6;i++)this.person(g,-14+(i%2)*2,3.8,-26+i*10,[0xe77656,0xdeb84f,0x539791][i%3]);
     this.pennants(g,-18,-12,8,-5,6);
-    const rest=this.group(843,16);this.sign(rest,'ВЫДОХНИ',-16,4,0,5,'#357e73');
+    const rest=this.group(843,16);this.sign(rest,this.game.isAviasales?'РЕЙС БЛИЗКО!':'ВЫДОХНИ',-16,4,0,5,'#357e73');
   }
   makeBar(){
     const g=this.group(1372,40);this.bar=g;
@@ -131,8 +131,13 @@ class CourseShow {
     this.maxCup=new THREE.Sprite(new THREE.SpriteMaterial({map:this.game.handBeer.texture,transparent:true,depthWrite:false,depthTest:false}));
     this.borisCup=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,depthWrite:false,depthTest:false}));
     for(const [cup,holder] of [[this.maxCup,this.glass],[this.borisCup,this.borisGlass]]){cup.center.set(.5,0);cup.scale.set(.78,1,1);cup.renderOrder=6;holder.add(cup);}
-    this.sign(g,'МАКС',-13,6.3,1.5,1.8,'#27596b');this.sign(g,'БОРИС',-10.5,6.3,1.5,1.8,'#b7633d');
-    this.finishBanner=this.sign(g,'ФИНИШ',1,8,-10,10,'#b7633d');
+    if(this.game.isAviasales){
+      this.borisGlass.visible=false;
+      this.sign(g,'ТРАП',-13,6.3,1.5,1.8,'#27596b');
+    } else {
+      this.sign(g,'МАКС',-13,6.3,1.5,1.8,'#27596b');this.sign(g,'БОРИС',-10.5,6.3,1.5,1.8,'#b7633d');
+    }
+    this.finishBanner=this.sign(g,this.game.isAviasales?'ПОСАДКА':'ФИНИШ',1,8,-10,10,'#b7633d');
     for(const x of [-6,8])this.box(g,x,3.8,-10,.20,8,.20,0xf4dbb0);
     this.confetti=[];
     for(let i=0;i<28;i++){
@@ -226,7 +231,11 @@ class CourseShow {
     this.cameraFrom=g.camera.position.clone();this.lookFrom=new THREE.Vector3(0,0,-1).applyQuaternion(g.camera.quaternion).multiplyScalar(22).add(g.camera.position);
     this.delivery.classList.remove('hidden');g.container.classList.add('delivery-active');
     const result=g.duel.result;
-    document.getElementById('delivery-line').textContent=(success?'ТОНИ: «МАКС ПЕРВЫЙ! КУБОК ТВОЙ!»':result.outcome==='tie'?'ТОНИ: «ФОТОФИНИШ! ОБЪЯВЛЯЮ НИЧЬЮ.»':'ТОНИ: «БОРИС ПЕРВЫЙ. РЕВАНШ?»')+'\nПИВО '+result.max+'% · БОНУС +'+result.beerBonus.toLocaleString('ru-RU');
+    if(g.isAviasales){
+      document.getElementById('delivery-line').textContent=(success?'КАПИТАН: «УСПЕЛ! ЗАПРЫГИВАЙ НА БОРТ!»':'КАПИТАН: «КАТЕР УШЁЛ...»')+'\nПАСПОРТ '+result.max+'% СУХОЙ · БОНУС +'+result.beerBonus.toLocaleString('ru-RU');
+    } else {
+      document.getElementById('delivery-line').textContent=(success?'ТОНИ: «МАКС ПЕРВЫЙ! КУБОК ТВОЙ!»':result.outcome==='tie'?'ТОНИ: «ФОТОФИНИШ! ОБЪЯВЛЯЮ НИЧЬЮ.»':'ТОНИ: «БОРИС ПЕРВЫЙ. РЕВАНШ?»')+'\nПИВО '+result.max+'% · БОНУС +'+result.beerBonus.toLocaleString('ru-RU');
+    }
     this.delivery.querySelector('button').focus({preventScroll:true});g.renderDirty=true;
   }
   updateDelivery(dt){
